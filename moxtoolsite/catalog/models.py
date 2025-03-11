@@ -52,7 +52,7 @@ class Track(models.Model):
     title = models.CharField(max_length=200)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    beatport_track_id = models.BigIntegerField('BeatportTrack', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
 
     def __str__(self):
         """Function returning a string of the track title."""
@@ -62,6 +62,11 @@ class Track(models.Model):
         """Function returning a URL for track details."""
         return reverse('track-detail', args=[str(self.id)])
     
+    def display_artist(self):
+        """Function returning a string of the artists on the track."""
+        return ', '.join(artist.name for artist in self.artist.all()[:3])
+    
+    display_artist.short_description = 'Artist'
 
 class TrackInstance(models.Model):
     """Model representing a music track in a specific user library."""
@@ -69,10 +74,23 @@ class TrackInstance(models.Model):
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
     date_added = models.DateField(null=True, blank=True)
+    play_count = models.IntegerField(default=0)
 
     def __str__(self):
         """Function returning a string of the track title."""
-        return f'{self.id} ({self.track.title})'
+        return f'{self.track.title} ({self.id})'
+    
+    def get_track_display_artist(self):
+        """Function returning a string of the artists on the underlying track."""
+        return self.track.display_artist()
+    
+    get_track_display_artist.short_description = 'Artist'
+    
+    def get_track_genre(self):
+        """Function returning a string of the genre of the underlying track."""
+        return self.track.genre
+    
+    get_track_genre.short_description = 'Genre'
 
     class Meta:
         ordering = ['date_added']
