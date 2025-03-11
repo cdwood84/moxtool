@@ -5,6 +5,22 @@ from django.urls import reverse
 import uuid
 
 
+class Artist(models.Model):
+    """Model representing a musical artist."""
+    name = models.CharField(max_length=200)
+
+    def __str__(self):
+        """Function returning a string of the artist name."""
+        return self.name
+
+    def get_absolute_url(self):
+        """Function returning a URL for artist details."""
+        return reverse('artist-detail', args=[str(self.id)])
+
+    class Meta:
+        ordering = ['name']
+
+
 class Genre(models.Model):
     """Model representing a dance music genre."""
     name = models.CharField(
@@ -34,9 +50,9 @@ class Genre(models.Model):
 class Track(models.Model):
     """Model representing a music track, not specifically in any user's library."""
     title = models.CharField(max_length=200)
-    artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     beatport_track_id = models.BigIntegerField('BeatportTrack', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
-    genre = models.ManyToManyField(Genre, help_text="Select a genre for this track")
 
     def __str__(self):
         """Function returning a string of the track title."""
@@ -60,19 +76,21 @@ class TrackInstance(models.Model):
 
     class Meta:
         ordering = ['date_added']
-    
 
-class Artist(models.Model):
-    """Model representing a musical artist."""
+
+class Playlist(models.Model):
+    """Model representing a music track, not specifically in any user's library."""
     name = models.CharField(max_length=200)
+    track = models.ManyToManyField(TrackInstance, help_text="Select a track for this playlist")
+    date_added = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        """Function returning a string of the artist name."""
+        """Function returning a string of the playlist name."""
         return self.name
-
+    
     def get_absolute_url(self):
-        """Function returning a URL for artist details."""
-        return reverse('artist-detail', args=[str(self.id)])
+        """Function returning a URL for playlist details."""
+        return reverse('playlist-detail', args=[str(self.id)])
 
     class Meta:
-        ordering = ['name']
+        ordering = ['date_added']
