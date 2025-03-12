@@ -1,0 +1,25 @@
+{% extends "base_generic.html" %}
+
+
+{% block title %}
+    <title>Your Music Library</title>
+{% endblock %}
+
+
+{% block content %}
+    <h1>Music Library Home</h1>
+        <p>
+            Welcome to MoxToolSite, a website developed by
+            <em>EnterTheMox</em>!
+        </p>
+    <h2>Dynamic content</h2>
+    <p>The library has the following record counts:</p>
+    <ul>
+        <li><strong>Unique Tracks:</strong> {{ num_tracks }}</li>
+        <li><strong>Unique Tech House Tracks:</strong> {{ num_tracks_tech_house }}</li>
+        <li><strong>Track Files:</strong> {{ num_instances }}</li>
+        <li><strong>Artists:</strong> {{ num_artists }}</li>
+        <li><strong>Playlists:</strong> {{ num_playlists }}</li>
+        <li><strong>Playlists starting with 'S':</strong> {{ num_playlists_starting_with_s }}</li>
+    </ul>
+{% endblock %}

@@ -1,0 +1,13 @@
+.sidebar-nav {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 5px;
+    list-style: none;
+    background: rgba(240, 240, 240, .75);
+  }
+.col-sm-10 {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(250, 250, 250, .8);
+}
