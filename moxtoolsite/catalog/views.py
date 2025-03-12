@@ -6,22 +6,36 @@ from .models import Artist, Genre, Playlist, Track, TrackInstance
 class TrackListView(generic.ListView):
     model = Track
     context_object_name = 'track_list'
-    #queryset = Track.objects.filter(title__icontains='house')[:5]
-    template_name = 'tracks/track_list.html'
+    template_name = 'catalog/track_list.html'
+    paginate_by = 20
+    # queryset = Track.objects.filter(title__icontains='house')[:5]
 
-    def get_queryset(self):
-        return Track.objects.filter(title__icontains='house')[:5]
+    # def get_queryset(self):
+    #     return Track.objects.filter(title__icontains='house')[:5]
 
-    def get_context_data(self, **kwargs):
-        context = super(TrackListView, self).get_context_data(**kwargs)
-        context['some_data'] = 'This is just some data'
-        return context
+    # def get_context_data(self, **kwargs):
+    #     context = super(TrackListView, self).get_context_data(**kwargs)
+    #     context['some_data'] = 'This is just some data'
+    #     return context
 
 
 class TrackDetailView(generic.DetailView):
     model = Track
-    context_object_name = 'track_list'
+    context_object_name = 'track'
     template_name = "catalog/track_detail.html"
+
+
+class ArtistListView(generic.ListView):
+    model = Artist
+    context_object_name = 'artist_list'
+    template_name = 'catalog/artist_list.html'
+    paginate_by = 20
+
+
+class ArtistDetailView(generic.DetailView):
+    model = Artist
+    context_object_name = 'artist'
+    template_name = "catalog/artist_detail.html"
     
 
 def index(request):
@@ -52,3 +66,8 @@ def index(request):
 def track_detail_view(request, primary_key):
     track = get_object_or_404(Track, pk=primary_key)
     return render(request, 'catalog/track_detail.html', context={'track': track})
+
+
+def artist_detail_view(request, primary_key):
+    artist = get_object_or_404(Artist, pk=primary_key)
+    return render(request, 'catalog/artist_detail.html', context={'artist': artist})

@@ -5,15 +5,15 @@
 
   <p><strong>Artist:</strong> <a href="">{{ track.artist.all|join:", " }}</a></p>
   <!-- author detail link not yet defined -->
-  <p><strong>Genre:</strong> {{ book.genre }}</p>
+  <p><strong>Genre:</strong> {{ track.genre }}</p>
 
   <div style="margin-left:20px;margin-top:20px">
     <h4>Instances</h4>
 
-    {% for instance in Track.trackinstance_set.all %}
+    {% for instance in track.trackinstance_set.all %}
       <hr />
       <p class="{% if instance.rating == 'a' %}text-success{% elif cinstance.rating == 't' %}text-danger{% else %}text-warning{% endif %}">
-        {{ track.get_rating_display }} </p>
+        {{ instance.get_rating_display }} </p>
       {% if instance.date_added != None %}
         <p><strong>Track added:</strong> {{ instance.date_added }}</p>
       {% endif %}

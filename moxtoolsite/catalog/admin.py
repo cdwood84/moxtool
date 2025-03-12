@@ -36,5 +36,5 @@ class TrackInstanceAdmin(admin.ModelAdmin):
     list_filter = ['date_added', 'play_count']
     fieldsets = (
         (None,{'fields': ['track', 'id']}),
-        ('User Info',{'fields': ['date_added', 'comments', 'play_count']})
+        ('User Info',{'fields': ['date_added', 'rating', 'comments', 'play_count']})
     )
