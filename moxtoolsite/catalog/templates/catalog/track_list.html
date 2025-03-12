@@ -1,0 +1,17 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>Track List</h1>
+  {% if track_list %}
+    <ul>
+      {% for track in track_list %}
+      <li>
+        <a href="{{ track.get_absolute_url }}">{{ track.title }}</a>
+        ({{track.display_artist}})
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>There are no tracks in your library.</p>
+  {% endif %}
+{% endblock %}

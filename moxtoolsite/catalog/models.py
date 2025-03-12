@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
 from django.urls import reverse
+import re
 import uuid
 
 
@@ -15,7 +16,16 @@ class Artist(models.Model):
 
     def get_absolute_url(self):
         """Function returning a URL for artist details."""
-        return reverse('artist-detail', args=[str(self.id)])
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('artist-detail', args=[url_friendly_name, str(self.id)])
+    
+    def get_genre_list(self):
+        artist_track_list = self.track_set.all()
+        artist_genre_list = []
+        for artist_track in artist_track_list:
+            if artist_track.genre.name not in artist_genre_list:
+                artist_genre_list.append(artist_track.genre.name)
+        return re.sub(r"[\[|\]|']", '', str(artist_genre_list))
 
     class Meta:
         ordering = ['name']
@@ -60,13 +70,15 @@ class Track(models.Model):
     
     def get_absolute_url(self):
         """Function returning a URL for track details."""
-        return reverse('track-detail', args=[str(self.id)])
+        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        return reverse('track-detail', args=[url_friendly_title, str(self.id)])
     
     def display_artist(self):
         """Function returning a string of the artists on the track."""
         return ', '.join(artist.name for artist in self.artist.all()[:3])
     
     display_artist.short_description = 'Artist'
+
 
 class TrackInstance(models.Model):
     """Model representing a music track in a specific user library."""
@@ -75,6 +87,20 @@ class TrackInstance(models.Model):
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
+
+    TRACK_RATING = (
+        ('a', 'Awesome'),
+        ('f', 'Fine'),
+        ('t', 'Terrible'),
+    )
+
+    rating = models.CharField(
+        max_length=1,
+        choices=TRACK_RATING,
+        blank=True,
+        default='f',
+        help_text='Track rating',
+    )
 
     def __str__(self):
         """Function returning a string of the track title."""
