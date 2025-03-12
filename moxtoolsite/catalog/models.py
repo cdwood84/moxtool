@@ -76,6 +76,20 @@ class TrackInstance(models.Model):
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
 
+    TRACK_RATING = (
+        ('a', 'Awesome'),
+        ('f', 'Fine'),
+        ('t', 'Terrible'),
+    )
+
+    rating = models.CharField(
+        max_length=1,
+        choices=TRACK_RATING,
+        blank=True,
+        default='f',
+        help_text='Track rating',
+    )
+
     def __str__(self):
         """Function returning a string of the track title."""
         return f'{self.track.title} ({self.id})'

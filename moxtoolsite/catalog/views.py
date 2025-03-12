@@ -1,6 +1,28 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.views import generic
 from .models import Artist, Genre, Playlist, Track, TrackInstance
 
+
+class TrackListView(generic.ListView):
+    model = Track
+    context_object_name = 'track_list'
+    #queryset = Track.objects.filter(title__icontains='house')[:5]
+    template_name = 'tracks/track_list.html'
+
+    def get_queryset(self):
+        return Track.objects.filter(title__icontains='house')[:5]
+
+    def get_context_data(self, **kwargs):
+        context = super(TrackListView, self).get_context_data(**kwargs)
+        context['some_data'] = 'This is just some data'
+        return context
+
+
+class TrackDetailView(generic.DetailView):
+    model = Track
+    context_object_name = 'track_list'
+    template_name = "catalog/track_detail.html"
+    
 
 def index(request):
     """View function returns the home page for the catalog application."""
@@ -25,3 +47,8 @@ def index(request):
 
     # render HTML template
     return render(request, 'index.html', context=context)
+
+
+def track_detail_view(request, primary_key):
+    track = get_object_or_404(Track, pk=primary_key)
+    return render(request, 'catalog/track_detail.html', context={'track': track})
