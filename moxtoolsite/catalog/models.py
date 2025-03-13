@@ -82,6 +82,34 @@ class Track(models.Model):
     display_artist.short_description = 'Artist'
 
 
+class Tag(models.Model):
+    OBJECT_TYPE_LIST = [
+        ('t','track'),
+        ('p','playlist'),
+    ]
+    object_type = models.CharField(
+        max_length=8,
+        choices=OBJECT_TYPE_LIST,
+        blank=True,
+        default=None,
+        help_text='Object of a tag (e.g. track)',
+    )
+    TAG_TYPE_LIST = [
+        ('v','vibe'),
+        ('c','color'),
+        ('h','chords'),
+        ('s','sounds'),
+        ('g','groove'),
+    ]
+    tag_type = models.CharField(
+        max_length=6,
+        choices=TAG_TYPE_LIST,
+        blank=True,
+        default=None,
+        help_text='Type of tag (e.g. vibe)',
+    )
+
+
 class TrackInstance(models.Model):
     """Model representing a music track in a specific user library."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this track and owner library")
@@ -90,23 +118,24 @@ class TrackInstance(models.Model):
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tag = models.ManyToManyField(Tag, help_text="Select a tag for this track")
 
-    TRACK_RATING = (
-        (0, 'Unplayable'),
-        (1, 'Atrocious'),
-        (2, 'Terrible'),
-        (3, 'Bad'),
-        (4, 'Meh'),
-        (5, 'Okay'),
-        (6, 'Fine'),
-        (7, 'Good'),
-        (8, 'Great'),
-        (9, 'Excellent'),
-        (10, 'Perfect'),
-    )
+    TRACK_RATING = [
+        ('0', 'Unplayable'),
+        ('1', 'Atrocious'),
+        ('2', 'Terrible'),
+        ('3', 'Bad'),
+        ('4', 'Meh'),
+        ('5', 'Okay'),
+        ('6', 'Fine'),
+        ('7', 'Good'),
+        ('8', 'Great'),
+        ('9', 'Excellent'),
+        ('10', 'Perfect'),
+    ]
 
     rating = models.CharField(
-        max_length=1,
+        max_length=2,
         choices=TRACK_RATING,
         blank=True,
         default=None,
@@ -131,7 +160,7 @@ class TrackInstance(models.Model):
 
     @property
     def is_user_a_favorite(self):
-        return (self.date_added and date.today >= self.date_added and self.rating >= 9)
+        return (self.date_added and date.today >= self.date_added and self.rating and int(self.rating) >= 9)
 
     class Meta:
         ordering = ['date_added']
@@ -141,7 +170,9 @@ class Playlist(models.Model):
     """Model representing a music track, not specifically in any user's library."""
     name = models.CharField(max_length=200)
     track = models.ManyToManyField(TrackInstance, help_text="Select a track for this playlist")
+    tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist")
     date_added = models.DateField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         """Function returning a string of the playlist name."""

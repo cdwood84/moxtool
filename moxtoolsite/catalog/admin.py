@@ -32,9 +32,9 @@ class TrackAdmin(admin.ModelAdmin):
 
 @admin.register(TrackInstance)
 class TrackInstanceAdmin(admin.ModelAdmin):
-    list_display = ['track', 'get_track_genre', 'get_track_display_artist', 'date_added', 'play_count']
-    list_filter = ['date_added', 'play_count']
+    list_display = ['track', 'get_track_genre', 'get_track_display_artist', 'user', 'date_added', 'play_count', 'rating']
+    list_filter = ['date_added', 'play_count', 'rating']
     fieldsets = (
         (None,{'fields': ['track', 'id']}),
-        ('User Info',{'fields': ['date_added', 'rating', 'comments', 'play_count']})
+        ('User Info',{'fields': ['user', 'date_added', 'play_count', 'rating', 'comments']})
     )
