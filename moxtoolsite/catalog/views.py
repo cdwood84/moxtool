@@ -49,6 +49,11 @@ def index(request):
     num_playlists = Playlist.objects.count()
     num_playlists_starting_with_s = Playlist.objects.filter(name__istartswith='s').count()
 
+    # get data from request
+    num_visits = request.session.get('num_visits', 0)
+    num_visits += 1
+    request.session['num_visits'] = num_visits
+
     # define model context
     context = {
         'num_tracks': num_tracks,
@@ -57,6 +62,7 @@ def index(request):
         'num_artists': num_artists,
         'num_playlists': num_playlists,
         'num_playlists_starting_with_s': num_playlists_starting_with_s,
+        'num_visits': num_visits,
     }
 
     # render HTML template
@@ -71,3 +77,6 @@ def track_detail_view(request, primary_key):
 def artist_detail_view(request, primary_key):
     artist = get_object_or_404(Artist, pk=primary_key)
     return render(request, 'catalog/artist_detail.html', context={'artist': artist})
+
+
+# add more here
