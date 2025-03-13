@@ -1,3 +1,5 @@
+from datetime import date
+from django.conf import settings
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
@@ -87,18 +89,27 @@ class TrackInstance(models.Model):
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     TRACK_RATING = (
-        ('a', 'Awesome'),
-        ('f', 'Fine'),
-        ('t', 'Terrible'),
+        (0, 'Unplayable'),
+        (1, 'Atrocious'),
+        (2, 'Terrible'),
+        (3, 'Bad'),
+        (4, 'Meh'),
+        (5, 'Okay'),
+        (6, 'Fine'),
+        (7, 'Good'),
+        (8, 'Great'),
+        (9, 'Excellent'),
+        (10, 'Perfect'),
     )
 
     rating = models.CharField(
         max_length=1,
         choices=TRACK_RATING,
         blank=True,
-        default='f',
+        default=None,
         help_text='Track rating',
     )
 
@@ -117,6 +128,10 @@ class TrackInstance(models.Model):
         return self.track.genre
     
     get_track_genre.short_description = 'Genre'
+
+    @property
+    def is_user_a_favorite(self):
+        return (self.date_added and date.today >= self.date_added and self.rating >= 9)
 
     class Meta:
         ordering = ['date_added']
