@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Artist, Genre, Playlist, Track, TrackInstance
+from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
 
 
 @admin.register(Artist)
@@ -14,8 +14,14 @@ class GenreAdmin(admin.ModelAdmin):
 
 @admin.register(Playlist)
 class PlaylistAdmin(admin.ModelAdmin):
-    list_display = ['name', 'date_added']
-    list_filter = ['date_added']
+    list_display = ['name', 'user', 'date_added', 'display_tags']
+    list_filter = ['user', 'date_added', 'tag']
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ['value', 'type', 'user', 'date_added', 'detail']
+    list_filter = ['user', 'type', 'date_added']
 
 
 class TrackInstanceInline(admin.TabularInline):
@@ -32,9 +38,9 @@ class TrackAdmin(admin.ModelAdmin):
 
 @admin.register(TrackInstance)
 class TrackInstanceAdmin(admin.ModelAdmin):
-    list_display = ['track', 'get_track_genre', 'get_track_display_artist', 'user', 'date_added', 'play_count', 'rating']
-    list_filter = ['date_added', 'play_count', 'rating']
+    list_display = ['track', 'get_track_genre', 'get_track_display_artist', 'user', 'date_added', 'play_count', 'rating', 'display_tags']
+    list_filter = ['user', 'date_added', 'play_count', 'rating', 'tag']
     fieldsets = (
         (None,{'fields': ['track', 'id']}),
-        ('User Info',{'fields': ['user', 'date_added', 'play_count', 'rating', 'comments']})
+        ('User Info',{'fields': ['user', 'date_added', 'play_count', 'rating', 'tag', 'comments']})
     )

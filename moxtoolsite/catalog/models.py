@@ -8,6 +8,9 @@ import re
 import uuid
 
 
+# models shared by the application
+
+
 class Artist(models.Model):
     """Model representing a musical artist."""
     name = models.CharField(max_length=200)
@@ -28,9 +31,16 @@ class Artist(models.Model):
             if artist_track.genre.name not in artist_genre_list:
                 artist_genre_list.append(artist_track.genre.name)
         return re.sub(r"[\[|\]|']", '', str(artist_genre_list))
-
+    
     class Meta:
-        ordering = ['name']
+        ordering = [
+            'name',
+        ]
+        permissions = (
+            ('can_view_artist', 'Browse artists'),
+            ('can_create_artist', 'Create an artist'),
+            ('can_modify_artist', 'Modify an artist'),
+        )
 
 
 class Genre(models.Model):
@@ -57,6 +67,14 @@ class Genre(models.Model):
                 violation_error_message="Genre already exists (case insensiitive match)"
             ),
         ]
+        ordering = [
+            'name',
+        ]
+        permissions = (
+            ('can_view_genre', 'Browse genres'),
+            ('can_create_genre', 'Create a genre'),
+            ('can_modify_genre', 'Modify a genre'),
+        )
 
 
 class Track(models.Model):
@@ -80,34 +98,59 @@ class Track(models.Model):
         return ', '.join(artist.name for artist in self.artist.all()[:3])
     
     display_artist.short_description = 'Artist'
+    
+    class Meta:
+        ordering = [
+            'title',
+        ]
+        permissions = (
+            ('can_view_track', 'Browse tracks'),
+            ('can_create_track', 'Create a track'),
+            ('can_modify_track', 'Modify a track'),
+        )
+
+
+# models owned by the user
 
 
 class Tag(models.Model):
-    OBJECT_TYPE_LIST = [
-        ('t','track'),
-        ('p','playlist'),
-    ]
-    object_type = models.CharField(
-        max_length=8,
-        choices=OBJECT_TYPE_LIST,
-        blank=True,
-        default=None,
-        help_text='Object of a tag (e.g. track)',
-    )
-    TAG_TYPE_LIST = [
+    TYPE_LIST = [
         ('v','vibe'),
         ('c','color'),
         ('h','chords'),
         ('s','sounds'),
         ('g','groove'),
     ]
-    tag_type = models.CharField(
+    type = models.CharField(
         max_length=6,
-        choices=TAG_TYPE_LIST,
+        choices=TYPE_LIST,
         blank=True,
         default=None,
-        help_text='Type of tag (e.g. vibe)',
+        help_text='Type of tag (e.g. vibe, chords, etc.)',
     )
+    value = models.CharField(max_length=100, null=True)
+    detail = models.CharField(max_length=1000, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    date_added = models.DateField(null=True, blank=True)
+    public = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.value
+    
+    class Meta:
+        ordering = [
+            'type',
+            'date_added',
+        ]
+        permissions = (
+            ('can_view_own_tag', 'Browse your tags'),
+            ('can_view_public_tag', 'Browse public tags'),
+            ('can_view_any_tag', 'Browse tags'),
+            ('can_create_own_tag', 'Create a tag'),
+            ('can_create_any_tag', 'Create a tag'),
+            ('can_modify_own_tag', 'Modify one of your tags'),
+            ('can_modify_any_tag', 'Modify a tag'),
+        )
 
 
 class TrackInstance(models.Model):
@@ -118,20 +161,21 @@ class TrackInstance(models.Model):
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this track")
+    public = models.BooleanField(default=False)
+    tag = models.ManyToManyField(Tag, help_text="Select a tag for this track", blank=True)
 
     TRACK_RATING = [
-        ('0', 'Unplayable'),
-        ('1', 'Atrocious'),
-        ('2', 'Terrible'),
-        ('3', 'Bad'),
-        ('4', 'Meh'),
-        ('5', 'Okay'),
-        ('6', 'Fine'),
-        ('7', 'Good'),
-        ('8', 'Great'),
-        ('9', 'Excellent'),
-        ('10', 'Perfect'),
+        ('0', 'unplayable'),
+        ('1', 'atrocious'),
+        ('2', 'terrible'),
+        ('3', 'bad'),
+        ('4', 'meh'),
+        ('5', 'okay'),
+        ('6', 'fine'),
+        ('7', 'good'),
+        ('8', 'great'),
+        ('9', 'excellent'),
+        ('10', 'perfect'),
     ]
 
     rating = models.CharField(
@@ -157,33 +201,74 @@ class TrackInstance(models.Model):
         return self.track.genre
     
     get_track_genre.short_description = 'Genre'
+    
+    def display_tags(self):
+        return ', '.join(str(tag) for tag in self.tag.all()[:3])
+    
+    display_tags.short_description = 'Tags'
 
     @property
-    def is_user_a_favorite(self):
-        return (self.date_added and date.today >= self.date_added and self.rating and int(self.rating) >= 9)
+    def rating_numeric(self):
+        return int(self.rating)
+
+    @property
+    def is_a_user_favorite(self):
+        return (self.date_added and date.today >= self.date_added and self.rating and self.rating_numeric >= 9)
 
     class Meta:
-        ordering = ['date_added']
+        constraints = [
+            UniqueConstraint(
+                fields=['track', 'user'],
+                name='user_track_unique',
+                violation_error_message="User already has this track in their library"
+            ),
+        ]
+        ordering = [
+            'date_added',
+        ]
+        permissions = (
+            ('can_view_own_trackinstance', 'Browse your tracks'),
+            ('can_view_public_trackinstance', 'Browse public tracks'),
+            ('can_view_any_trackinstance', 'Browse track instances'),
+            ('can_create_own_trackinstance', 'Add a track to your library'),
+            ('can_create_any_trackinstance', 'Create an instance of a track'),
+            ('can_modify_own_trackinstance', 'Modify one of your tracks'),
+            ('can_modify_any_trackinstance', 'Modify a track instance'),
+        )
 
 
 class Playlist(models.Model):
     """Model representing a music track, not specifically in any user's library."""
     name = models.CharField(max_length=200)
     track = models.ManyToManyField(TrackInstance, help_text="Select a track for this playlist")
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist")
     date_added = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist", blank=True)
+    public = models.BooleanField(default=False)
 
     def __str__(self):
         """Function returning a string of the playlist name."""
         return self.name
     
     def get_absolute_url(self):
-        """Function returning a URL for playlist details."""
-        return reverse('playlist-detail', args=[str(self.id)])
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('track-detail', args=[url_friendly_name, str(self.id)])
+    
+    def display_tags(self):
+        return ', '.join(str(tag) for tag in self.tag.all()[:3])
+    
+    display_tags.short_description = 'Tags'
 
     class Meta:
-        ordering = ['date_added']
-
-
-# add more here
+        ordering = [
+            'date_added',
+        ]
+        permissions = (
+            ('can_view_own_playlist', 'Browse your playlists'),
+            ('can_view_public_playlist', 'Browse public playlists'),
+            ('can_view_any_playlist', 'Browse playlists'),
+            ('can_create_own_playlist', 'Create a playlist'),
+            ('can_create_any_playlist', 'Create a playlist'),
+            ('can_modify_own_playlist', 'Modify one of your playlists'),
+            ('can_modify_any_playlist', 'Modify a playlist'),
+        )

@@ -1,10 +1,10 @@
-.col-sm-2 {
-    margin-top: 20px;
-    margin-bottom: 20px;
-    padding: 5px;
-    list-style: none;
-    background: rgba(240, 240, 240, .75);
-  }
+.sidebar-nav {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 5px;
+  list-style: none;
+  background: rgba(240, 240, 240, .75);
+}
 .col-sm-10 {
     margin-top: 20px;
     margin-bottom: 20px;

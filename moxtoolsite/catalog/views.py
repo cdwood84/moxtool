@@ -1,3 +1,5 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.views import generic
 from .models import Artist, Genre, Playlist, Track, TrackInstance
@@ -77,6 +79,26 @@ def track_detail_view(request, primary_key):
 def artist_detail_view(request, primary_key):
     artist = get_object_or_404(Artist, pk=primary_key)
     return render(request, 'catalog/artist_detail.html', context={'artist': artist})
+
+
+class FavoriteTracksByUserListView(LoginRequiredMixin,generic.ListView):
+    model = TrackInstance
+    template_name = 'catalog/trackinstance_list_favorites_user.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            TrackInstance.objects.filter(user=self.request.user)
+            .filter(Q(rating='9') | Q(rating='10'))
+            .order_by('-rating', '-date_added')
+        )
+
+
+class PlaylistListView(generic.ListView):
+    model = Playlist
+    context_object_name = 'playlist_list'
+    template_name = 'catalog/playlist_list.html'
+    paginate_by = 20
 
 
 # add more here
