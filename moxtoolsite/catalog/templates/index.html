@@ -22,4 +22,7 @@
         <li><strong>Playlists:</strong> {{ num_playlists }}</li>
         <li><strong>Playlists starting with 'S':</strong> {{ num_playlists_starting_with_s }}</li>
     </ul>
+    <p>
+        You have visited this page {{ num_visits }} time{{ num_visits|pluralize }}.
+    </p>
 {% endblock %}

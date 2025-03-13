@@ -3,8 +3,12 @@
 {% block content %}
   <h1>Title: {{ track.title }}</h1>
 
-  <p><strong>Artist:</strong> <a href="">{{ track.artist.all|join:", " }}</a></p>
-  <!-- author detail link not yet defined -->
+  <p>
+    <strong>Artist:</strong> 
+    {% for artist in track.artist.all %}
+      {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
+    {% endfor %}
+  </p>
   <p><strong>Genre:</strong> {{ track.genre }}</p>
 
   <div style="margin-left:20px;margin-top:20px">
