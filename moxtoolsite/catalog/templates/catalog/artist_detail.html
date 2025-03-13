@@ -9,7 +9,7 @@
 
     {% for track in artist.track_set.all %}
       <hr />
-      <p><strong>Track:</strong> {{ track.title }}</p>
+      <p><strong>Track:</strong> <a href="{{ track.get_absolute_url }}">{{ track.title }}</a></p>
       <p><strong>Genre:</strong> {{ track.genre }}</p>
       <p><strong>DJ Count:</strong> {{ track.trackinstance_set.count }}</p>
       <p class="text-muted"><strong>Id:</strong> {{ track.id }}</p>
