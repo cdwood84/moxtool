@@ -81,7 +81,7 @@ def artist_detail_view(request, primary_key):
     return render(request, 'catalog/artist_detail.html', context={'artist': artist})
 
 
-class FavoriteTracksByUserListView(LoginRequiredMixin,generic.ListView):
+class FavoriteTracksByUserListView(LoginRequiredMixin, generic.ListView):
     model = TrackInstance
     template_name = 'catalog/trackinstance_list_favorites_user.html'
     paginate_by = 20
@@ -90,7 +90,7 @@ class FavoriteTracksByUserListView(LoginRequiredMixin,generic.ListView):
         return (
             TrackInstance.objects.filter(user=self.request.user)
             .filter(Q(rating='9') | Q(rating='10'))
-            .order_by('-rating', '-date_added')
+            .order_by('rating', '-play_count')
         )
 
 
@@ -100,5 +100,17 @@ class PlaylistListView(generic.ListView):
     template_name = 'catalog/playlist_list.html'
     paginate_by = 20
 
-
-# add more here
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            playlist_set = (
+                Playlist.objects
+                .filter(Q(public=True) | Q(user=self.request.user))
+                .order_by('-date_added')
+            )
+        else:
+            playlist_set = (
+                Playlist.objects
+                .filter(public=True)
+                .order_by('-date_added')
+            )
+        return playlist_set

@@ -14,6 +14,7 @@ import uuid
 class Artist(models.Model):
     """Model representing a musical artist."""
     name = models.CharField(max_length=200)
+    public = models.BooleanField(default=False)
 
     def __str__(self):
         """Function returning a string of the artist name."""
@@ -37,9 +38,12 @@ class Artist(models.Model):
             'name',
         ]
         permissions = (
-            ('can_view_artist', 'Browse artists'),
-            ('can_create_artist', 'Create an artist'),
-            ('can_modify_artist', 'Modify an artist'),
+            ('can_create_public_artist', 'Artist - Create Public'),
+            ('can_create_any_artist', 'Artist - Create Any'),
+            ('can_view_public_artist', 'Artist - View Public'),
+            ('can_view_any_artist', 'Artist - View Any'),
+            ('can_modify_public_artist', 'Artist - Modify Public'),
+            ('can_modify_any_artist', 'Artist - Modify Any'),
         )
 
 
@@ -50,6 +54,7 @@ class Genre(models.Model):
         unique=True,
         help_text="Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)"
     )
+    public = models.BooleanField(default=False)
 
     def __str__(self):
         """Function returning a string of the genre name."""
@@ -71,9 +76,12 @@ class Genre(models.Model):
             'name',
         ]
         permissions = (
-            ('can_view_genre', 'Browse genres'),
-            ('can_create_genre', 'Create a genre'),
-            ('can_modify_genre', 'Modify a genre'),
+            ('can_create_public_genre', 'Genre - Create Public'),
+            ('can_create_any_genre', 'Genre - Create Any'),
+            ('can_view_public_genre', 'Genre - View Public'),
+            ('can_view_any_genre', 'Genre - View Any'),
+            ('can_modify_public_genre', 'Genre - Modify Public'),
+            ('can_modify_any_genre', 'Genre - Modify Any'),
         )
 
 
@@ -83,6 +91,7 @@ class Track(models.Model):
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    public = models.BooleanField(default=False)
 
     def __str__(self):
         """Function returning a string of the track title."""
@@ -104,9 +113,12 @@ class Track(models.Model):
             'title',
         ]
         permissions = (
-            ('can_view_track', 'Browse tracks'),
-            ('can_create_track', 'Create a track'),
-            ('can_modify_track', 'Modify a track'),
+            ('can_create_public_track', 'Track - Create Public'),
+            ('can_create_any_track', 'Track - Create Any'),
+            ('can_view_public_track', 'Track - View Public'),
+            ('can_view_any_track', 'Track - View Any'),
+            ('can_modify_public_track', 'Track - Modify Public'),
+            ('can_modify_any_track', 'Track - Modify Any'),
         )
 
 
@@ -143,13 +155,14 @@ class Tag(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_view_own_tag', 'Browse your tags'),
-            ('can_view_public_tag', 'Browse public tags'),
-            ('can_view_any_tag', 'Browse tags'),
-            ('can_create_own_tag', 'Create a tag'),
-            ('can_create_any_tag', 'Create a tag'),
-            ('can_modify_own_tag', 'Modify one of your tags'),
-            ('can_modify_any_tag', 'Modify a tag'),
+            ('can_create_own_tag', 'Tag - Create Own'),
+            ('can_create_any_tag', 'Tag - Create Any'),
+            ('can_view_own_tag', 'Tag - View Own'),
+            ('can_view_public_tag', 'Tag - View Public'),
+            ('can_view_any_tag', 'Tag - View Any'),
+            ('can_modify_own_tag', 'Tag - Modify Own'),
+            ('can_modify_public_tag', 'Tag - Modify Public'),
+            ('can_modify_any_tag', 'Tag - Modify Any'),
         )
 
 
@@ -161,8 +174,8 @@ class TrackInstance(models.Model):
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    public = models.BooleanField(default=False)
     tag = models.ManyToManyField(Tag, help_text="Select a tag for this track", blank=True)
+    public = models.BooleanField(default=False)
 
     TRACK_RATING = [
         ('0', 'unplayable'),
@@ -227,13 +240,14 @@ class TrackInstance(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_view_own_trackinstance', 'Browse your tracks'),
-            ('can_view_public_trackinstance', 'Browse public tracks'),
-            ('can_view_any_trackinstance', 'Browse track instances'),
-            ('can_create_own_trackinstance', 'Add a track to your library'),
-            ('can_create_any_trackinstance', 'Create an instance of a track'),
-            ('can_modify_own_trackinstance', 'Modify one of your tracks'),
-            ('can_modify_any_trackinstance', 'Modify a track instance'),
+            ('can_create_own_trackinstance', 'Track Instance - Create Own'),
+            ('can_create_any_trackinstance', 'Track Instance - Create Any'),
+            ('can_view_own_trackinstance', 'Track Instance - View Own'),
+            ('can_view_public_trackinstance', 'Track Instance - View Public'),
+            ('can_view_any_trackinstance', 'Track Instance - View Any'),
+            ('can_modify_own_trackinstance', 'Track Instance - Modify Own'),
+            ('can_modify_public_trackinstance', 'Track Instance - Modify Public'),
+            ('can_modify_any_trackinstance', 'Track Instance - Modify Any'),
         )
 
 
@@ -264,11 +278,12 @@ class Playlist(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_view_own_playlist', 'Browse your playlists'),
-            ('can_view_public_playlist', 'Browse public playlists'),
-            ('can_view_any_playlist', 'Browse playlists'),
-            ('can_create_own_playlist', 'Create a playlist'),
-            ('can_create_any_playlist', 'Create a playlist'),
-            ('can_modify_own_playlist', 'Modify one of your playlists'),
-            ('can_modify_any_playlist', 'Modify a playlist'),
+            ('can_create_own_playlist', 'Playlist - Create Own'),
+            ('can_create_any_playlist', 'Playlist - Create Any'),
+            ('can_view_own_playlist', 'Playlist - View Own'),
+            ('can_view_public_playlist', 'Playlist - View Public'),
+            ('can_view_any_playlist', 'Playlist - View Any'),
+            ('can_modify_own_playlist', 'Playlist - Modify Own'),
+            ('can_modify_public_playlist', 'Playlist - Modify Public'),
+            ('can_modify_any_playlist', 'Playlist - Modify Any'),
         )

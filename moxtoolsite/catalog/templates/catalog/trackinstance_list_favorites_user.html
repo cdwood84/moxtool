@@ -9,7 +9,7 @@
             <a href="{{ trackinstance.track.get_absolute_url }}">{{ trackinstance.track.title }}</a> by 
             {% for artist in trackinstance.track.artist.all %}
                 {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
-            {% endfor %} ({{ trackinstance.rating }})
+            {% endfor %} (Rating = {{ trackinstance.rating }}, Plays = {{ trackinstance.play_count }})
         </li>
         {% endfor %}
         </ul>

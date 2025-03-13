@@ -1,22 +1,15 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-  <h1>Your Playlists</h1>
-  {% if playlist_list %}
-    <ul>
-      {% for playlist in playlist_list %}
-      <li>
-        <a href="{{ playlist.get_absolute_url }}">{{ playlist.name }}</a> {% if playlist.tag.all.count >= 1 %}({{ playlist.display_tags }}){% endif %}
-      </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>You have not created any playlists.</p>
-  {% endif %}
-  {% if perms.catalog.can_create_own_playlist %}
-    <p>Create a playlist (stub)</p>
-  {% endif %}
-  {% if perms.catalog.can_delete_own_playlist %}
-    <p>Delete a playlist (stub)</p>
-  {% endif %}
+    {% if playlist_list %}
+        <h1>Playlists</h1>
+        <ul>{% for playlist in playlist_list %}
+            <li>
+                <a href="{{ playlist.get_absolute_url }}">{{ playlist.name }}</a> by <strong>{{ playlist.user }}</strong>
+                <!-- {% if playlist.tag.all.count >= 1 %} ({{ playlist.display_tags }}){% endif %} -->
+            </li>
+        {% endfor %}</ul>
+    {% else %}
+        <p>You neither own any playlists nor are there any publicly shared on this site by other DJs.</p>
+    {% endif %}
 {% endblock %}
