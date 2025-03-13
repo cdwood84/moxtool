@@ -1,4 +1,4 @@
-.sidebar-nav {
+.col-sm-2 {
     margin-top: 20px;
     margin-bottom: 20px;
     padding: 5px;
@@ -10,4 +10,11 @@
     margin-bottom: 20px;
     padding: 10px;
     background: rgba(250, 250, 250, .8);
+}
+#logout-form {
+  display: inline;
+}
+#logout-form button {
+  padding: 0;
+  margin: 0;
 }
