@@ -38,12 +38,12 @@ class Artist(models.Model):
             'name',
         ]
         permissions = (
-            ('can_create_public_artist', 'Artist - Create Public'),
-            ('can_create_any_artist', 'Artist - Create Any'),
-            ('can_view_public_artist', 'Artist - View Public'),
-            ('can_view_any_artist', 'Artist - View Any'),
-            ('can_modify_public_artist', 'Artist - Modify Public'),
-            ('can_modify_any_artist', 'Artist - Modify Any'),
+            ('moxtool_can_create_public_artist', 'Artist - Create Public - DJ'),
+            ('moxtool_can_create_any_artist', 'Artist - Create Any - MOX'),
+            ('moxtool_can_view_public_artist', 'Artist - View Public - DJ'),
+            ('moxtool_can_view_any_artist', 'Artist - View Any - MOX'),
+            ('moxtool_can_modify_public_artist', 'Artist - Modify Public - DJ'),
+            ('moxtool_can_modify_any_artist', 'Artist - Modify Any - MOX'),
         )
 
 
@@ -76,12 +76,12 @@ class Genre(models.Model):
             'name',
         ]
         permissions = (
-            ('can_create_public_genre', 'Genre - Create Public'),
-            ('can_create_any_genre', 'Genre - Create Any'),
-            ('can_view_public_genre', 'Genre - View Public'),
-            ('can_view_any_genre', 'Genre - View Any'),
-            ('can_modify_public_genre', 'Genre - Modify Public'),
-            ('can_modify_any_genre', 'Genre - Modify Any'),
+            ('moxtool_can_create_public_genre', 'Genre - Create Public - DJ'),
+            ('moxtool_can_create_any_genre', 'Genre - Create Any - MOX'),
+            ('moxtool_can_view_public_genre', 'Genre - View Public - DJ'),
+            ('moxtool_can_view_any_genre', 'Genre - View Any - MOX'),
+            ('moxtool_can_modify_public_genre', 'Genre - Modify Public - DJ'),
+            ('moxtool_can_modify_any_genre', 'Genre - Modify Any - MOX'),
         )
 
 
@@ -113,12 +113,12 @@ class Track(models.Model):
             'title',
         ]
         permissions = (
-            ('can_create_public_track', 'Track - Create Public'),
-            ('can_create_any_track', 'Track - Create Any'),
-            ('can_view_public_track', 'Track - View Public'),
-            ('can_view_any_track', 'Track - View Any'),
-            ('can_modify_public_track', 'Track - Modify Public'),
-            ('can_modify_any_track', 'Track - Modify Any'),
+            ('moxtool_can_create_public_track', 'Track - Create Public - DJ'),
+            ('moxtool_can_create_any_track', 'Track - Create Any - MOX'),
+            ('moxtool_can_view_public_track', 'Track - View Public - DJ'),
+            ('moxtool_can_view_any_track', 'Track - View Any - MOX'),
+            ('moxtool_can_modify_public_track', 'Track - Modify Public - DJ'),
+            ('moxtool_can_modify_any_track', 'Track - Modify Any - MOX'),
         )
 
 
@@ -155,14 +155,14 @@ class Tag(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_create_own_tag', 'Tag - Create Own'),
-            ('can_create_any_tag', 'Tag - Create Any'),
-            ('can_view_own_tag', 'Tag - View Own'),
-            ('can_view_public_tag', 'Tag - View Public'),
-            ('can_view_any_tag', 'Tag - View Any'),
-            ('can_modify_own_tag', 'Tag - Modify Own'),
-            ('can_modify_public_tag', 'Tag - Modify Public'),
-            ('can_modify_any_tag', 'Tag - Modify Any'),
+            ('moxtool_can_create_own_tag', 'Tag - Create Own - DJ'),
+            ('moxtool_can_create_any_tag', 'Tag - Create Any - MOX'),
+            ('moxtool_can_view_own_tag', 'Tag - View Own - DJ'),
+            ('moxtool_can_view_public_tag', 'Tag - View Public - DJ'),
+            ('moxtool_can_view_any_tag', 'Tag - View Any - MOX'),
+            ('moxtool_can_modify_own_tag', 'Tag - Modify Own - DJ'),
+            ('moxtool_can_modify_public_tag', 'Tag - Modify Public - DJ'),
+            ('moxtool_can_modify_any_tag', 'Tag - Modify Any - MOX'),
         )
 
 
@@ -240,14 +240,14 @@ class TrackInstance(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_create_own_trackinstance', 'Track Instance - Create Own'),
-            ('can_create_any_trackinstance', 'Track Instance - Create Any'),
-            ('can_view_own_trackinstance', 'Track Instance - View Own'),
-            ('can_view_public_trackinstance', 'Track Instance - View Public'),
-            ('can_view_any_trackinstance', 'Track Instance - View Any'),
-            ('can_modify_own_trackinstance', 'Track Instance - Modify Own'),
-            ('can_modify_public_trackinstance', 'Track Instance - Modify Public'),
-            ('can_modify_any_trackinstance', 'Track Instance - Modify Any'),
+            ('moxtool_can_create_own_trackinstance', 'Track Instance - Create Own - DJ'),
+            ('moxtool_can_create_any_trackinstance', 'Track Instance - Create Any - MOX'),
+            ('moxtool_can_view_own_trackinstance', 'Track Instance - View Own - DJ'),
+            ('moxtool_can_view_public_trackinstance', 'Track Instance - View Public - DJ'),
+            ('moxtool_can_view_any_trackinstance', 'Track Instance - View Any - MOX'),
+            ('moxtool_can_modify_own_trackinstance', 'Track Instance - Modify Own - DJ'),
+            ('moxtool_can_modify_public_trackinstance', 'Track Instance - Modify Public - DJ'),
+            ('moxtool_can_modify_any_trackinstance', 'Track Instance - Modify Any - MOX'),
         )
 
 
@@ -278,12 +278,12 @@ class Playlist(models.Model):
             'date_added',
         ]
         permissions = (
-            ('can_create_own_playlist', 'Playlist - Create Own'),
-            ('can_create_any_playlist', 'Playlist - Create Any'),
-            ('can_view_own_playlist', 'Playlist - View Own'),
-            ('can_view_public_playlist', 'Playlist - View Public'),
-            ('can_view_any_playlist', 'Playlist - View Any'),
-            ('can_modify_own_playlist', 'Playlist - Modify Own'),
-            ('can_modify_public_playlist', 'Playlist - Modify Public'),
-            ('can_modify_any_playlist', 'Playlist - Modify Any'),
+            ('moxtool_can_create_own_playlist', 'Playlist - Create Own - DJ'),
+            ('moxtool_can_create_any_playlist', 'Playlist - Create Any - MOX'),
+            ('moxtool_can_view_own_playlist', 'Playlist - View Own - DJ'),
+            ('moxtool_can_view_public_playlist', 'Playlist - View Public - DJ'),
+            ('moxtool_can_view_any_playlist', 'Playlist - View Any - MOX'),
+            ('moxtool_can_modify_own_playlist', 'Playlist - Modify Own - DJ'),
+            ('moxtool_can_modify_public_playlist', 'Playlist - Modify Public - DJ'),
+            ('moxtool_can_modify_any_playlist', 'Playlist - Modify Any - MOX'),
         )
