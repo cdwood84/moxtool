@@ -1,10 +1,15 @@
-from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+import datetime
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError
 from django.db.models import Q
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
+from django.urls import reverse
 from django.views import generic
 from .models import Artist, Genre, Playlist, Track, TrackInstance
+from .forms import AddTrackToLibraryForm
 
 
 def index(request):
@@ -104,3 +109,96 @@ class PlaylistListView(LoginRequiredMixin, generic.ListView):
         else:
             raise PermissionDenied
         return list_result
+    
+
+@login_required
+def add_track_dj(request):
+
+    if request.method == 'POST':
+        form = AddTrackToLibraryForm(request.POST)
+        if form.is_valid():
+
+            # check genres
+            try:
+                genre, genre_created = Genre.objects.get_or_create(name=form.cleaned_data['genre_name'])
+                print('Genre: ',genre,' (new = ',genre_created,')')
+                if genre_created == True:
+                    genre.save()
+            except IntegrityError as e:
+                print(f" ")
+                print(f"IntegrityError occurred: {e}")
+                print(f"Error occured on Genre step")
+                print(f" ")
+                return HttpResponseRedirect(reverse('add-track-failure'))
+
+            # check track
+            try:
+                track, track_created = Track.objects.get_or_create(
+                    beatport_track_id=form.cleaned_data['beatport_track_id'],
+                    defaults={
+                        'genre': genre,
+                        'title': form.cleaned_data['track_title']
+                    })
+                print('Track: ',track,' (new = ',track_created,')')
+                if track_created == True:
+                    track.save()
+            except IntegrityError as e:
+                print(f" ")
+                print(f"IntegrityError occurred: {e}")
+                print(f"Error occured on Track step")
+                print(f" ")
+                return HttpResponseRedirect(reverse('add-track-failure'))
+
+            # check artists
+            try:
+                for artist_name in [element.strip() for element in form.cleaned_data['artist_names'].split(',')]:
+                    artist, artist_created = Artist.objects.get_or_create(name=artist_name)
+                    print('Artist: ',artist,' (new = ',artist_created,')')
+                    if artist_created == True:
+                        artist.save()
+                    if track_created == True:
+                        track.artist.add(artist)
+            except IntegrityError as e:
+                print(f" ")
+                print(f"IntegrityError occurred: {e}")
+                print(f"Error occured on Artist step")
+                print(f" ")
+                return HttpResponseRedirect(reverse('add-track-failure'))
+
+            # check track instance
+            try:
+                trackinstance, trackinstance_created = TrackInstance.objects.get_or_create(
+                    track=track,
+                    user=request.user,
+                    defaults={
+                        'comments': form.cleaned_data['comments'],
+                        'date_added': form.cleaned_data['date_added'],
+                        'play_count': form.cleaned_data['play_count'],
+                        'rating': form.cleaned_data['rating'],
+                        'public': form.cleaned_data['public_flag'],
+                    })
+                print('TrackInstance: ',trackinstance,' (new = ',trackinstance_created,')')
+                if trackinstance_created == True:
+                    trackinstance.save()
+            except IntegrityError as e:
+                print(f" ")
+                print(f"IntegrityError occurred: {e}")
+                print(f"Error occured on TrackInstance step")
+                print(f" ")
+                return HttpResponseRedirect(reverse('add-track-failure'))
+            
+            # redirect if successful
+            return HttpResponseRedirect(reverse('add-track-success'))
+    else:
+        proposed_genre_name = 'House'
+        date_added = datetime.date.today()
+        form = AddTrackToLibraryForm(initial={
+            'genre_name': proposed_genre_name,
+            'date_added': date_added,
+        })
+
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'catalog/add_track_dj.html', context)

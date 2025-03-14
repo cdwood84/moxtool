@@ -88,7 +88,7 @@ class Genre(models.Model):
 class Track(models.Model):
     """Model representing a music track, not specifically in any user's library."""
     title = models.CharField(max_length=200)
-    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", null=True)
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     public = models.BooleanField(default=False)
