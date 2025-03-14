@@ -43,39 +43,84 @@ def index(request):
     return render(request, 'index.html', context=context)
 
 
-class TrackListView(generic.ListView):
+class TrackListView(LoginRequiredMixin, generic.ListView):
     model = Track
     context_object_name = 'track_list'
     template_name = 'catalog/track_list.html'
     paginate_by = 20
-    # queryset = Track.objects.filter(title__icontains='house')[:5]
 
-    # def get_queryset(self):
-    #     return Track.objects.filter(title__icontains='house')[:5]
+    def get_queryset(self):
+        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
+            list_result = Track.objects.all()
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            list_result = Track.objects.filter(Q(public=True) | Q(user=self.request.user))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
+            list_result = Track.objects.filter(public=True)
+        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            list_result = Track.objects.filter(user=self.request.user)
+        else:
+            raise PermissionDenied
+        return list_result
 
-    # def get_context_data(self, **kwargs):
-    #     context = super(TrackListView, self).get_context_data(**kwargs)
-    #     context['some_data'] = 'This is just some data'
-    #     return context
 
-
-class TrackDetailView(generic.DetailView):
+class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     model = Track
     context_object_name = 'track'
     template_name = "catalog/track_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
+            obj = Track.objects.get(id=pk)
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            obj = Track.objects.get(Q(id=pk) & (Q(public=True) | Q(user=self.request.user)))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
+            obj = Track.objects.get(Q(id=pk) & Q(public=True))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            obj = Track.objects.get(Q(id=pk) & Q(user=self.request.user))
+        else:
+            raise PermissionDenied
+        return obj
 
 
-class ArtistListView(generic.ListView):
+class ArtistListView(LoginRequiredMixin, generic.ListView):
     model = Artist
     context_object_name = 'artist_list'
     template_name = 'catalog/artist_list.html'
     paginate_by = 20
 
+    def get_queryset(self):
+        if self.request.user.has_perm('catalog.moxtool_can_view_any_artist'):
+            list_result = Artist.objects.all()
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_artist') and self.request.user.has_perm('catalog.moxtool_can_view_own_artist'):
+            list_result = Artist.objects.filter(Q(public=True) | Q(user=self.request.user))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_artist'):
+            list_result = Artist.objects.filter(public=True)
+        elif self.request.user.has_perm('catalog.moxtool_can_view_own_artist'):
+            list_result = Artist.objects.filter(user=self.request.user)
+        else:
+            raise PermissionDenied
+        return list_result
 
-class ArtistDetailView(generic.DetailView):
+
+class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
     model = Artist
     context_object_name = 'artist'
     template_name = "catalog/artist_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
+            obj = Artist.objects.get(id=pk)
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            obj = Artist.objects.get(Q(id=pk) & (Q(public=True) | Q(user=self.request.user)))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
+            obj = Artist.objects.get(Q(id=pk) & Q(public=True))
+        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
+            obj = Artist.objects.get(Q(id=pk) & Q(user=self.request.user))
+        else:
+            raise PermissionDenied
+        return obj
 
 
 class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
@@ -84,11 +129,15 @@ class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return (
-            TrackInstance.objects
-            .filter(user=self.request.user)
-            .order_by('date_added', '-play_count')
-        )
+        if self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
+            list_result = (
+                TrackInstance.objects
+                .filter(user=self.request.user)
+                .order_by('date_added', '-play_count')
+            )
+        else:
+            raise PermissionDenied
+        return list_result
 
 
 class PlaylistListView(LoginRequiredMixin, generic.ListView):
@@ -111,7 +160,7 @@ class PlaylistListView(LoginRequiredMixin, generic.ListView):
         return list_result
     
 
-class PlaylistDetailView(generic.DetailView):
+class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
     model = Playlist
     context_object_name = 'playlist'
     template_name = "catalog/playlist_detail.html"
@@ -278,6 +327,7 @@ def remove_track_from_playlist_dj(request, playlist_id, trackinstance_id):
     return render(request, 'catalog/remove_track_from_playlist_dj.html', context)
 
 
+@login_required
 def confirm_remove_track_from_playlist_dj(request, playlist_id, trackinstance_id):
     playlist = get_object_or_404(Playlist, pk=playlist_id)
     trackinstance = playlist.track.filter(id=trackinstance_id)

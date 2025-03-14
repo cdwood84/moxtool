@@ -17,11 +17,9 @@ class Artist(models.Model):
     public = models.BooleanField(default=False)
 
     def __str__(self):
-        """Function returning a string of the artist name."""
         return self.name
 
     def get_absolute_url(self):
-        """Function returning a URL for artist details."""
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
         return reverse('artist-detail', args=[url_friendly_name, str(self.id)])
     
