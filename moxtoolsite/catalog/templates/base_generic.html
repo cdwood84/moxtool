@@ -36,7 +36,8 @@
             <ul class="sidebar-nav">
               {% if user.is_authenticated %}
                 <li>User: {{ user.get_username }}</li>
-                <li><a href="{% url 'my-favorites' %}">My Favorite Tracks</a></li>
+                <li><a href="{% url 'user-trackinstances' %}">My tracks</a></li>
+                <li><a href="{% url 'user-playlists' %}">My playlists</a></li>
                 <li>
                   <form id="logout-form" method="post" action="{% url 'logout' %}">
                     {% csrf_token %}

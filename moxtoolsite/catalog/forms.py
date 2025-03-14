@@ -39,6 +39,7 @@ class AddTrackToLibraryForm(forms.Form):
     )
     public_flag = forms.BooleanField(
         help_text="Indicate whether you want owning this track to be made public on MoxToolSite (default is false).",
+        required=False,
     )
 
     def clean_rating(self):
@@ -46,3 +47,14 @@ class AddTrackToLibraryForm(forms.Form):
         if data < 0 or data > 10:
             raise ValidationError(_('Invalid rating - value must be between 0 and 10'))
         return data
+    
+
+class AddTrackToPlaylistForm(forms.Form):
+    track_selection = forms.ModelMultipleChoiceField(
+        queryset=TrackInstance.objects.none(),
+        widget=forms.CheckboxSelectMultiple
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['track_selection'].queryset = TrackInstance.objects.filter(user=user)

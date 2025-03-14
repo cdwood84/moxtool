@@ -9,7 +9,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 from .models import Artist, Genre, Playlist, Track, TrackInstance
-from .forms import AddTrackToLibraryForm
+from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm
 
 
 def index(request):
@@ -78,16 +78,16 @@ class ArtistDetailView(generic.DetailView):
     template_name = "catalog/artist_detail.html"
 
 
-class FavoriteTracksByUserListView(LoginRequiredMixin, generic.ListView):
+class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
     model = TrackInstance
-    template_name = 'catalog/trackinstance_list_favorites_user.html'
+    template_name = 'catalog/user_trackinstance_list.html'
     paginate_by = 20
 
     def get_queryset(self):
         return (
-            TrackInstance.objects.filter(user=self.request.user)
-            .filter(Q(rating='9') | Q(rating='10'))
-            .order_by('rating', '-play_count')
+            TrackInstance.objects
+            .filter(user=self.request.user)
+            .order_by('date_added', '-play_count')
         )
 
 
@@ -110,6 +110,12 @@ class PlaylistListView(LoginRequiredMixin, generic.ListView):
             raise PermissionDenied
         return list_result
     
+
+class PlaylistDetailView(generic.DetailView):
+    model = Playlist
+    context_object_name = 'playlist'
+    template_name = "catalog/playlist_detail.html"
+
 
 @login_required
 def add_track_dj(request):
@@ -188,7 +194,7 @@ def add_track_dj(request):
                 return HttpResponseRedirect(reverse('add-track-failure'))
             
             # redirect if successful
-            return HttpResponseRedirect(reverse('add-track-success'))
+            return HttpResponseRedirect(reverse('user-trackinstances'))
     else:
         proposed_genre_name = 'House'
         date_added = datetime.date.today()
@@ -202,3 +208,71 @@ def add_track_dj(request):
     }
 
     return render(request, 'catalog/add_track_dj.html', context)
+
+
+
+def add_track_failure(request):
+    return render(request, 'catalog/add_track_failure.html')
+
+
+class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
+    model = Playlist
+    template_name = 'catalog/user_playlist_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Playlist.objects
+            .filter(user=self.request.user)
+            .order_by('name')
+        )
+
+
+@login_required
+def add_playlist_dj(request):
+    
+    # form handling here
+    
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'catalog/add_playlist_dj.html', context)
+
+
+def add_playlist_failure(request):
+    return render(request, 'catalog/add_playlist_failure.html')
+
+
+@login_required
+def add_track_to_playlist_dj(request, pk):
+
+    playlist = get_object_or_404(Playlist, pk=pk)
+    
+    if request.method == 'POST':
+        form = AddTrackToPlaylistForm(request.user, request.POST)
+        if form.is_valid():
+            for trackinstance in form.cleaned_data['track_selection']:
+                print(trackinstance)
+                playlist.track.add(trackinstance.id)
+                return HttpResponseRedirect(playlist.get_absolute_url())
+    else:
+        form = AddTrackToPlaylistForm(request.user)
+    
+    context = {
+        'form': form,
+        'playlist': playlist,
+    }
+
+    return render(request, 'catalog/add_track_to_playlist_dj.html', context)
+
+
+@login_required
+def remove_track_from_playlist_dj(request, playlist_id, trackinstance_id):
+    playlist = get_object_or_404(Playlist, pk=playlist_id)
+    trackinstance = TrackInstance.object.filter(id=trackinstance_id)
+    context = {
+        'playlist': playlist,
+        'trackinstance': trackinstance,
+    }
+    return render(request, 'catalog/remove_track_from_playlist_dj.html', context)

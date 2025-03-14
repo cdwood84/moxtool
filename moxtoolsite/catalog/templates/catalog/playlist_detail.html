@@ -1,0 +1,31 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>{{ playlist.name }}</h1>
+
+  <p>a <strong>{% if playlist.public == True %}public{% else %}private{% endif %}</strong> playlist created by <strong>{{ playlist.user }}</strong></p>
+  <p><strong>Date Added:</strong> {{ playlist.date_added }}</p>
+  <p>
+    <strong>Tags:</strong> 
+    {% for tag in playlist.tag.all %}
+      {% if not forloop.first %}, {% endif %}<a href="{{ tag.get_absolute_url }}">{{ tag }}</a>
+    {% endfor %}
+  </p>
+
+  <div style="margin-left:20px;margin-top:20px">
+    <h4>Tracks</h4>
+
+    {% for trackinstance in playlist.track.all %}
+      <hr />
+      <p><strong>Title:</strong> <a href="{{ trackinstance.track.get_absolute_url }}">{{ trackinstance.track.title }}</a></p>
+      <p><strong>Artist:</strong> {% for artist in trackinstance.track.artist.all %}
+        {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
+      {% endfor %}</p>
+      <p><strong>Rating:</strong> <span class="{% if trackinstance.rating_numeric >= 9 %}text-success{% elif trackinstance.rating_numeric <= 6 %}text-danger{% else %}text-warning{% endif %}">{{ trackinstance.get_rating_display }}</span></p>
+      <p><a href="{% url 'remove-track-from-playlist-dj' playlist.id trackinstance.id %}"></a></p>
+    {% endfor %}
+  </div>
+  {% if playlist.user == request.user %}
+    <p><a href="{{ playlist.get_url_to_add_track }}">Add a track to this playlist</a></p>
+  {% endif %}
+{% endblock %}

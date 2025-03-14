@@ -1,0 +1,15 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    <h1>Your playlists</h1>
+    {% if playlist_list %}
+        <ul>
+        {% for playlist in playlist_list %}
+            <li><a href="{{ playlist.get_absolute_url }}">{{ playlist.name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+      <p>You don't have any playlists.</p>
+    {% endif %}
+    <p><a href="{% url 'add-playlist-dj' %}">Add a playlist</a></p>
+{% endblock %}

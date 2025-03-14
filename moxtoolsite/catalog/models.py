@@ -88,7 +88,7 @@ class Genre(models.Model):
 class Track(models.Model):
     """Model representing a music track, not specifically in any user's library."""
     title = models.CharField(max_length=200)
-    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", null=True)
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     public = models.BooleanField(default=False)
@@ -215,6 +215,11 @@ class TrackInstance(models.Model):
     
     get_track_genre.short_description = 'Genre'
     
+    def get_track_title(self):
+        return self.track.title
+    
+    get_track_title.short_description = 'Track Title'
+    
     def display_tags(self):
         return ', '.join(str(tag) for tag in self.tag.all()[:3])
     
@@ -266,7 +271,10 @@ class Playlist(models.Model):
     
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('track-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('playlist-detail', args=[url_friendly_name, str(self.id)])
+    
+    def get_url_to_add_track(self):
+        return reverse('add-track-to-playlist-dj', args=[str(self.id)])
     
     def display_tags(self):
         return ', '.join(str(tag) for tag in self.tag.all()[:3])
