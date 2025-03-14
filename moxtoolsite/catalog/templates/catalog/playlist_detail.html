@@ -20,9 +20,9 @@
       <p><strong>Title:</strong> <a href="{{ trackinstance.track.get_absolute_url }}">{{ trackinstance.track.title }}</a></p>
       <p><strong>Artist:</strong> {% for artist in trackinstance.track.artist.all %}
         {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
-      {% endfor %}</p>
+        {% endfor %}</p>
       <p><strong>Rating:</strong> <span class="{% if trackinstance.rating_numeric >= 9 %}text-success{% elif trackinstance.rating_numeric <= 6 %}text-danger{% else %}text-warning{% endif %}">{{ trackinstance.get_rating_display }}</span></p>
-      <p><a href="{% url 'remove-track-from-playlist-dj' playlist.id trackinstance.id %}"></a></p>
+      <p><a href="{% url 'remove-track-from-playlist-dj' playlist.id trackinstance.id %}">Remove track from playlist</a></p>
     {% endfor %}
   </div>
   {% if playlist.user == request.user %}

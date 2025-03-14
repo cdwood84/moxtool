@@ -270,9 +270,23 @@ def add_track_to_playlist_dj(request, pk):
 @login_required
 def remove_track_from_playlist_dj(request, playlist_id, trackinstance_id):
     playlist = get_object_or_404(Playlist, pk=playlist_id)
-    trackinstance = TrackInstance.object.filter(id=trackinstance_id)
+    trackinstance = playlist.track.filter(id=trackinstance_id)
     context = {
         'playlist': playlist,
         'trackinstance': trackinstance,
     }
     return render(request, 'catalog/remove_track_from_playlist_dj.html', context)
+
+
+def confirm_remove_track_from_playlist_dj(request, playlist_id, trackinstance_id):
+    playlist = get_object_or_404(Playlist, pk=playlist_id)
+    trackinstance = playlist.track.filter(id=trackinstance_id)
+    context = {
+        'playlist': playlist,
+        'trackinstance': trackinstance,
+    }
+    if request.method == 'POST':
+        playlist.track.remove(trackinstance_id)
+        return HttpResponseRedirect(playlist.get_absolute_url())
+    else:
+        return render(request, 'catalog/remove_track_from_playlist_failure.html', context)

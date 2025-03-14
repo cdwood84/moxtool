@@ -18,5 +18,6 @@ urlpatterns = [
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
     # path('myplaylists/<uuid:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
-    re_path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove', views.add_track_to_playlist_dj, name='remove-track-from-playlist-dj'),
+    path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove', views.remove_track_from_playlist_dj, name='remove-track-from-playlist-dj'),
+    path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove/confirm', views.confirm_remove_track_from_playlist_dj, name='comfirm-remove-track-from-playlist-dj'),
 ]

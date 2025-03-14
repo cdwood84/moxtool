@@ -16,7 +16,7 @@
 {% else %} -->
 <p>Are you sure you want to remove this track from the playlist?</p>
 
-<form action="" method="POST">
+<form action="remove/confirm" method="POST">
   {% csrf_token %}
   <input type="submit" action="" value="Yes, delete.">
 </form>
