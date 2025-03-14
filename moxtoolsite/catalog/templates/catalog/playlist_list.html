@@ -1,0 +1,15 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if playlist_list %}
+        <h1>Playlists</h1>
+        <ul>{% for playlist in playlist_list %}
+            <li>
+                <a href="{{ playlist.get_absolute_url }}">{{ playlist.name }}</a> by <strong>{{ playlist.user }}</strong>
+                <!-- {% if playlist.tag.all.count >= 1 %} ({{ playlist.display_tags }}){% endif %} -->
+            </li>
+        {% endfor %}</ul>
+    {% else %}
+        <p>You neither own any playlists nor are there any publicly shared on this site by other DJs.</p>
+    {% endif %}
+{% endblock %}
