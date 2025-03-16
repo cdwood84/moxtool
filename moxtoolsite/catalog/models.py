@@ -1,7 +1,9 @@
 from datetime import date
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Q
 from django.db.models.functions import Lower
 from django.urls import reverse
 import re
@@ -10,11 +12,43 @@ import uuid
 
 # models shared by the application
 
+class SharedModelPermissionManager(models.Manager):
+    valid_shared_models = ['artist','genre','track']
+
+    def get_queryset_can_view(self, user, shared_model):
+        if shared_model in self.valid_shared_models:
+            if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
+                return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
+                return self.get_queryset().filter(public=True)
+            else:
+                raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
+        else:
+            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+
+    def get_queryset_can_direct_modify(self, user, shared_model):
+        if shared_model in self.valid_shared_models:
+            if user.has_perm('catalog.moxtool_can_modify_any_artist'):
+                return self.get_queryset()
+            else:
+                raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
+        else:
+            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+
+    def get_queryset_can_request_modify(self, user, shared_model):
+        if shared_model in self.valid_shared_models:
+            if user.has_perm('catalog.moxtool_can_modify_public_artist'):
+                return self.get_queryset().filter(public=True)
+            else:
+                raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+        else:
+            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+
 
 class Artist(models.Model):
-    """Model representing a musical artist."""
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
+    objects = SharedModelPermissionManager()
 
     def __str__(self):
         return self.name
@@ -53,14 +87,25 @@ class Genre(models.Model):
         help_text="Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)"
     )
     public = models.BooleanField(default=False)
+    objects = SharedModelPermissionManager()
 
     def __str__(self):
         """Function returning a string of the genre name."""
         return self.name
     
     def get_absolute_url(self):
-        """Function returning a URL for genre details."""
-        return reverse('genre-detail', args=[str(self.id)])
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('genre-detail', args=[url_friendly_name, str(self.id)])
+    
+    def get_viewable_tracks_in_genre(self, user):
+        return Track.objects.get_queryset_can_view(user, 'track').filter(genre=self)
+    
+    def get_viewable_artists_in_genre(self, user):
+        viewable_tracks = self.get_viewable_tracks_in_genre(user)
+        viewable_artists = Artist.objects.none()
+        for track in viewable_tracks:
+            viewable_artists = viewable_artists | track.get_viewable_artists_on_track(user)
+        return viewable_artists
     
     class Meta:
         constraints = [
@@ -81,28 +126,31 @@ class Genre(models.Model):
             ('moxtool_can_modify_public_genre', 'Genre - Modify Public - DJ'),
             ('moxtool_can_modify_any_genre', 'Genre - Modify Any - MOX'),
         )
-
+   
 
 class Track(models.Model):
-    """Model representing a music track, not specifically in any user's library."""
     title = models.CharField(max_length=200)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     public = models.BooleanField(default=False)
+    objects = SharedModelPermissionManager()
 
     def __str__(self):
-        """Function returning a string of the track title."""
         return self.title
     
     def get_absolute_url(self):
-        """Function returning a URL for track details."""
         url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
         return reverse('track-detail', args=[url_friendly_title, str(self.id)])
     
     def display_artist(self):
-        """Function returning a string of the artists on the track."""
         return ', '.join(artist.name for artist in self.artist.all()[:3])
+    
+    def get_viewable_artists_on_track(self, user):
+        viewable_artists = Artist.objects.none()
+        for artist in self.artist:
+            viewable_artists = viewable_artists | Artist.objects.get_queryset_can_view(user, 'artist')
+        return viewable_artists
     
     display_artist.short_description = 'Artist'
     
@@ -122,6 +170,45 @@ class Track(models.Model):
 
 # models owned by the user
 
+
+class UserModelPermissionManager(models.Manager):
+    valid_user_models = ['tag','trackinstance','playlist']
+
+    def get_queryset_can_view(self, user, user_model):
+        if user_model in self.valid_user_models:
+            if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
+                return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) or user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                return self.get_queryset().filter(Q(public=True) | Q(user=user))
+            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
+                return self.get_queryset().filter(public=True)
+            elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                return self.get_queryset().filter(user=user)
+            else:
+                raise PermissionDenied("You do not have permission to view any tags.")
+        else:
+            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+
+    def get_queryset_can_direct_modify(self, user, user_model):
+        if user_model in self.valid_user_models:
+            if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
+                return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
+                return self.get_queryset().filter(user=user)
+            else:
+                raise PermissionDenied("You do not have permission to directly modify any tags.")
+        else:
+            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+
+    def get_queryset_can_request_modify(self, user, user_model):
+        if user_model in self.valid_user_models:
+            if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
+                return self.get_queryset().filter(public=True)
+            else:
+                raise PermissionDenied("You do not have permission to request modifications to tags.")
+        else:
+            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+        
 
 class Tag(models.Model):
     TYPE_LIST = [
@@ -143,9 +230,21 @@ class Tag(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     date_added = models.DateField(null=True, blank=True)
     public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
 
     def __str__(self):
-        return self.value
+        return self.type+' - '+self.value
+    
+    def get_absolute_url(self):
+        url_friendly_type = re.sub(r'[^a-zA-Z0-9]', '_', self.get_type_display().lower())
+        url_friendly_value = re.sub(r'[^a-zA-Z0-9]', '_', self.value.lower())
+        return reverse('tag-detail', args=[url_friendly_type, url_friendly_value, str(self.id)])
+    
+    def get_viewable_trackinstances_tagged(self, user):
+        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(tag__in=[self])
+    
+    def get_viewable_playlists_tagged(self, user):
+        return Playlist.objects.get_queryset_can_view(user, 'playlist').filter(tag__in=[self])
     
     class Meta:
         ordering = [
@@ -174,6 +273,7 @@ class TrackInstance(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     tag = models.ManyToManyField(Tag, help_text="Select a tag for this track", blank=True)
     public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
 
     TRACK_RATING = [
         ('0', 'unplayable'),
@@ -262,6 +362,7 @@ class Playlist(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist", blank=True)
     public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
 
     def __str__(self):
         """Function returning a string of the playlist name."""

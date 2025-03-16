@@ -8,20 +8,23 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, Genre, Playlist, Track, TrackInstance
+from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm
+
+
+# upper navigation pages and assocciated detail pages
 
 
 def index(request):
     """View function returns the home page for the catalog application."""
 
     # get data from model objects
-    num_tracks = Track.objects.all().count()
-    num_tracks_tech_house = Track.objects.filter(genre__name='Tech House').count()
-    num_instances = TrackInstance.objects.count()
-    num_artists = Artist.objects.count()
-    num_playlists = Playlist.objects.count()
-    num_playlists_starting_with_s = Playlist.objects.filter(name__istartswith='s').count()
+    num_tracks = Track.objects.filter(public=True).count()
+    num_tracks_tech_house = Track.objects.filter(Q(genre__name='Tech House') & Q(public=True)).count()
+    num_instances = TrackInstance.objects.filter(public=True).count()
+    num_artists = Artist.objects.filter(public=True).count()
+    num_playlists = Playlist.objects.filter(public=True).count()
+    num_playlists_starting_with_s = Playlist.objects.filter(Q(name__istartswith='s') & Q(public=True)).count()
 
     # get data from request
     num_visits = request.session.get('num_visits', 0)
@@ -43,46 +46,6 @@ def index(request):
     return render(request, 'index.html', context=context)
 
 
-class TrackListView(LoginRequiredMixin, generic.ListView):
-    model = Track
-    context_object_name = 'track_list'
-    template_name = 'catalog/track_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
-            list_result = Track.objects.all()
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            list_result = Track.objects.filter(Q(public=True) | Q(user=self.request.user))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
-            list_result = Track.objects.filter(public=True)
-        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            list_result = Track.objects.filter(user=self.request.user)
-        else:
-            raise PermissionDenied
-        return list_result
-
-
-class TrackDetailView(LoginRequiredMixin, generic.DetailView):
-    model = Track
-    context_object_name = 'track'
-    template_name = "catalog/track_detail.html"
-    
-    def get_object(self):
-        pk = self.kwargs.get(self.pk_url_kwarg)
-        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
-            obj = Track.objects.get(id=pk)
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            obj = Track.objects.get(Q(id=pk) & (Q(public=True) | Q(user=self.request.user)))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
-            obj = Track.objects.get(Q(id=pk) & Q(public=True))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            obj = Track.objects.get(Q(id=pk) & Q(user=self.request.user))
-        else:
-            raise PermissionDenied
-        return obj
-
-
 class ArtistListView(LoginRequiredMixin, generic.ListView):
     model = Artist
     context_object_name = 'artist_list'
@@ -90,17 +53,7 @@ class ArtistListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_any_artist'):
-            list_result = Artist.objects.all()
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_artist') and self.request.user.has_perm('catalog.moxtool_can_view_own_artist'):
-            list_result = Artist.objects.filter(Q(public=True) | Q(user=self.request.user))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_artist'):
-            list_result = Artist.objects.filter(public=True)
-        elif self.request.user.has_perm('catalog.moxtool_can_view_own_artist'):
-            list_result = Artist.objects.filter(user=self.request.user)
-        else:
-            raise PermissionDenied
-        return list_result
+        return Artist.objects.get_queryset_can_view(self.request.user, 'artist')
 
 
 class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
@@ -110,17 +63,102 @@ class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        if self.request.user.has_perm('catalog.moxtool_can_view_any_track'):
-            obj = Artist.objects.get(id=pk)
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track') and self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            obj = Artist.objects.get(Q(id=pk) & (Q(public=True) | Q(user=self.request.user)))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_track'):
-            obj = Artist.objects.get(Q(id=pk) & Q(public=True))
-        elif self.request.user.has_perm('catalog.moxtool_can_view_own_track'):
-            obj = Artist.objects.get(Q(id=pk) & Q(user=self.request.user))
-        else:
-            raise PermissionDenied
-        return obj
+        return Artist.objects.get_queryset_can_view(self.request.user, 'artist').get(id=pk)
+
+
+class GenreListView(LoginRequiredMixin, generic.ListView):
+    model = Genre
+    context_object_name = 'genre_list'
+    template_name = 'catalog/genre_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Genre.objects.get_queryset_can_view(self.request.user, 'genre')
+
+
+class GenreDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Genre
+    context_object_name = 'genre'
+    template_name = "catalog/genre_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Genre.objects.get_queryset_can_view(self.request.user, 'genre').get(id=pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['viewable_tracks'] = context['genre'].get_viewable_tracks_in_genre(self.request.user)
+        context['viewable_artists'] = context['genre'].get_viewable_artists_in_genre(self.request.user)
+        return context
+
+
+class TrackListView(LoginRequiredMixin, generic.ListView):
+    model = Track
+    context_object_name = 'track_list'
+    template_name = 'catalog/track_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Track.objects.get_queryset_can_view(self.request.user, 'track')
+
+
+class TrackDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Track
+    context_object_name = 'track'
+    template_name = "catalog/track_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Track.objects.get_queryset_can_view(self.request.user, 'track').get(id=pk)
+
+
+class PlaylistListView(LoginRequiredMixin, generic.ListView):
+    model = Playlist
+    context_object_name = 'playlist_list'
+    template_name = 'catalog/playlist_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Playlist.objects.get_queryset_can_view(self.request.user, 'playlist')
+
+
+class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Playlist
+    context_object_name = 'playlist'
+    template_name = "catalog/playlist_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Playlist.objects.get_queryset_can_view(self.request.user, 'playlist').get(id=pk)
+
+
+class TagListView(LoginRequiredMixin, generic.ListView):
+    model = Tag
+    context_object_name = 'tag_list'
+    template_name = 'catalog/tag_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Tag.objects.get_queryset_can_view(self.request.user, 'tag')
+
+
+class TagDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Tag
+    context_object_name = 'tag'
+    template_name = "catalog/tag_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Tag.objects.get_queryset_can_view(self.request.user, 'tag').get(id=pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['viewable_playlists'] = context['tag'].get_viewable_playlists_tagged(self.request.user)
+        context['viewable_trackinstances'] = context['tag'].get_viewable_trackinstances_tagged(self.request.user)
+        return context
+
+
+# lower navigation pages and assocciated detail pages
 
 
 class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
@@ -138,32 +176,6 @@ class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
         else:
             raise PermissionDenied
         return list_result
-
-
-class PlaylistListView(LoginRequiredMixin, generic.ListView):
-    model = Playlist
-    context_object_name = 'playlist_list'
-    template_name = 'catalog/playlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_any_playlist'):
-            list_result = Playlist.objects.all().order_by('-date_added')
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_playlist') and self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
-            list_result = Playlist.objects.filter(Q(public=True) | Q(user=self.request.user)).order_by('-date_added')
-        elif self.request.user.has_perm('catalog.moxtool_can_view_public_playlist'):
-            list_result = Playlist.objects.filter(public=True).order_by('-date_added')
-        elif self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
-            list_result = Playlist.objects.filter(user=self.request.user).order_by('-date_added')
-        else:
-            raise PermissionDenied
-        return list_result
-    
-
-class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
-    model = Playlist
-    context_object_name = 'playlist'
-    template_name = "catalog/playlist_detail.html"
 
 
 @login_required

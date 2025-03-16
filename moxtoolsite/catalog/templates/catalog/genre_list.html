@@ -1,0 +1,14 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if genre_list %}
+        <h1>Genres</h1>
+        <ul>{% for genre in genre_list %}
+            <li>
+                <a href="{{ genre.get_absolute_url }}">{{ genre.name }}</a>
+            </li>
+        {% endfor %}</ul>
+    {% else %}
+        <p>There aren't any genres publicly shared on this site.</p>
+    {% endif %}
+{% endblock %}

@@ -29,9 +29,11 @@
           {% block sidebar %}
             <ul class="sidebar-nav">
               <li><a href="{% url 'index' %}">Home</a></li>
-              <li><a href="{% url 'tracks' %}">All tracks</a></li>
+              <li><a href="{% url 'genres' %}">All genres</a></li>
               <li><a href="{% url 'artists' %}">All artists</a></li>
+              <li><a href="{% url 'tracks' %}">All tracks</a></li>
               <li><a href="{% url 'playlists' %}">All playlists</a></li>
+              <li><a href="{% url 'tags' %}">All tags</a></li>
             </ul>
             <ul class="sidebar-nav">
               {% if user.is_authenticated %}

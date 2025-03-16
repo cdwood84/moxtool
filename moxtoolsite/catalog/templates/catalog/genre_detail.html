@@ -1,0 +1,23 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>Genre Name: {{ genre.name }}</h1>
+
+  <div style="margin-left:20px;margin-top:20px">
+    <h4>Artists</h4>
+    <ul>
+        {% for artist in viewable_artists %}
+            <li>><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a></li>
+        {% endfor %}
+    </ul>
+  </div>
+
+  <div style="margin-left:20px;margin-top:20px">
+    <h4>Tracks</h4>
+    <ul>
+        {% for track in viewable_tracks %}
+            <li><a href="{{ track.get_absolute_url }}">{{ track.title }}</a></li>
+        {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
