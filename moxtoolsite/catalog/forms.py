@@ -16,12 +16,16 @@ class AddTrackToLibraryForm(forms.Form):
         help_text="Enter the track title, which can be found on Beatport.",
         required=True,
     )
+    genre_name = forms.CharField(
+        help_text="Enter the genre name, which can be found on Beatport.",
+        required=True,
+    )
     artist_names = forms.CharField(
         help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
         required=True,
     )
-    genre_name = forms.CharField(
-        help_text="Enter the genre name, which can be found on Beatport.",
+    remix_artist_names = forms.CharField(
+        help_text="Enter the remix artist names, separated by commas, which can be found on Beatport.",
         required=True,
     )
 
@@ -80,106 +84,75 @@ class GenreForm(forms.ModelForm):
         ]
 
 
-class TrackForm(forms.ModelForm):
+class TrackForm(forms.Form):
 
-    existing_artists = ModelMultipleChoiceField(
-        queryset=Artist.objects.none(),
-        widget=SelectMultiple(attrs={'class': 'existing-artists-select'}),
-        required=False,
-        label="Existing Artists"
+    beatport_track_id = forms.IntegerField(
+        help_text="Enter the Beatport track ID, which can be found in the Beatport URL.",
+        required=True,
     )
-    new_artist_names = forms.CharField(
-        widget=forms.Textarea(attrs={'class': 'new-artist-names-textarea'}),
-        required=False,
-        label="New Artist Names (one per line)"
+    title = forms.CharField(
+        help_text="Enter the track title without the mix name, which can be found on Beatport.",
+        required=True,
     )
-    existing_remix_artists = ModelMultipleChoiceField(
-        queryset=Artist.objects.none(),
-        widget=SelectMultiple(attrs={'class': 'existing-remix-artists-select'}),
-        required=False,
-        label="Existing Artists (Remixer)"
+    genre_name = forms.CharField(
+        help_text="Enter the genre name, which can be found on Beatport.",
+        required=True,
     )
-    new_remix_artist_names = forms.CharField(
-        widget=forms.Textarea(attrs={'class': 'new-remix-artist-names-textarea'}),
-        required=False,
-        label="New Artist (Remixer) Names (one per line)"
+    artist_names = forms.CharField(
+        help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
+        required=True,
     )
-    existing_genre = ModelMultipleChoiceField(
-        queryset=Artist.objects.none(),
-        widget=SelectMultiple(attrs={'class': 'existing-artists-select'}),
+    remix_artist_names = forms.CharField(
+        help_text="Enter the remix artist names, separated by commas, which can be found on Beatport.",
         required=False,
-        label="Existing Artists"
     )
-    new_genre_name = forms.CharField(
-        widget=forms.Textarea(attrs={'class': 'new-artist-names-textarea'}),
+    mix = forms.ChoiceField(
+        help_text="Enter the mix name, which can be found in parenthases in the title.",
         required=False,
-        label="New Artist Names (one per line)"
+        choices=Track.MIX_LIST,
     )
-    existing_genre = ModelChoiceField(
-        queryset=Genre.objects.none(),
-        widget=Select(attrs={'class': 'existing-genre-select'}),
+    public = forms.BooleanField(
+        help_text="Indicate whether you want this track to be made public on MoxToolSite (default is false).",
         required=False,
-        label="Existing Genre"
     )
-    new_genre_name = forms.CharField(
-        max_length=200,
-        required=False,
-        label="New Genre Name"
-    )
-
-    def __init__(self, *args, user=None, track=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if user:
-            self.fields['existing_artists'].queryset = Artist.objects.get_queryset_can_view(user, 'artist')
-            self.fields['existing_genre'].queryset = Genre.objects.get_queryset_can_view(user, 'genre')
-            self.track = track
-        else:
-            raise PermissionError
         
     def save(self, commit=True):
-        track = super().save(commit=False)
-        existing_artists = self.cleaned_data.get('existing_artists')
-        new_artist_names = self.cleaned_data.get('new_artist_names')
-        existing_remix_artists = self.cleaned_data.get('existing_remix_artists')
-        new_remix_artist_names = self.cleaned_data.get('new_remix_artist_names')
-        existing_genre = self.cleaned_data.get('existing_genre')
-        new_genre_name = self.cleaned_data.get('new_genre_name')
+        
+        # track
+        track, track_created = Track.objects.get_or_create(beatport_track_id=self.cleaned_data.get('beatport_track_id'))
+        track.title = self.cleaned_data.get('title')
+        track.mix = self.cleaned_data.get('mix')
+        track.public = self.cleaned_data.get('public')
+        print('Track: ',track,' (new = ',track_created,')')
+
+        # genre
+        genre, genre_created = Genre.objects.get_or_create(name=self.cleaned_data.get('genre_name'))
+        print('Genre: ',genre,' (new = ',genre_created,')')
+        if genre_created == True:
+            genre.save()
+        track.genre = genre
+
+        # artist
+        artists = Artist.objects.none()
+        for artist_name in [element.strip() for element in self.cleaned_data.get('artist_names').split(',')]:
+            artist, artist_created = Artist.objects.get_or_create(name=artist_name)
+            artists = artists | Artist.objects.filter(id=artist.id)
+            print('Artist: ',artist,' (new = ',artist_created,')')
+            if artist_created == True:
+                artist.save()
+        track.artist.set(artists)
+
+        # remix artist
+        remix_artists = Artist.objects.none()
+        for remix_artist_name in [element.strip() for element in self.cleaned_data.get('remix_artist_names').split(',')]:
+            remix_artist, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name)
+            remix_artists = remix_artists | Artist.objects.filter(id=remix_artist.id)
+            print('Remix Artist: ',remix_artist,' (new = ',remix_artist_created,')')
+            if remix_artist_created == True:
+                remix_artist.save()
+        track.remix_artist.set(remix_artists)
+
+        # save and return
         if commit:
             track.save()
-        if existing_artists:
-            track.artist.set(existing_artists)
-        if new_artist_names:
-            artist_names = [name.strip() for name in new_artist_names.splitlines() if name.strip()]
-            for name in artist_names:
-                new_artist, created = Artist.objects.get_or_create(name=name)
-                print('Artist: ',new_artist,' (new = ',created,')')
-                track.artist.add(new_artist)
-        if existing_remix_artists:
-            track.remix_artist.set(existing_remix_artists)
-        if new_remix_artist_names:
-            artist_names = [name.strip() for name in new_remix_artist_names.splitlines() if name.strip()]
-            for name in artist_names:
-                new_artist, created = Artist.objects.get_or_create(name=name)
-                print('Artist: ',new_artist,' (new = ',created,')')
-                track.remix_artist.add(new_artist)
-        if existing_genre:
-            track.genre = existing_genre
-        if new_genre_name:
-            new_genre, created = Genre.objects.get_or_create(name=new_genre_name)
-            track.genre = new_genre
         return track
-
-    class Meta:
-        model = Track
-        fields = [
-            'title',
-            'beatport_track_id',
-            'existing_genre',
-            'new_genre_name',
-            'existing_artists',
-            'new_artist_names',
-            'existing_remix_artists',
-            'new_remix_artist_names',
-            'mix',
-            'public',
-        ]

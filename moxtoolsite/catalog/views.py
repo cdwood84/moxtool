@@ -113,8 +113,9 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
         context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
+        context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
+        context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
         context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user)
         return context
 
@@ -364,33 +365,33 @@ def confirm_remove_track_from_playlist_dj(request, playlist_id, trackinstance_id
 @login_required
 def modify_track_admin(request, track_id):
     track = Track.objects.get_queryset_can_direct_modify(request.user, 'track').get(id=track_id)
+
     if track:
         initial={
             'beatport_track_id': track.beatport_track_id,
             'title': track.title,
-            'existing_genre': track.genre,
-            'existing_artists': track.artist,
-            'existing_remix_artists': track.remix_artist,
+            'genre_name': track.get_viewable_genre_on_track(request.user).name,
+            'artist_names': track.display_viewable_artists(request.user),
+            'remix_artist_names': track.display_viewable_remix_artists(request.user),
             'mix': track.mix,
             'public': track.public,
         }
     else:
         raise #TBD
     if request.method == 'POST':
-        form = TrackForm(request.POST, user=request.user, track=track)
+        form = TrackForm(request.POST)
         if form.is_valid():
-            form.save()
+            track = form.save()
+            print(track)
             return HttpResponseRedirect(track.get_absolute_url())
+        else:
+            print(form.errors)
     else:
-        form = TrackForm(initial, user=request.user)
-        artist_form = ArtistForm()
-        genre_form = GenreForm()
+        form = TrackForm(initial)
 
     context = {
         'form': form,
         'track': track,
-        'artist_form': artist_form,
-        'genre_form': genre_form
     }
 
     return render(request, 'catalog/modify_track_admin.html', context)

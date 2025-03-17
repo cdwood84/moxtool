@@ -1,4 +1,5 @@
 from datetime import date
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -17,10 +18,23 @@ class SharedModelPermissionManager(models.Manager):
 
     def get_queryset_can_view(self, user, shared_model):
         if shared_model in self.valid_shared_models:
+            model = apps.get_model('catalog', shared_model.title())
+            user_queryset = model.objects.none()
+            for trackinstance in TrackInstance.objects.filter(user=user):
+                if shared_model == 'artist':
+                    user_queryset = user_queryset | trackinstance.track.artist.all()
+                elif shared_model == 'genre':
+                    user_queryset = user_queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                elif shared_model == 'track':
+                    user_queryset = user_queryset | Track.objects.filter(id=trackinstance.track.id)
             if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
                 return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model) or user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                return self.get_queryset().filter(public=True) | user_queryset
             elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
                 return self.get_queryset().filter(public=True)
+            elif user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                return user_queryset
             else:
                 raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
         else:
@@ -71,10 +85,13 @@ class Artist(models.Model):
         ]
         permissions = (
             ('moxtool_can_create_public_artist', 'Artist - Create Public - DJ'),
+            ('moxtool_can_create_own_artist', 'Artist - Create Own - DJ'),
             ('moxtool_can_create_any_artist', 'Artist - Create Any - MOX'),
             ('moxtool_can_view_public_artist', 'Artist - View Public - DJ'),
+            ('moxtool_can_view_own_artist', 'Artist - View Own - DJ'),
             ('moxtool_can_view_any_artist', 'Artist - View Any - MOX'),
             ('moxtool_can_modify_public_artist', 'Artist - Modify Public - DJ'),
+            ('moxtool_can_modify_own_artist', 'Artist - Modify Public - DJ'),
             ('moxtool_can_modify_any_artist', 'Artist - Modify Any - MOX'),
         )
 
@@ -118,10 +135,13 @@ class Genre(models.Model):
         ]
         permissions = (
             ('moxtool_can_create_public_genre', 'Genre - Create Public - DJ'),
+            ('moxtool_can_create_own_genre', 'Genre - Create Own - DJ'),
             ('moxtool_can_create_any_genre', 'Genre - Create Any - MOX'),
             ('moxtool_can_view_public_genre', 'Genre - View Public - DJ'),
+            ('moxtool_can_view_own_genre', 'Genre - View Own - DJ'),
             ('moxtool_can_view_any_genre', 'Genre - View Any - MOX'),
             ('moxtool_can_modify_public_genre', 'Genre - Modify Public - DJ'),
+            ('moxtool_can_modify_own_genre', 'Genre - Modify Own - DJ'),
             ('moxtool_can_modify_any_genre', 'Genre - Modify Any - MOX'),
         )
    
@@ -163,14 +183,25 @@ class Track(models.Model):
     
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        for artist in self.artist.all():
-            viewable_artists = viewable_artists | Artist.objects.get_queryset_can_view(user, 'artist').filter(track=self, id=artist.id)
+        for artist in self.artist.get_queryset_can_view(user, 'artist'):
+            viewable_artists = viewable_artists | Artist.objects.filter(id=artist.id)
         return viewable_artists
     
     def display_viewable_artists(self, user):
         return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
 
     display_viewable_artists.short_description = 'Artist'
+    
+    def get_viewable_remix_artists_on_track(self, user):
+        viewable_remix_artists = Artist.objects.none()
+        for remix_artist in self.remix_artist.get_queryset_can_view(user, 'artist'):
+            viewable_remix_artists = viewable_remix_artists | Artist.objects.filter(id=remix_artist.id)
+        return viewable_remix_artists
+    
+    def display_viewable_remix_artists(self, user):
+        return ', '.join(remix_artist.name for remix_artist in self.get_viewable_remix_artists_on_track(user))
+
+    display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
         return Genre.objects.get_queryset_can_view(user, 'genre').filter(track=self).get(id=self.genre.id)
@@ -184,10 +215,13 @@ class Track(models.Model):
         ]
         permissions = (
             ('moxtool_can_create_public_track', 'Track - Create Public - DJ'),
+            ('moxtool_can_create_own_track', 'Track - Create Own - DJ'),
             ('moxtool_can_create_any_track', 'Track - Create Any - MOX'),
             ('moxtool_can_view_public_track', 'Track - View Public - DJ'),
+            ('moxtool_can_view_own_track', 'Track - View Own - DJ'),
             ('moxtool_can_view_any_track', 'Track - View Any - MOX'),
             ('moxtool_can_modify_public_track', 'Track - Modify Public - DJ'),
+            ('moxtool_can_modify_own_track', 'Track - Modify Own - DJ'),
             ('moxtool_can_modify_any_track', 'Track - Modify Any - MOX'),
         )
 
@@ -203,7 +237,7 @@ class UserModelPermissionManager(models.Manager):
             if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
                 return self.get_queryset()
             elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) or user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                return self.get_queryset().filter(Q(public=True) | Q(user=user))
+                return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
             elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
                 return self.get_queryset().filter(public=True)
             elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
