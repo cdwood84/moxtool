@@ -80,7 +80,6 @@ class Artist(models.Model):
 
 
 class Genre(models.Model):
-    """Model representing a dance music genre."""
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -90,7 +89,6 @@ class Genre(models.Model):
     objects = SharedModelPermissionManager()
 
     def __str__(self):
-        """Function returning a string of the genre name."""
         return self.name
     
     def get_absolute_url(self):
@@ -135,6 +133,21 @@ class Track(models.Model):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
+    MIX_LIST = [
+        ('o','Original Mix'),
+        ('e','Extended Mix'),
+        ('x','Remix'),
+        ('r','Radio Mix'),
+    ]
+    mix = models.CharField(
+        max_length=12,
+        choices=MIX_LIST,
+        blank=True,
+        default=None,
+        null=True,
+        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
+    )
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist", blank=True)
 
     def __str__(self):
         return self.title
@@ -144,15 +157,26 @@ class Track(models.Model):
         return reverse('track-detail', args=[url_friendly_title, str(self.id)])
     
     def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all()[:3])
+        return ', '.join(artist.name for artist in self.artist.all())
+
+    display_artist.short_description = 'Artist'
     
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        for artist in self.artist:
-            viewable_artists = viewable_artists | Artist.objects.get_queryset_can_view(user, 'artist')
+        for artist in self.artist.all():
+            viewable_artists = viewable_artists | Artist.objects.get_queryset_can_view(user, 'artist').filter(track=self, id=artist.id)
         return viewable_artists
     
-    display_artist.short_description = 'Artist'
+    def display_viewable_artists(self, user):
+        return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
+
+    display_viewable_artists.short_description = 'Artist'
+    
+    def get_viewable_genre_on_track(self, user):
+        return Genre.objects.get_queryset_can_view(user, 'genre').filter(track=self).get(id=self.genre.id)
+    
+    def get_viewable_instances_of_track(self, user):
+        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(track=self)
     
     class Meta:
         ordering = [

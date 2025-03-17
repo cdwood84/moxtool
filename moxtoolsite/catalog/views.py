@@ -9,7 +9,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
-from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm
+from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
 
 
 # upper navigation pages and assocciated detail pages
@@ -111,6 +111,13 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return Track.objects.get_queryset_can_view(self.request.user, 'track').get(id=pk)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
+        context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
+        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user)
+        return context
+
 
 class PlaylistListView(LoginRequiredMixin, generic.ListView):
     model = Playlist
@@ -158,7 +165,7 @@ class TagDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-# lower navigation pages and assocciated detail pages
+# lower navigation pages and assocciated form pages
 
 
 class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
@@ -352,3 +359,64 @@ def confirm_remove_track_from_playlist_dj(request, playlist_id, trackinstance_id
         return HttpResponseRedirect(playlist.get_absolute_url())
     else:
         return render(request, 'catalog/remove_track_from_playlist_failure.html', context)
+    
+
+@login_required
+def modify_track_admin(request, track_id):
+    track = Track.objects.get_queryset_can_direct_modify(request.user, 'track').get(id=track_id)
+    if track:
+        initial={
+            'beatport_track_id': track.beatport_track_id,
+            'title': track.title,
+            'existing_genre': track.genre,
+            'existing_artists': track.artist,
+            'existing_remix_artists': track.remix_artist,
+            'mix': track.mix,
+            'public': track.public,
+        }
+    else:
+        raise #TBD
+    if request.method == 'POST':
+        form = TrackForm(request.POST, user=request.user, track=track)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(track.get_absolute_url())
+    else:
+        form = TrackForm(initial, user=request.user)
+        artist_form = ArtistForm()
+        genre_form = GenreForm()
+
+    context = {
+        'form': form,
+        'track': track,
+        'artist_form': artist_form,
+        'genre_form': genre_form
+    }
+
+    return render(request, 'catalog/modify_track_admin.html', context)
+
+
+@login_required
+def create_artist(request):
+    if request.method == 'POST':
+        form = ArtistForm(request.POST)
+        if form.is_valid():
+            artist = form.save()
+            print('Artist created: ' + artist.name)
+            return #TBD
+        else:
+            return #TBD
+    return #TBD
+
+
+@login_required
+def create_genre(request):
+    if request.method == 'POST':
+        form = GenreForm(request.POST)
+        if form.is_valid():
+            genre = form.save()
+            print('Genre created: ' + genre.name)
+            return #TBD
+        else:
+            return #TBD
+    return #TBD

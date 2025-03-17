@@ -23,4 +23,7 @@ urlpatterns = [
     re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove', views.remove_track_from_playlist_dj, name='remove-track-from-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove/confirm', views.confirm_remove_track_from_playlist_dj, name='comfirm-remove-track-from-playlist-dj'),
+    path('track/<int:track_id>/modify', views.modify_track_admin, name='modify-track-admin'),
+    path('artist/create', views.create_artist, name='create-artist'),
+    path('genre/create', views.create_genre, name='create-genre'),
 ]

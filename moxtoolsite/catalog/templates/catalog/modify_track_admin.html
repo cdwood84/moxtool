@@ -1,0 +1,89 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>Modify track: {{ track.name }}</h1>
+
+  <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Save Track</button>
+  </form>
+
+  {% if perms.catalog.moxtool_can_create_any_genre %}
+    <div id="new-genre-modal" style="display: none;">
+        <form id="new-genre-form" method="post" action="{% url 'create-genre' %}">
+            {% csrf_token %}
+            {{ genre_form.as_p }}
+            <button type="submit">Create Genre</button>
+        </form>
+    </div>
+
+    <script>
+        // Add similar javascript to your file as the artist javascript, but change all instances of artist to genre.
+        document.getElementById('new-genre-button').addEventListener('click', function() {
+            document.getElementById('new-genre-modal').style.display = 'block';
+        });
+        document.getElementById('new-genre-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.querySelector('.existing-genre-select');
+                    const option = document.createElement('option');
+                    option.value = data.genre_id;
+                    option.text = data.genre_name;
+                    select.add(option);
+                    document.getElementById('new-genre-modal').style.display = 'none';
+                    document.getElementById('new-genre-form').reset();
+
+                } else {
+                    alert('Error creating genre');
+                }
+            });
+        });
+    </script>
+  {% endif %}
+
+  {% if perms.catalog.moxtool_can_create_any_artist %}
+    <div id="new-artist-modal" style="display: none;">
+        <form id="new-artist-form" method="post" action="{% url 'create-artist' %}">
+            {% csrf_token %}
+            {{ artist_form.as_p }}
+            <button type="submit">Create Artist</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('new-artist-button').addEventListener('click', function() {
+            document.getElementById('new-artist-modal').style.display = 'block';
+        });
+        document.getElementById('new-artist-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.querySelector('.existing-artist-select');
+                    const option = document.createElement('option');
+                    option.value = data.genre_id;
+                    option.text = data.genre_name;
+                    select.add(option);
+                    document.getElementById('new-artist-modal').style.display = 'none';
+                    document.getElementById('new-artist-form').reset();
+
+                } else {
+                    alert('Error creating artist');
+                }
+            });
+        });
+    </script>
+  {% endif %}
+
+{% endblock %}
