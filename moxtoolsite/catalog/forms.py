@@ -1,9 +1,8 @@
 from django import forms
+from django.apps import apps
 from django.core.exceptions import ValidationError
-from django.forms import ModelMultipleChoiceField, ModelChoiceField
-from django.forms.widgets import SelectMultiple, Select
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, Genre, Playlist, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, Playlist, Track, TrackInstance
 
 class AddTrackToLibraryForm(forms.Form):
 
@@ -66,22 +65,81 @@ class AddTrackToPlaylistForm(forms.Form):
         self.fields['track_selection'].queryset = TrackInstance.objects.filter(user=user)
 
 
-class ArtistForm(forms.ModelForm):
-    class Meta:
-        model = Artist
-        fields = [
-            'name',
-            'public',
-        ]
+class ObjectFormMixin:
+    def save(self, model, user, existing_obj, commit=True):
+
+        # get or create object based on use case
+        if model.endswith('Request'):
+            obj = apps.get_model('catalog', model).objects.create(user=user)
+            if existing_obj:
+                obj_name = model[:-len('Request')].lower()
+                obj.set_field(obj_name,existing_obj)
+            potential_matches = apps.get_model('catalog', model).objects.exclude(id=obj.id)
+        else:
+            if existing_obj:
+                obj = apps.get_model('catalog', model).objects.get(id=existing_obj.id)
+            else:
+                obj = apps.get_model('catalog', model).objects.create(name=self.cleaned_data.get('name'))
+
+        # set object fields with cleaned data
+        for field in self.cleaned_data:
+            obj.set_field(field, self.cleaned_data.get(field))
+            if model.endswith('Request'):
+                filter_kwargs = {field: self.cleaned_data.get(field)}
+                potential_matches = potential_matches.filter(**filter_kwargs)
+        
+        # check for duplicate modifications
+        if (model.endswith('Request') and potential_matches.count() >= 1) or (existing_obj and existing_obj.is_equivalent(obj)):
+            if model.endswith('Request') or not(existing_obj):
+                obj.delete()
+            return None, False
+        
+        # when otherwise successful
+        print(model,': ',obj,' (new = ',str(existing_obj is None).strip(),')')
+        if commit:
+            obj.save()
+        return obj, True
 
 
-class GenreForm(forms.ModelForm):
-    class Meta:
-        model = Genre
-        fields = [
-            'name',
-            'public',
-        ]
+class ArtistForm(forms.Form, ObjectFormMixin):
+    name = forms.CharField(
+        help_text="Enter the artist name.",
+        required=True,
+    )
+    public = forms.BooleanField(
+        help_text="Indicate whether you want this artist to be made public on MoxToolSite (default is false).",
+        required=False,
+    )
+
+
+class GenreForm(forms.Form):
+    name = forms.CharField(
+        help_text="Enter the genre name.",
+        required=True,
+    )
+    public = forms.BooleanField(
+        help_text="Indicate whether you want this genre to be made public on MoxToolSite (default is false).",
+        required=False,
+    )
+
+    def save(self, model, user, existing_genre, commit=True):
+        if model == 'Genre':
+            if existing_genre:
+                genre = apps.get_model('catalog', model).objects.get(id=existing_genre.id)
+            else:
+                genre = apps.get_model('catalog', model).objects.create(name=self.cleaned_data.get('name'))
+            genre.public = self.cleaned_data.get('public')
+        else:
+            genre = apps.get_model('catalog', model).objects.create(
+                name=self.cleaned_data.get('name'),
+                public=self.cleaned_data.get('public'),
+                user=user,
+                genre=existing_genre,
+            )
+        print(model,': ',genre,' (new = ',str(existing_genre is None),')')
+        if commit:
+            genre.save()
+        return genre
 
 
 class TrackForm(forms.Form):

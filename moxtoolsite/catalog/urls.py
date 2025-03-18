@@ -3,16 +3,35 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+    # path('<str:type>/request/failure', views.bad_request, name='bad-request'),
+
+    # genre
     path('genres/', views.GenreListView.as_view(), name='genres'),
+    path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
+    path('genre/create', views.modify_genre, name='create-genre'),
+    path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
+
+    # artist
     path('artists/', views.ArtistListView.as_view(), name='artists'),
+    path('artist/<int:pk>/<str:name>', views.ArtistDetailView.as_view(), name='artist-detail'),
+    path('artist/create', views.modify_artist, name='create-artist'),
+    path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
+
+    # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
-    path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
-    path('tags/', views.TagListView.as_view(), name='tags'),
-    re_path(r'^genre/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.GenreDetailView.as_view(), name='genre-detail'),
-    re_path(r'^artist/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.ArtistDetailView.as_view(), name='artist-detail'),
     re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
+    path('track/create', views.modify_track, name='create-track'),
+    path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
+
+    # playlist
+    path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
     re_path(r'^playlist/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.PlaylistDetailView.as_view(), name='playlist-detail'),
+
+    # tag
+    path('tags/', views.TagListView.as_view(), name='tags'),
     re_path(r'^tag/(?P<type>[-\w]+)/(?P<value>[-\w]+)/(?P<pk>\d+)$', views.TagDetailView.as_view(), name='tag-detail'),
+
+    # user library
     path('mytracks/', views.UserTrackInstanceListView.as_view(), name='user-trackinstances'),
     path('mytracks/add', views.add_track_dj, name='add-track-dj'),
     path('mytracks/add/failure', views.add_track_failure, name='add-track-failure'),
@@ -23,7 +42,4 @@ urlpatterns = [
     re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove', views.remove_track_from_playlist_dj, name='remove-track-from-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove/confirm', views.confirm_remove_track_from_playlist_dj, name='comfirm-remove-track-from-playlist-dj'),
-    path('track/<int:track_id>/modify', views.modify_track_admin, name='modify-track-admin'),
-    path('artist/create', views.create_artist, name='create-artist'),
-    path('genre/create', views.create_genre, name='create-genre'),
 ]

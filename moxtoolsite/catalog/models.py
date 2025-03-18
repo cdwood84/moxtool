@@ -1,17 +1,17 @@
 from datetime import date
 from django.apps import apps
 from django.conf import settings
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
 from django.urls import reverse
 import re
 import uuid
 
 
-# models shared by the application
+# shared models
 
 class SharedModelPermissionManager(models.Manager):
     valid_shared_models = ['artist','genre','track']
@@ -66,10 +66,37 @@ class Artist(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def set_field(self, field, value):
+        if field == 'name':
+            self.name = value
+        elif field == 'public':
+            self.public = value
+        else:
+            raise ValidationError('Artist does not contain a field named '+field)
+
+    def get_field(self, field):
+        if field == 'name':
+            return self.name
+        elif field == 'public':
+            return self.public
+        else:
+            raise ValidationError('Artist does not contain a field named '+field) 
+    
+    def is_equivalent(self, obj):
+        if self.name != obj.name:
+            return False
+        elif self.public != obj.public:
+            return False
+        else:
+            return True
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('artist-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('artist-detail', args=[str(self.id), url_friendly_name])
+
+    def get_modify_url(self):
+        return reverse('modify-artist', args=[str(self.id)])
     
     def get_genre_list(self):
         artist_track_list = self.track_set.all()
@@ -84,14 +111,13 @@ class Artist(models.Model):
             'name',
         ]
         permissions = (
-            ('moxtool_can_create_public_artist', 'Artist - Create Public - DJ'),
             ('moxtool_can_create_own_artist', 'Artist - Create Own - DJ'),
             ('moxtool_can_create_any_artist', 'Artist - Create Any - MOX'),
             ('moxtool_can_view_public_artist', 'Artist - View Public - DJ'),
             ('moxtool_can_view_own_artist', 'Artist - View Own - DJ'),
             ('moxtool_can_view_any_artist', 'Artist - View Any - MOX'),
             ('moxtool_can_modify_public_artist', 'Artist - Modify Public - DJ'),
-            ('moxtool_can_modify_own_artist', 'Artist - Modify Public - DJ'),
+            ('moxtool_can_modify_own_artist', 'Artist - Modify Own - DJ'),
             ('moxtool_can_modify_any_artist', 'Artist - Modify Any - MOX'),
         )
 
@@ -107,10 +133,13 @@ class Genre(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('genre-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('genre-detail', args=[str(self.id), url_friendly_name])
+
+    def get_modify_url(self):
+        return reverse('modify-genre', args=[str(self.id)])
     
     def get_viewable_tracks_in_genre(self, user):
         return Track.objects.get_queryset_can_view(user, 'track').filter(genre=self)
@@ -134,7 +163,6 @@ class Genre(models.Model):
             'name',
         ]
         permissions = (
-            ('moxtool_can_create_public_genre', 'Genre - Create Public - DJ'),
             ('moxtool_can_create_own_genre', 'Genre - Create Own - DJ'),
             ('moxtool_can_create_any_genre', 'Genre - Create Any - MOX'),
             ('moxtool_can_view_public_genre', 'Genre - View Public - DJ'),
@@ -181,6 +209,11 @@ class Track(models.Model):
 
     display_artist.short_description = 'Artist'
     
+    def display_remix_artist(self):
+        return ', '.join(artist.name for artist in self.remix_artist.all())
+
+    display_remix_artist.short_description = 'Remix Artist'
+    
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
         for artist in self.artist.get_queryset_can_view(user, 'artist'):
@@ -214,7 +247,6 @@ class Track(models.Model):
             'title',
         ]
         permissions = (
-            ('moxtool_can_create_public_track', 'Track - Create Public - DJ'),
             ('moxtool_can_create_own_track', 'Track - Create Own - DJ'),
             ('moxtool_can_create_any_track', 'Track - Create Any - MOX'),
             ('moxtool_can_view_public_track', 'Track - View Public - DJ'),
@@ -226,11 +258,225 @@ class Track(models.Model):
         )
 
 
-# models owned by the user
+# user requests
+
+
+class UserRequestPermissionManager(models.Manager):
+    valid_request_models = ['artistrequest', 'genrerequest', 'trackrequest']
+
+    def get_queryset_can_view(self, user, request_model):
+        if request_model in self.valid_request_models:
+            if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
+                return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
+                return self.get_queryset().filter(user=user)
+            else:
+                raise PermissionDenied("You do not have permission to view any tags.")
+        else:
+            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+
+    def get_queryset_can_direct_modify(self, user, request_model):
+        if request_model in self.valid_request_models:
+            if user.has_perm('catalog.moxtool_can_modify_any_'+request_model):
+                return self.get_queryset()
+            elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
+                return self.get_queryset().filter(user=user)
+            else:
+                raise PermissionDenied("You do not have permission to directly modify any tags.")
+        else:
+            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+        
+
+class ArtistRequest(models.Model):
+    name = models.CharField(max_length=200)
+    public = models.BooleanField(default=False)
+    date_requested = models.DateField(default=date.today())
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+    objects = UserRequestPermissionManager()
+
+    def __str__(self):
+        message = self.name
+        if self.artist:
+            message = 'Modify artist request: ' + message
+            if self.name != self.artist.name:
+                message = message + ', change name to'
+            if self.public != self.artist.public:
+                message = message + ', change public to ' + str(self.public)
+        else:
+            message = 'New artist request: ' + message
+        return message
+    
+    def set_field(self, field, value):
+        if field == 'name':
+            self.name = value
+        elif field == 'public':
+            self.public = value
+        elif field == 'artist':
+            self.artist = value
+        else:
+            raise ValidationError('ArtistRequest does not contain a field named '+field)
+
+    def get_field(self, field):
+        if field == 'name':
+            return self.name
+        elif field == 'public':
+            return self.public
+        elif field == 'artist':
+            return self.artist
+        else:
+            raise ValidationError('ArtistRequest does not contain a field named '+field) 
+    
+    def is_equivalent(self, obj):
+        if self.name != obj.name:
+            return False
+        elif self.public != obj.public:
+            return False
+        elif self.artist and obj.artist and not(self.artist.is_equivalent(obj.artist)):
+            return False
+        else:
+            return True
+
+    def get_absolute_url(self):
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+    
+    class Meta:
+        ordering = [
+            'date_requested',
+            'name',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_artistrequest', 'ArtistRequest - Create Own - DJ'),
+            ('moxtool_can_create_any_artistrequest', 'ArtistRequest - Create Any - MOX'),
+            ('moxtool_can_view_own_artistrequest', 'ArtistRequest - View Own - DJ'),
+            ('moxtool_can_view_any_artistrequest', 'ArtistRequest - View Any - MOX'),
+            ('moxtool_can_modify_own_artistrequest', 'ArtistRequest - Modify Own - DJ'),
+            ('moxtool_can_modify_any_artistrequest', 'ArtistRequest - Modify Any - MOX'),
+        )
+
+
+class GenreRequest(models.Model):
+    name = models.CharField(max_length=200)
+    public = models.BooleanField(default=False)
+    date_requested = models.DateField(default=date.today())
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+    objects = UserRequestPermissionManager()
+
+    def __str__(self):
+        message = self.name
+        if self.genre:
+            message = 'Modify genre request: ' + message
+            if self.name != self.genre.name:
+                message = message + ', change name'
+            if self.public != self.genre.public:
+                message = message + ', change public to ' + str(self.public)
+        else:
+            message = 'New genre request: ' + message
+        return message
+
+    def get_absolute_url(self):
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('genre-request-detail', args=[url_friendly_name, str(self.id)])
+    
+    class Meta:
+        ordering = [
+            'date_requested',
+            'name',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_genrerequest', 'GenreRequest - Create Own - DJ'),
+            ('moxtool_can_create_any_genrerequest', 'GenreRequest - Create Any - MOX'),
+            ('moxtool_can_view_own_genrerequest', 'GenreRequest - View Own - DJ'),
+            ('moxtool_can_view_any_genrerequest', 'GenreRequest - View Any - MOX'),
+            ('moxtool_can_modify_own_genrerequest', 'GenreRequest - Modify Own - DJ'),
+            ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
+        )
+
+
+class TrackRequest(models.Model):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    title = models.CharField(max_length=200)
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist", blank=True)
+    MIX_LIST = [
+        ('o','Original Mix'),
+        ('e','Extended Mix'),
+        ('x','Remix'),
+        ('r','Radio Mix'),
+    ]
+    mix = models.CharField(
+        max_length=12,
+        choices=MIX_LIST,
+        blank=True,
+        default=None,
+        null=True,
+        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
+    )
+    public = models.BooleanField(default=False)
+    date_requested = models.DateField(default=date.today())
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
+    objects = UserRequestPermissionManager()
+
+    def __str__(self):
+        message = self.title
+        if self.track:
+            message = 'Modify track request: ' + message
+            if self.beatport_track_id != self.track.beatport_track_id:
+                message = message + ', change Beatport track ID to ' + self.beatport_track_id
+            if self.title != self.track.title:
+                message = message + ', change title'
+            if self.genre != self.track.genre:
+                message = message + ', change genre to ' + self.genre
+            if self.display_artist() != self.track.display_artist():
+                message = message + ', change artist to ' + self.display_artist()
+            if self.display_remix_artist() != self.track.display_remix_artist():
+                message = message + ', change remix artist to ' + self.display_remix_artist()
+            if self.get_mix_display != self.track.get_mix_display:
+                message = message + ', change mix to ' + self.get_mix_display
+            if self.public != self.artist.public:
+                message = message + ', change public to ' + str(self.public)
+        else:
+            message = 'New track request: ' + message
+        return message
+    
+    def display_artist(self):
+        return ', '.join(artist.name for artist in self.artist.all())
+
+    display_artist.short_description = 'Artist'
+    
+    def display_remix_artist(self):
+        return ', '.join(artist.name for artist in self.remix_artist.all())
+
+    display_remix_artist.short_description = 'Remix Artist'
+
+    def get_absolute_url(self):
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+    
+    class Meta:
+        ordering = [
+            'date_requested',
+            'title',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_trackrequest', 'TrackRequest - Create Own - DJ'),
+            ('moxtool_can_create_any_trackrequest', 'TrackRequest - Create Any - MOX'),
+            ('moxtool_can_view_own_trackrequest', 'TrackRequest - View Own - DJ'),
+            ('moxtool_can_view_any_trackrequest', 'TrackRequest - View Any - MOX'),
+            ('moxtool_can_modify_own_trackrequest', 'TrackRequest - Modify Own - DJ'),
+            ('moxtool_can_modify_any_trackrequest', 'TrackRequest - Modify Any - MOX'),
+        )
+
+
+# user models
 
 
 class UserModelPermissionManager(models.Manager):
-    valid_user_models = ['tag','trackinstance','playlist']
+    valid_user_models = ['tag', 'trackinstance', 'playlist']
 
     def get_queryset_can_view(self, user, user_model):
         if user_model in self.valid_user_models:
@@ -266,7 +512,7 @@ class UserModelPermissionManager(models.Manager):
                 raise PermissionDenied("You do not have permission to request modifications to tags.")
         else:
             raise ValidationError("The request for "+user_model+" is not a valid user model.")
-        
+
 
 class Tag(models.Model):
     TYPE_LIST = [

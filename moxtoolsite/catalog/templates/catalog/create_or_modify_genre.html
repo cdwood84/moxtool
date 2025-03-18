@@ -1,0 +1,21 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if modify == True %}
+        <h1>Modify genre: {{ genre.name }}</h1>
+    {% else %}
+        <h1>Create genre</h1>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">
+            {% if perms.catalog.moxtool_can_create_any_genre %}
+                Save Genre{% if modify == True %} Change{% endif %}
+            {% else %}
+                Request Genre{% if modify == True %} Change{% endif %}
+            {% endif %}
+        </button>
+    </form>
+{% endblock %}

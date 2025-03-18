@@ -1,9 +1,14 @@
 from django.contrib import admin
-from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance
 
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(ArtistRequest)
+class ArtistRequestAdmin(admin.ModelAdmin):
     pass
 
 

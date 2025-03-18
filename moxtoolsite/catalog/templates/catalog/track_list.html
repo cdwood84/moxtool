@@ -14,4 +14,9 @@
   {% else %}
     <p>There are no tracks in your library.</p>
   {% endif %}
+  {% if perms.catalog.moxtool_can_create_any_track %}
+    <p><a href="{% url 'create-track-admin' %}">Create a track</a></p>
+  {% elif perms.catalog.moxtool_can_create_public_track %}
+    <p><a href="">Request a new track</a></p>
+  {% endif %}
 {% endblock %}

@@ -3,6 +3,11 @@
 {% block content %}
   <h1>Artist Name: {{ artist.name }}</h1>
   <p><strong>Genres:</strong> {{ artist.get_genre_list }}</a></p>
+  {% if perms.catalog.moxtool_can_modify_any_artist %}
+    <p><a href="{{ artist.get_modify_url }}">Modify this artist</a></p>
+  {% elif perms.catalog.moxtool_can_modify_public_artist %}
+    <p><a href="{{ artist.get_modify_url }}">Request a modification to this artist</a></p>
+  {% endif %}
 
   <div style="margin-left:20px;margin-top:20px">
     <h4>Tracks</h4>

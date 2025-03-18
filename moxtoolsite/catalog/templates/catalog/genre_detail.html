@@ -2,12 +2,17 @@
 
 {% block content %}
   <h1>Genre Name: {{ genre.name }}</h1>
+  {% if perms.catalog.moxtool_can_modify_any_genre %}
+    <p><a href="{{ genre.get_modify_url }}">Modify this genre</a></p>
+  {% elif perms.catalog.moxtool_can_modify_public_genre %}
+    <p><a href="{{ genre.get_modify_url }}">Request a modification to this genre</a></p>
+  {% endif %}
 
   <div style="margin-left:20px;margin-top:20px">
     <h4>Artists</h4>
     <ul>
         {% for artist in viewable_artists %}
-            <li>><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a></li>
+            <li><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a></li>
         {% endfor %}
     </ul>
   </div>
