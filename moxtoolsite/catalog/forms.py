@@ -66,6 +66,7 @@ class AddTrackToPlaylistForm(forms.Form):
 
 
 class ObjectFormMixin:
+    
     def save(self, model, user, existing_obj, commit=True):
 
         # get or create object based on use case

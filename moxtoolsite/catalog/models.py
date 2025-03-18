@@ -59,37 +59,41 @@ class SharedModelPermissionManager(models.Manager):
             raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
 
-class Artist(models.Model):
+class SharedModelMixin:
+
+    def set_field(self, field, value):
+        if field in self.valid_fields:
+            eval("self."+field+"="+value)
+        else:
+            raise ValidationError('The field '+field+' does not exist in '+self.__class__.__name__)
+        
+    def get_field(self, field):
+        if field in self.valid_fields:
+            value = eval("return self."+field)
+            return value
+        else:
+            raise ValidationError('The field '+field+' does not exist in '+self.__class__.__name__)
+        
+    def is_equivalent(self, obj):
+        equivalence = True
+        for field in self.valid_fields:
+            eval("equivalence = self."+field+" == obj."+field)
+            if equivalence is False:
+                break
+        return equivalence
+
+
+class Artist(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
+    
+    @property
+    def valid_fields(self):
+        return ['name', 'public']
 
     def __str__(self):
         return self.name
-    
-    def set_field(self, field, value):
-        if field == 'name':
-            self.name = value
-        elif field == 'public':
-            self.public = value
-        else:
-            raise ValidationError('Artist does not contain a field named '+field)
-
-    def get_field(self, field):
-        if field == 'name':
-            return self.name
-        elif field == 'public':
-            return self.public
-        else:
-            raise ValidationError('Artist does not contain a field named '+field) 
-    
-    def is_equivalent(self, obj):
-        if self.name != obj.name:
-            return False
-        elif self.public != obj.public:
-            return False
-        else:
-            return True
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
@@ -107,6 +111,13 @@ class Artist(models.Model):
         return re.sub(r"[\[|\]|']", '', str(artist_genre_list))
     
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                Lower('name'),
+                name='artist_name_case_insensitive_unique',
+                violation_error_message="Artist already exists (case insensiitive match)"
+            ),
+        ]
         ordering = [
             'name',
         ]
@@ -122,7 +133,7 @@ class Artist(models.Model):
         )
 
 
-class Genre(models.Model):
+class Genre(models.Model, SharedModelMixin):
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -130,6 +141,10 @@ class Genre(models.Model):
     )
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
+    
+    @property
+    def valid_fields(self):
+        return ['name', 'public']
 
     def __str__(self):
         return self.name
@@ -174,7 +189,7 @@ class Genre(models.Model):
         )
    
 
-class Track(models.Model):
+class Track(models.Model, SharedModelMixin):
     title = models.CharField(max_length=200)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
@@ -196,6 +211,10 @@ class Track(models.Model):
         help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
     )
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist", blank=True)
+    
+    @property
+    def valid_fields(self):
+        return ['beatport_track_id', 'title', 'genre', 'artist', 'remix_artist', 'mix', 'public']
 
     def __str__(self):
         return self.title
@@ -287,13 +306,17 @@ class UserRequestPermissionManager(models.Manager):
             raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
 
-class ArtistRequest(models.Model):
+class ArtistRequest(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(default=date.today())
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
+    
+    @property
+    def valid_fields(self):
+        return ['name', 'public', 'artist']
 
     def __str__(self):
         message = self.name
@@ -306,36 +329,6 @@ class ArtistRequest(models.Model):
         else:
             message = 'New artist request: ' + message
         return message
-    
-    def set_field(self, field, value):
-        if field == 'name':
-            self.name = value
-        elif field == 'public':
-            self.public = value
-        elif field == 'artist':
-            self.artist = value
-        else:
-            raise ValidationError('ArtistRequest does not contain a field named '+field)
-
-    def get_field(self, field):
-        if field == 'name':
-            return self.name
-        elif field == 'public':
-            return self.public
-        elif field == 'artist':
-            return self.artist
-        else:
-            raise ValidationError('ArtistRequest does not contain a field named '+field) 
-    
-    def is_equivalent(self, obj):
-        if self.name != obj.name:
-            return False
-        elif self.public != obj.public:
-            return False
-        elif self.artist and obj.artist and not(self.artist.is_equivalent(obj.artist)):
-            return False
-        else:
-            return True
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
@@ -356,13 +349,17 @@ class ArtistRequest(models.Model):
         )
 
 
-class GenreRequest(models.Model):
+class GenreRequest(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(default=date.today())
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
+    
+    @property
+    def valid_fields(self):
+        return ['name', 'public', 'genre']
 
     def __str__(self):
         message = self.name
@@ -395,7 +392,7 @@ class GenreRequest(models.Model):
         )
 
 
-class TrackRequest(models.Model):
+class TrackRequest(models.Model, SharedModelMixin):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     title = models.CharField(max_length=200)
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
@@ -420,6 +417,10 @@ class TrackRequest(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
+    
+    @property
+    def valid_fields(self):
+        return ['beatport_track_id', 'title', 'genre', 'artist', 'remix_artist', 'mix', 'public']
 
     def __str__(self):
         message = self.title
