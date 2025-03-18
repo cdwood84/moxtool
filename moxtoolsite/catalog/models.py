@@ -309,7 +309,7 @@ class UserRequestPermissionManager(models.Manager):
 class ArtistRequest(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
-    date_requested = models.DateField(default=date.today())
+    date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
@@ -352,7 +352,7 @@ class ArtistRequest(models.Model, SharedModelMixin):
 class GenreRequest(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
-    date_requested = models.DateField(default=date.today())
+    date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
@@ -413,7 +413,7 @@ class TrackRequest(models.Model, SharedModelMixin):
         help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
     )
     public = models.BooleanField(default=False)
-    date_requested = models.DateField(default=date.today())
+    date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
