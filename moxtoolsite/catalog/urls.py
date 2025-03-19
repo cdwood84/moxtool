@@ -19,9 +19,10 @@ urlpatterns = [
 
     # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
-    re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
+    path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
     path('track/create', views.modify_track, name='create-track'),
     path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
+    # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
 
     # playlist
     path('playlists/', views.PlaylistListView.as_view(), name='playlists'),

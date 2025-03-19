@@ -2,7 +2,8 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, ArtistRequest, Genre, Playlist, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Track, TrackInstance, TrackRequest
+import datetime
 
 class AddTrackToLibraryForm(forms.Form):
 
@@ -66,12 +67,12 @@ class AddTrackToPlaylistForm(forms.Form):
 
 
 class ObjectFormMixin:
-    
+
     def save(self, model, user, existing_obj, commit=True):
 
         # get or create object based on use case
         if model.endswith('Request'):
-            obj = apps.get_model('catalog', model).objects.create(user=user)
+            obj = apps.get_model('catalog', model).objects.create(user=user, date_added=datetime.date.today())
             if existing_obj:
                 obj_name = model[:-len('Request')].lower()
                 obj.set_field(obj_name,existing_obj)
@@ -90,9 +91,8 @@ class ObjectFormMixin:
                 potential_matches = potential_matches.filter(**filter_kwargs)
         
         # check for duplicate modifications
-        if (model.endswith('Request') and potential_matches.count() >= 1) or (existing_obj and existing_obj.is_equivalent(obj)):
-            if model.endswith('Request') or not(existing_obj):
-                obj.delete()
+        if model.endswith('Request') and potential_matches.count() >= 1:
+            obj.delete()
             return None, False
         
         # when otherwise successful
@@ -113,7 +113,7 @@ class ArtistForm(forms.Form, ObjectFormMixin):
     )
 
 
-class GenreForm(forms.Form):
+class GenreForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the genre name.",
         required=True,
@@ -123,27 +123,8 @@ class GenreForm(forms.Form):
         required=False,
     )
 
-    def save(self, model, user, existing_genre, commit=True):
-        if model == 'Genre':
-            if existing_genre:
-                genre = apps.get_model('catalog', model).objects.get(id=existing_genre.id)
-            else:
-                genre = apps.get_model('catalog', model).objects.create(name=self.cleaned_data.get('name'))
-            genre.public = self.cleaned_data.get('public')
-        else:
-            genre = apps.get_model('catalog', model).objects.create(
-                name=self.cleaned_data.get('name'),
-                public=self.cleaned_data.get('public'),
-                user=user,
-                genre=existing_genre,
-            )
-        print(model,': ',genre,' (new = ',str(existing_genre is None),')')
-        if commit:
-            genre.save()
-        return genre
 
-
-class TrackForm(forms.Form):
+class TrackForm(forms.Form, ObjectFormMixin):
 
     beatport_track_id = forms.IntegerField(
         help_text="Enter the Beatport track ID, which can be found in the Beatport URL.",
@@ -175,43 +156,43 @@ class TrackForm(forms.Form):
         required=False,
     )
         
-    def save(self, commit=True):
+    # def save(self, commit=True):
         
-        # track
-        track, track_created = Track.objects.get_or_create(beatport_track_id=self.cleaned_data.get('beatport_track_id'))
-        track.title = self.cleaned_data.get('title')
-        track.mix = self.cleaned_data.get('mix')
-        track.public = self.cleaned_data.get('public')
-        print('Track: ',track,' (new = ',track_created,')')
+    #     # track
+    #     track, track_created = Track.objects.get_or_create(beatport_track_id=self.cleaned_data.get('beatport_track_id'))
+    #     track.title = self.cleaned_data.get('title')
+    #     track.mix = self.cleaned_data.get('mix')
+    #     track.public = self.cleaned_data.get('public')
+    #     print('Track: ',track,' (new = ',track_created,')')
 
-        # genre
-        genre, genre_created = Genre.objects.get_or_create(name=self.cleaned_data.get('genre_name'))
-        print('Genre: ',genre,' (new = ',genre_created,')')
-        if genre_created == True:
-            genre.save()
-        track.genre = genre
+    #     # genre
+    #     genre, genre_created = Genre.objects.get_or_create(name=self.cleaned_data.get('genre_name'))
+    #     print('Genre: ',genre,' (new = ',genre_created,')')
+    #     if genre_created == True:
+    #         genre.save()
+    #     track.genre = genre
 
-        # artist
-        artists = Artist.objects.none()
-        for artist_name in [element.strip() for element in self.cleaned_data.get('artist_names').split(',')]:
-            artist, artist_created = Artist.objects.get_or_create(name=artist_name)
-            artists = artists | Artist.objects.filter(id=artist.id)
-            print('Artist: ',artist,' (new = ',artist_created,')')
-            if artist_created == True:
-                artist.save()
-        track.artist.set(artists)
+    #     # artist
+    #     artists = Artist.objects.none()
+    #     for artist_name in [element.strip() for element in self.cleaned_data.get('artist_names').split(',')]:
+    #         artist, artist_created = Artist.objects.get_or_create(name=artist_name)
+    #         artists = artists | Artist.objects.filter(id=artist.id)
+    #         print('Artist: ',artist,' (new = ',artist_created,')')
+    #         if artist_created == True:
+    #             artist.save()
+    #     track.artist.set(artists)
 
-        # remix artist
-        remix_artists = Artist.objects.none()
-        for remix_artist_name in [element.strip() for element in self.cleaned_data.get('remix_artist_names').split(',')]:
-            remix_artist, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name)
-            remix_artists = remix_artists | Artist.objects.filter(id=remix_artist.id)
-            print('Remix Artist: ',remix_artist,' (new = ',remix_artist_created,')')
-            if remix_artist_created == True:
-                remix_artist.save()
-        track.remix_artist.set(remix_artists)
+    #     # remix artist
+    #     remix_artists = Artist.objects.none()
+    #     for remix_artist_name in [element.strip() for element in self.cleaned_data.get('remix_artist_names').split(',')]:
+    #         remix_artist, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name)
+    #         remix_artists = remix_artists | Artist.objects.filter(id=remix_artist.id)
+    #         print('Remix Artist: ',remix_artist,' (new = ',remix_artist_created,')')
+    #         if remix_artist_created == True:
+    #             remix_artist.save()
+    #     track.remix_artist.set(remix_artists)
 
-        # save and return
-        if commit:
-            track.save()
-        return track
+    #     # save and return
+    #     if commit:
+    #         track.save()
+    #     return track

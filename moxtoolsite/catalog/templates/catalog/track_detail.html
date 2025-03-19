@@ -29,7 +29,7 @@
     <p class="text-muted"><strong>Genre:</strong> the genre on this track is either undefined or not public</p>
   {% endif %}
   {% if perms.catalog.moxtool_can_modify_any_track %}
-    <p><a href="{% url 'modify-track-admin' track.id %}">Modify this track</a></p>
+    <p><a href="{% url 'modify-track' track.id %}">Modify this track</a></p>
   {% elif perms.catalog.moxtool_can_modify_public_track %}
     <p>Request changes to this track</p>
   {% endif %}

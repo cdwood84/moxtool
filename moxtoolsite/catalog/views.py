@@ -78,7 +78,7 @@ def modify_artist(request, pk=None):
 
     try:
         existing_artist = Artist.objects.get(id=pk)
-        modify = True
+        action = 'modify'
         print('attempting to modifiy '+str(existing_artist))
         if request.user.has_perm('catalog.moxtool_can_modify_any_artist'):
             model = 'Artist'
@@ -88,7 +88,7 @@ def modify_artist(request, pk=None):
             raise PermissionError
     except:
         existing_artist = None
-        modify = False
+        action = 'create'
         print('attempting to create a new artist')
         if request.user.has_perm('catalog.moxtool_can_create_any_artist'):
             model = 'Artist'
@@ -124,11 +124,14 @@ def modify_artist(request, pk=None):
 
     context = {
         'form': form,
-        'artist': existing_artist,
-        'modify': modify,
+        'obj': existing_artist,
+        'text': {
+            'type': 'artist',
+            'action': action,
+        },
     }
 
-    return render(request, 'catalog/create_or_modify_artist.html', context)
+    return render(request, 'catalog/create_or_modify_object.html', context)
 
 
 # genre
@@ -165,7 +168,7 @@ def modify_genre(request, pk=None):
     
     try:
         existing_genre = Genre.objects.get(id=pk)
-        modify = True
+        action = 'modify'
         print('attempting to modifiy '+str(existing_genre))
         if request.user.has_perm('catalog.moxtool_can_modify_any_genre'):
             model = 'Genre'
@@ -175,7 +178,7 @@ def modify_genre(request, pk=None):
             raise PermissionError
     except:
         existing_genre = None
-        modify = False
+        action = 'create'
         print('attempting to create a new genre')
         if request.user.has_perm('catalog.moxtool_can_create_any_genre'):
             model = 'Genre'
@@ -187,12 +190,17 @@ def modify_genre(request, pk=None):
     if request.method == 'POST':
         form = GenreForm(request.POST)
         if form.is_valid():
-            genre = form.save(model, request.user, existing_genre)
-            print(genre)
-            if model == 'Genre':
-                return HttpResponseRedirect(genre.get_absolute_url())
+            genre, success = form.save(model, request.user, existing_genre)
+            print(str(success))
+            if success is True:
+                print(genre)
+                if model == 'Artist':
+                    return HttpResponseRedirect(genre.get_absolute_url())
+                else:
+                    return HttpResponseRedirect(reverse('genres'))
             else:
-                return HttpResponseRedirect(reverse('genres'))
+                # HttpResponseRedirect(reverse('bad-request', args=['artist']))
+                print('No change detected')
         else:
             print(form.errors)
     else:
@@ -206,11 +214,14 @@ def modify_genre(request, pk=None):
 
     context = {
         'form': form,
-        'genre': existing_genre,
-        'modify': modify,
+        'obj': existing_genre,
+        'text': {
+            'type': 'genre',
+            'action': action,
+        },
     }
 
-    return render(request, 'catalog/create_or_modify_genre.html', context)
+    return render(request, 'catalog/create_or_modify_object.html', context)
 
 
 # track
@@ -249,7 +260,7 @@ def modify_track(request, pk=None):
 
     try:
         existing_track = Track.objects.get(id=pk)
-        modify = True
+        action = 'modify'
         print('attempting to modifiy '+str(existing_track))
         if request.user.has_perm('catalog.moxtool_can_modify_any_track'):
             model = 'Track'
@@ -259,7 +270,7 @@ def modify_track(request, pk=None):
             raise PermissionError
     except:
         existing_track = None
-        modify = False
+        action = 'create'
         print('attempting to create a new artist')
         if request.user.has_perm('catalog.moxtool_can_create_any_track'):
             model = 'Track'
@@ -271,12 +282,17 @@ def modify_track(request, pk=None):
     if request.method == 'POST':
         form = TrackForm(request.POST)
         if form.is_valid():
-            track = form.save(model, request.user, existing_track)
-            print(track)
-            if model == 'Track':
-                return HttpResponseRedirect(track.get_absolute_url())
+            track, success = form.save(model, request.user, existing_track)
+            print(str(success))
+            if success is True:
+                print(track)
+                if model == 'Artist':
+                    return HttpResponseRedirect(track.get_absolute_url())
+                else:
+                    return HttpResponseRedirect(reverse('tracks'))
             else:
-                return HttpResponseRedirect(reverse('tracks'))
+                # HttpResponseRedirect(reverse('bad-request', args=['artist']))
+                print('No change detected')
         else:
             print(form.errors)
     else:
@@ -284,6 +300,9 @@ def modify_track(request, pk=None):
         if existing_track:
             initial['beatport_track_id'] = existing_track.beatport_track_id
             initial['title'] = existing_track.title
+            initial['genre_name'] = existing_track.genre.name
+            initial['artist_names'] = existing_track.display_artist()
+            initial['remix_artist_names'] = existing_track.display_remix_artist()
             initial['mix'] = existing_track.mix
             initial['public'] = existing_track.public
             form = TrackForm(initial)
@@ -292,11 +311,14 @@ def modify_track(request, pk=None):
 
     context = {
         'form': form,
-        'artist': existing_track,
-        'modify': modify,
+        'obj': existing_track,
+        'text': {
+            'type': 'track',
+            'action': action,
+        },
     }
 
-    return render(request, 'catalog/create_or_modify_track.html', context)
+    return render(request, 'catalog/create_or_modify_object.html', context)
 
 
 # playlist

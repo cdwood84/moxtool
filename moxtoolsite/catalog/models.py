@@ -2,7 +2,7 @@ from datetime import date
 from django.apps import apps
 from django.conf import settings
 # from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError, FieldDoesNotExist
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
@@ -61,26 +61,84 @@ class SharedModelPermissionManager(models.Manager):
 
 class SharedModelMixin:
 
-    def set_field(self, field, value):
-        if field in self.valid_fields:
-            eval("self."+field+"="+value)
-        else:
-            raise ValidationError('The field '+field+' does not exist in '+self.__class__.__name__)
-        
-    def get_field(self, field):
-        if field in self.valid_fields:
-            value = eval("return self."+field)
-            return value
-        else:
-            raise ValidationError('The field '+field+' does not exist in '+self.__class__.__name__)
+    def set_field(self, field_name, value_input):
+        try:
+            if field_name in self.valid_fields:
+                setattr(self, field_name, value_input)
+                self.save()
+            else:
+                for field, field_obj in self.valid_fields.items():
+                    if 'string_form' in field_obj and field_obj['string_form'] == field_name:
+                        new_field_name = field
+                        break
+                if new_field_name:
+                    # special case where the field is a single model object that can be created with a string
+                    if self.valid_fields[new_field_name]['complexity'] == 1 and isinstance(value_input, str):
+                        print('attempting to create a model object from string input')
+                        value = None
+                        if value_input.strip().__len__() >= 1:
+                            filter_kwargs = {self.valid_fields[new_field_name]['string_field']: value_input.strip()}
+                            queryset = self.valid_fields[new_field_name]['model'].objects.filter(**filter_kwargs)
+                            if queryset.count() >= 1:
+                                value = queryset.first()
+                            else:
+                                value = self.valid_fields[new_field_name]['model'].objects.create()
+                                setattr(value, self.valid_fields[new_field_name]['string_field'], value_input.strip())
+                                value.save()
+                        setattr(self, new_field_name, value)
+                        self.save()
+                    # special case where the field is a queryset of model objects that can be created with a delimited string
+                    elif self.valid_fields[new_field_name]['complexity'] == 2 and isinstance(value_input, str):
+                        print('attempting to create a queryset from string input')
+                        values = self.valid_fields[new_field_name]['model'].objects.none()
+                        for value_item in value_input.split(','):
+                            if value_item.strip().__len__() >= 1:
+                                filter_kwargs = {self.valid_fields[new_field_name]['string_field']: value_item.strip()}
+                                queryset = self.valid_fields[new_field_name]['model'].objects.filter(**filter_kwargs)
+                                if queryset.count() >= 1:
+                                    value = queryset.first()
+                                else:
+                                    value = self.valid_fields[new_field_name]['model'].objects.create()
+                                    setattr(value, self.valid_fields[new_field_name]['string_field'], value_item.strip())
+                                    value.save()
+                                values = values | value
+                        setattr(self, new_field_name, values)
+                        self.save()
+                    else:
+                        raise ValidationError(f'The value '+str(value_input)+' cannot be parsed into '+field_name+'.')
+                else:
+                    raise ValidationError('The field '+field_name+' does not exist or is not able to be set in '+self.__class__.__name__+'.')
+        except FieldDoesNotExist:
+            print(f"Field '{field_name}' does not exist on the model.")
+        except ValueError:
+            print(f"Cannot convert '{str(value_input)}' to the type of field '{field_name}'.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def get_field(self, field_name):
+        try:
+            if field_name in self.valid_fields:
+                value = getattr(self, field_name)
+                return value
+            else:
+                raise ValidationError('The field '+field_name+' does not exist in '+self.__class__.__name__)
+        except FieldDoesNotExist:
+            print(f"Field '{field_name}' does not exist on the model.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
         
     def is_equivalent(self, obj):
-        equivalence = True
-        for field in self.valid_fields:
-            eval("equivalence = self."+field+" == obj."+field)
-            if equivalence is False:
-                break
-        return equivalence
+        try:
+            equivalence = True
+            for field_name in self.valid_fields:
+                self_field = self._meta.get_field(field_name)
+                obj_field = obj._meta.get_field(field_name)
+                equivalence = self_field == obj_field
+                if equivalence is False:
+                    break
+            return equivalence
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 class Artist(models.Model, SharedModelMixin):
@@ -90,7 +148,18 @@ class Artist(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['name', 'public']
+        return {
+            'name': {
+                'type': 'string',
+                'complexity': 0,
+                'create': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+                'create': False,
+            },
+        }
 
     def __str__(self):
         return self.name
@@ -144,7 +213,16 @@ class Genre(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['name', 'public']
+        return {
+            'name': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+            },
+        }
 
     def __str__(self):
         return self.name
@@ -214,14 +292,59 @@ class Track(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['beatport_track_id', 'title', 'genre', 'artist', 'remix_artist', 'mix', 'public']
+        return {
+            'beatport_track_id': {
+                'type': 'integer',
+                'complexity': 0,
+            },
+            'title': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'genre': {
+                'type': 'model',
+                'complexity': 1,
+                'model': Genre,
+                'string_field': 'name',
+                'string_form': 'genre_name',
+            },
+            'artist': {
+                'type': 'queryset',
+                'complexity': 2,
+                'model': Artist,
+                'string_form': 'artist_names',
+            },
+            'remix_artist': {
+                'type': 'queryset',
+                'complexity': 2,
+                'model': Artist,
+                'string_form': 'remix_artist_names',
+            },
+            'mix': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+            },
+        }
 
     def __str__(self):
-        return self.title
+        value = self.title
+        artists = self.display_artist()
+        remixers = self.display_remix_artist()
+        if remixers.__len__() >= 1:
+            value += ' (' + remixers + 'remix)'
+        else:
+            value += ' ' + self.get_mix_display()
+        if artists.__len__() >= 1:
+            value += ' by ' + artists
+        return value
     
     def get_absolute_url(self):
         url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
-        return reverse('track-detail', args=[url_friendly_title, str(self.id)])
+        return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
     def display_artist(self):
         return ', '.join(artist.name for artist in self.artist.all())
@@ -316,7 +439,21 @@ class ArtistRequest(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['name', 'public', 'artist']
+        return {
+            'name': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+            },
+            'artist': {
+                'type': 'model',
+                'complexity': 1,
+                'model': Artist,
+            },
+        }
 
     def __str__(self):
         message = self.name
@@ -359,7 +496,21 @@ class GenreRequest(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['name', 'public', 'genre']
+        return {
+            'name': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+            },
+            'genre': {
+                'type': 'model',
+                'complexity': 1,
+                'model': Genre,
+            },
+        }
 
     def __str__(self):
         message = self.name
@@ -420,7 +571,44 @@ class TrackRequest(models.Model, SharedModelMixin):
     
     @property
     def valid_fields(self):
-        return ['beatport_track_id', 'title', 'genre', 'artist', 'remix_artist', 'mix', 'public']
+        return {
+            'beatport_track_id': {
+                'type': 'integer',
+                'complexity': 0,
+            },
+            'title': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'genre': {
+                'type': 'model',
+                'complexity': 1,
+                'model': Genre,
+            },
+            'artist': {
+                'type': 'queryset',
+                'complexity': 2,
+                'model': Artist,
+            },
+            'remix_artist': {
+                'type': 'queryset',
+                'complexity': 2,
+                'model': Artist,
+            },
+            'mix': {
+                'type': 'string',
+                'complexity': 0,
+            },
+            'public': {
+                'type': 'boolean',
+                'complexity': 0,
+            },
+            'track': {
+                'type': 'model',
+                'complexity': 1,
+                'model': Track,
+            }
+        }
 
     def __str__(self):
         message = self.title

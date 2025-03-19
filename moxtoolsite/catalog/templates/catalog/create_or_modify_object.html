@@ -1,0 +1,16 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    <h1>{{ text.action.title }} {{ text.type.title }}{% if text.action == 'modify' %}: {{ obj }}{% endif %}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">
+            {% if perms.catalog.moxtool_can_create_any_genre %}
+                Save {{ text.type.title }}
+            {% else %}
+                Request {{ text.type.title }}
+            {% endif %}
+        </button>
+    </form>
+{% endblock %}
