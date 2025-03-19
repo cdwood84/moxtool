@@ -155,6 +155,10 @@ class SharedModelMixin:
                 initial.update({field_name: self.get_field(field_name)})
         return initial
 
+    def get_modify_url(self):
+        obj_name = self.__class__.__name__.lower()
+        return reverse('modify-object', args=[obj_name,str(self.id)])
+
 
 class Artist(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)
@@ -182,9 +186,6 @@ class Artist(models.Model, SharedModelMixin):
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
         return reverse('artist-detail', args=[str(self.id), url_friendly_name])
-
-    def get_modify_url(self):
-        return reverse('modify-artist', args=[str(self.id)])
     
     def get_genre_list(self):
         artist_track_list = self.track_set.all()
@@ -245,9 +246,6 @@ class Genre(models.Model, SharedModelMixin):
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
-
-    def get_modify_url(self):
-        return reverse('modify-genre', args=[str(self.id)])
     
     def get_viewable_tracks_in_genre(self, user):
         return Track.objects.get_queryset_can_view(user, 'track').filter(genre=self)

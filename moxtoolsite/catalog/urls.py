@@ -3,25 +3,28 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+
+    # shared
+    path('<str:obj_name>/create', views.modify_object, name='create-object'),
     path('<str:obj_name>/modify/<int:pk>', views.modify_object, name='modify-object'),
 
     # genre
     path('genres/', views.GenreListView.as_view(), name='genres'),
     path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
-    path('genre/create', views.modify_genre, name='create-genre'),
-    path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
+    # path('genre/create', views.modify_genre, name='create-genre'),
+    # path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
 
     # artist
     path('artists/', views.ArtistListView.as_view(), name='artists'),
     path('artist/<int:pk>/<str:name>', views.ArtistDetailView.as_view(), name='artist-detail'),
-    path('artist/create', views.modify_artist, name='create-artist'),
-    path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
+    # path('artist/create', views.modify_artist, name='create-artist'),
+    # path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
 
     # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
-    path('track/create', views.modify_track, name='create-track'),
-    path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
+    # path('track/create', views.modify_track, name='create-track'),
+    # path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
     # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
 
     # playlist

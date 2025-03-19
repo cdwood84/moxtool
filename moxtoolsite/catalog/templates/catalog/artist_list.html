@@ -14,8 +14,8 @@
     <p>There are no artists with tracks in your library.</p>
   {% endif %}
   {% if perms.catalog.moxtool_can_create_any_artist %}
-    <p><a href="{% url 'create-artist' %}">Create a new artist</a></p>
+    <p><a href="{% url 'create-object' 'artist' %}">Create a new artist</a></p>
   {% elif perms.catalog.moxtool_can_create_public_artist %}
-    <p><a href="{% url 'create-artist' %}">Request a new artist</a></p>
+    <p><a href="{% url 'create-object' 'artist' %}">Request a new artist</a></p>
   {% endif %}
 {% endblock %}

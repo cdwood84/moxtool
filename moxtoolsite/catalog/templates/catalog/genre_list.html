@@ -12,8 +12,8 @@
         <p>There aren't any genres publicly shared on this site.</p>
     {% endif %}
     {% if perms.catalog.moxtool_can_create_any_genre %}
-      <p><a href="{% url 'create-genre' %}">Create a new genre</a></p>
+      <p><a href="{% url 'create-object' 'genre' %}">Create a new genre</a></p>
     {% elif perms.catalog.moxtool_can_create_public_genre %}
-      <p><a href="{% url 'create-genre' %}">Request a new genre</a></p>
+      <p><a href="{% url 'create-object' 'genre' %}">Request a new genre</a></p>
     {% endif %}
 {% endblock %}
