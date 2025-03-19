@@ -68,30 +68,36 @@ class AddTrackToPlaylistForm(forms.Form):
 
 class ObjectFormMixin:
 
-    def save(self, model, user, existing_obj, commit=True):
+    def save(self, model, action_model, user, existing_obj, obj_name, commit=True):
 
         # get or create object based on use case
-        if model.endswith('Request'):
-            obj = apps.get_model('catalog', model).objects.create(user=user, date_added=datetime.date.today())
+        if model == action_model:
             if existing_obj:
-                obj_name = model[:-len('Request')].lower()
-                obj.set_field(obj_name,existing_obj)
-            potential_matches = apps.get_model('catalog', model).objects.exclude(id=obj.id)
-        else:
-            if existing_obj:
-                obj = apps.get_model('catalog', model).objects.get(id=existing_obj.id)
+                obj = action_model.objects.get(id=existing_obj.id)
             else:
-                obj = apps.get_model('catalog', model).objects.create(name=self.cleaned_data.get('name'))
+                obj = action_model.objects.create()
+                create_flag = True
+        else:
+            obj = action_model.objects.create(user=user, date_added=datetime.date.today())
+            if existing_obj:
+                obj.set_field(obj_name.lower(), existing_obj)
+            potential_matches = action_model.objects.exclude(id=obj.id)
 
-        # set object fields with cleaned data
-        for field in self.cleaned_data:
-            obj.set_field(field, self.cleaned_data.get(field))
-            if model.endswith('Request'):
-                filter_kwargs = {field: self.cleaned_data.get(field)}
-                potential_matches = potential_matches.filter(**filter_kwargs)
+        # try to set object fields with cleaned data
+        try:
+            for field, value in self.cleaned_data:
+                obj.set_field(field, value)
+                if model != action_model:
+                    filter_kwargs = {field: value}
+                    potential_matches = potential_matches.filter(**filter_kwargs)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            if create_flag:
+                obj.delete()
+            return None, False
         
-        # check for duplicate modifications
-        if model.endswith('Request') and potential_matches.count() >= 1:
+        # check for duplicate requests
+        if model != action_model and potential_matches.count() >= 1:
             obj.delete()
             return None, False
         

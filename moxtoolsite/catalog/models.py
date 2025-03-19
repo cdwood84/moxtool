@@ -140,6 +140,21 @@ class SharedModelMixin:
         except Exception as e:
             print(f"An error occurred: {e}")
 
+    def add_fields_to_initial(self, initial):
+        for field_name, field_obj in self.valid_fields:
+            if 'string_form' in field_obj:
+                field_value = self.get_field(field_name)
+                form_value = ''
+                if field_value:
+                    if field_obj['complexity'] == 1:
+                        form_value = field_value.__str__()
+                    if field_obj['complexity'] == 2:
+                        form_value = ', '.join(field_item.__str__() for field_item in field_value.all())
+                initial.update({field_obj['string_form']: form_value})
+            else:
+                initial.update({field_name: self.get_field(field_name)})
+        return initial
+
 
 class Artist(models.Model, SharedModelMixin):
     name = models.CharField(max_length=200)

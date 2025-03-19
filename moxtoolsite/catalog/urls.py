@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    # path('<str:type>/request/failure', views.bad_request, name='bad-request'),
+    path('<str:obj_name>/modify/<int:pk>', views.modify_object, name='modify-object'),
 
     # genre
     path('genres/', views.GenreListView.as_view(), name='genres'),

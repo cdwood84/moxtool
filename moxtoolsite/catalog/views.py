@@ -1,7 +1,8 @@
 import datetime
+from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError
 from django.db.models import Q
 from django.http import HttpResponseRedirect
@@ -10,6 +11,7 @@ from django.urls import reverse
 from django.views import generic
 from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
+import importlib
 
 
 def index(request):
@@ -43,11 +45,74 @@ def index(request):
     return render(request, 'index.html', context=context)
 
 
-def bad_request(request, type):
-    context = {
-        'request_type': type
-    }
-    return render(request, 'bad_request.html', context=context)
+@login_required
+def modify_object(request, obj_name, pk=None):
+
+    try:
+
+        # identify the model and determine use case by create / modify
+        model = apps.get_model('catalog', obj_name.title())
+        form_class = getattr(
+            importlib.import_module(".forms"), 
+            obj_name.title()+'Form'
+        )
+        if pk is not None:
+            existing_obj = model.objects.get(id=pk)
+            action = 'modify'
+        else:
+            existing_obj = None
+            action = 'create'
+
+        # assess user permissions by direct action / request action
+        if request.user.has_perm('catalog.moxtool_can_'+action+'_any_'+obj_name.lower()):
+            action_model = model
+            perm_level = 'direct'
+        elif request.user.has_perm('catalog.moxtool_can_'+action+'_own_'+obj_name.lower()) \
+            or request.user.has_perm('catalog.moxtool_can_'+action+'_public_'+obj_name.lower()):
+            action_model = apps.get_model('catalog', obj_name.title()+'Request')
+            perm_level = 'request'
+        else: 
+            raise PermissionError
+
+        # process the form
+        if request.method == 'POST':
+            form = form_class(request.POST)
+            if form.is_valid():
+                obj, success = form.save(model, action_model, request.user, existing_obj, obj_name)
+                if success is True:
+                    print(action.title()+' - '+obj+' was successful.')
+                    if model == action_model:
+                        return HttpResponseRedirect(obj.get_absolute_url())
+                    else:
+                        return HttpResponseRedirect(reverse(obj_name.lower()+'s'))
+                else:
+                    print('No change detected.')
+            else:
+                print(form.errors)
+        else:
+            initial = {'user': request.user}
+            if existing_obj:
+                initial = existing_obj.add_fields_to_initial(initial)
+                form = form_class(initial)
+            else:
+                form = form_class()
+
+        # set context for HTML
+        context = {
+            'form': form,
+            'obj': existing_obj,
+            'text': {
+                'type': obj_name,
+                'action': action,
+                'perm': perm_level,
+            },
+        }
+
+        # render the page
+        return render(request, 'catalog/create_or_modify_object.html', context)
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 # artist

@@ -1,7 +1,0 @@
-{% extends "base_generic.html" %}
-
-{% block content %}
-    <h1>Bad Request</h1>
-    <p>Your {{ request_type }} request failed.</p>
-    <p>Reasons for failure include the requested changes matching the existing {{ request_type }} or matching another pending request.</p>
-{% endblock %}
