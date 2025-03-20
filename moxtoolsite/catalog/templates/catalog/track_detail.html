@@ -2,7 +2,7 @@
 
 {% block content %}
   <h1>{{ track.title }} {% if track.mix %}({{ track.get_mix_display }}){% endif %}</h1>
-
+  <p><strong>Mix:</strong> {{ track.get_mix_display }}</p>
   {% if viewable_artists %}
     <p>
       <strong>Artist:</strong> 
@@ -29,9 +29,9 @@
     <p class="text-muted"><strong>Genre:</strong> the genre on this track is either undefined or not public</p>
   {% endif %}
   {% if perms.catalog.moxtool_can_modify_any_track %}
-    <p><a href="{% url 'modify-track' track.id %}">Modify this track</a></p>
+    <p><a href="{{ track.get_modify_url }}">Modify this track</a></p>
   {% elif perms.catalog.moxtool_can_modify_public_track %}
-    <p>Request changes to this track</p>
+    <p><a href="{{ track.get_modify_url }}">Request changes to this track</a></p>
   {% endif %}
 
   <div style="margin-left:20px;margin-top:20px">

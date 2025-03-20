@@ -53,7 +53,7 @@ def modify_object(request, obj_name, pk=None):
         # identify the model and determine use case by create / modify
         model = apps.get_model('catalog', obj_name.title())
         form_class = getattr(
-            importlib.import_module(".forms"), 
+            importlib.import_module("catalog.forms"), 
             obj_name.title()+'Form'
         )
         if pk is not None:
@@ -80,7 +80,7 @@ def modify_object(request, obj_name, pk=None):
             if form.is_valid():
                 obj, success = form.save(model, action_model, request.user, existing_obj, obj_name)
                 if success is True:
-                    print(action.title()+' - '+obj+' was successful.')
+                    print(action.title()+' '+obj_name.title()+': '+str(obj)+' was successful.')
                     if model == action_model:
                         return HttpResponseRedirect(obj.get_absolute_url())
                     else:
@@ -90,9 +90,8 @@ def modify_object(request, obj_name, pk=None):
             else:
                 print(form.errors)
         else:
-            initial = {'user': request.user}
             if existing_obj:
-                initial = existing_obj.add_fields_to_initial(initial)
+                initial = existing_obj.add_fields_to_initial()
                 form = form_class(initial)
             else:
                 form = form_class()

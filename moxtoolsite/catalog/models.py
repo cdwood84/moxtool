@@ -11,7 +11,148 @@ import re
 import uuid
 
 
-# shared models
+# mixins
+
+
+class ArtistMixin:
+
+    useful_field_list = [
+        'name',
+        'public',
+    ]
+
+    def add_fields_to_initial(self, initial={}):
+        initial['name'] = self.name
+        initial['public'] = self.public
+        return initial
+        
+    def is_equivalent(self, obj):
+        equivalence = True
+        if self.name != obj.name:
+            equivalence = False
+        if self.public != obj.public:
+            equivalence = False
+        return equivalence
+
+
+class GenreMixin:
+
+    useful_field_list = [
+        'name',
+        'public',
+    ]
+
+    def add_fields_to_initial(self, initial={}):
+        initial['name'] = self.name
+        initial['public'] = self.public
+        return initial
+        
+    def is_equivalent(self, obj):
+        equivalence = True
+        if self.name != obj.name:
+            equivalence = False
+        if self.public != obj.public:
+            equivalence = False
+        return equivalence
+
+
+class TrackMixin:
+
+    useful_field_list = [
+        'beatport_track_id',
+        'title',
+        'genre',
+        'artist',
+        'remix_artist',
+        'mix',
+        'public',
+    ]
+
+    def add_fields_to_initial(self, initial={}):
+        initial['beatport_track_id'] = self.beatport_track_id
+        initial['title'] = self.title
+        if self.genre and self.genre.name:
+            initial['genre_name'] = self.genre.name
+        if self.artist and self.artist.all().count() >= 1:
+            initial['artist_names'] = ', '.join(str(artist) for artist in self.artist.all())
+        if self.remix_artist and self.remix_artist.all().count() >= 1:
+            initial['remix_artist_names'] = ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
+        initial['mix'] = self.mix
+        initial['public'] = self.public
+        return initial
+
+
+class SharedModelMixin:
+
+    def set_field(self, field_name, value_input):
+        try:
+            if 'queryset' in str(value_input.__class__).lower():
+                field = getattr(self, field_name)
+                field.set(value_input)
+                self.save()
+            else:
+                setattr(self, field_name, value_input)
+                self.save()
+        except FieldDoesNotExist:
+            print(f"Field '{field_name}' does not exist on the model.")
+        except ValueError:
+            print(f"Cannot convert '{str(value_input)}' to the type of field '{field_name}'.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def get_field(self, field_name):
+        try:
+            value = getattr(self, field_name)
+            if 'many_to_many' in str(value.__class__).lower():
+                return getattr(self, field_name, None).all()
+            return value
+        except FieldDoesNotExist:
+            print(f"Field '{field_name}' does not exist on the model.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def get_modify_url(self):
+        obj_name = self.__class__.__name__.lower()
+        return reverse('modify-object', args=[obj_name,str(self.id)])
+        
+    def is_equivalent(self, obj):
+        for field in self.useful_field_list:
+            if self.field_is_equivalent(obj, field) is False:
+                return False
+        return True
+    
+    def field_is_equivalent(self, obj, field_name):
+        self_field = self.get_field(field_name)
+        obj_field = obj.get_field(field_name)
+        print(field_name)
+        if self_field and obj_field:
+            if 'queryset' in str(self_field.__class__).lower():
+                self_array = []
+                for self_item in self_field.all():
+                    self_array.append(self_item.id)
+                obj_array = []
+                for obj_item in obj_field.all():
+                    obj_array.append(obj_item.id)
+                print(self_array)
+                print(obj_array)
+                print(self_array.sort() == obj_array.sort())
+                return self_array.sort() == obj_array.sort()
+            else:
+                print(self_field)
+                print(obj_field)
+                print(self_field == obj_field)
+                return self_field == obj_field
+        elif not(self_field) and not(obj_field):
+            print(True)
+            return True
+        else:
+            print(self_field)
+            print(obj_field)
+            return False
+    
+
+# shared models with permissions manager
+
 
 class SharedModelPermissionManager(models.Manager):
     valid_shared_models = ['artist','genre','track']
@@ -59,126 +200,10 @@ class SharedModelPermissionManager(models.Manager):
             raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
 
-class SharedModelMixin:
-
-    def set_field(self, field_name, value_input):
-        try:
-            if field_name in self.valid_fields:
-                setattr(self, field_name, value_input)
-                self.save()
-            else:
-                for field, field_obj in self.valid_fields.items():
-                    if 'string_form' in field_obj and field_obj['string_form'] == field_name:
-                        new_field_name = field
-                        break
-                if new_field_name:
-                    # special case where the field is a single model object that can be created with a string
-                    if self.valid_fields[new_field_name]['complexity'] == 1 and isinstance(value_input, str):
-                        print('attempting to create a model object from string input')
-                        value = None
-                        if value_input.strip().__len__() >= 1:
-                            filter_kwargs = {self.valid_fields[new_field_name]['string_field']: value_input.strip()}
-                            queryset = self.valid_fields[new_field_name]['model'].objects.filter(**filter_kwargs)
-                            if queryset.count() >= 1:
-                                value = queryset.first()
-                            else:
-                                value = self.valid_fields[new_field_name]['model'].objects.create()
-                                setattr(value, self.valid_fields[new_field_name]['string_field'], value_input.strip())
-                                value.save()
-                        setattr(self, new_field_name, value)
-                        self.save()
-                    # special case where the field is a queryset of model objects that can be created with a delimited string
-                    elif self.valid_fields[new_field_name]['complexity'] == 2 and isinstance(value_input, str):
-                        print('attempting to create a queryset from string input')
-                        values = self.valid_fields[new_field_name]['model'].objects.none()
-                        for value_item in value_input.split(','):
-                            if value_item.strip().__len__() >= 1:
-                                filter_kwargs = {self.valid_fields[new_field_name]['string_field']: value_item.strip()}
-                                queryset = self.valid_fields[new_field_name]['model'].objects.filter(**filter_kwargs)
-                                if queryset.count() >= 1:
-                                    value = queryset.first()
-                                else:
-                                    value = self.valid_fields[new_field_name]['model'].objects.create()
-                                    setattr(value, self.valid_fields[new_field_name]['string_field'], value_item.strip())
-                                    value.save()
-                                values = values | value
-                        setattr(self, new_field_name, values)
-                        self.save()
-                    else:
-                        raise ValidationError(f'The value '+str(value_input)+' cannot be parsed into '+field_name+'.')
-                else:
-                    raise ValidationError('The field '+field_name+' does not exist or is not able to be set in '+self.__class__.__name__+'.')
-        except FieldDoesNotExist:
-            print(f"Field '{field_name}' does not exist on the model.")
-        except ValueError:
-            print(f"Cannot convert '{str(value_input)}' to the type of field '{field_name}'.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-    def get_field(self, field_name):
-        try:
-            if field_name in self.valid_fields:
-                value = getattr(self, field_name)
-                return value
-            else:
-                raise ValidationError('The field '+field_name+' does not exist in '+self.__class__.__name__)
-        except FieldDoesNotExist:
-            print(f"Field '{field_name}' does not exist on the model.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-        
-    def is_equivalent(self, obj):
-        try:
-            equivalence = True
-            for field_name in self.valid_fields:
-                self_field = self._meta.get_field(field_name)
-                obj_field = obj._meta.get_field(field_name)
-                equivalence = self_field == obj_field
-                if equivalence is False:
-                    break
-            return equivalence
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-    def add_fields_to_initial(self, initial):
-        for field_name, field_obj in self.valid_fields:
-            if 'string_form' in field_obj:
-                field_value = self.get_field(field_name)
-                form_value = ''
-                if field_value:
-                    if field_obj['complexity'] == 1:
-                        form_value = field_value.__str__()
-                    if field_obj['complexity'] == 2:
-                        form_value = ', '.join(field_item.__str__() for field_item in field_value.all())
-                initial.update({field_obj['string_form']: form_value})
-            else:
-                initial.update({field_name: self.get_field(field_name)})
-        return initial
-
-    def get_modify_url(self):
-        obj_name = self.__class__.__name__.lower()
-        return reverse('modify-object', args=[obj_name,str(self.id)])
-
-
-class Artist(models.Model, SharedModelMixin):
+class Artist(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
-    
-    @property
-    def valid_fields(self):
-        return {
-            'name': {
-                'type': 'string',
-                'complexity': 0,
-                'create': True,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-                'create': False,
-            },
-        }
 
     def __str__(self):
         return self.name
@@ -218,7 +243,7 @@ class Artist(models.Model, SharedModelMixin):
         )
 
 
-class Genre(models.Model, SharedModelMixin):
+class Genre(models.Model, SharedModelMixin, GenreMixin):
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -226,23 +251,10 @@ class Genre(models.Model, SharedModelMixin):
     )
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
-    
-    @property
-    def valid_fields(self):
-        return {
-            'name': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-            },
-        }
 
     def __str__(self):
         return self.name
-
+    
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
@@ -280,11 +292,11 @@ class Genre(models.Model, SharedModelMixin):
         )
    
 
-class Track(models.Model, SharedModelMixin):
+class Track(models.Model, SharedModelMixin, TrackMixin):
     title = models.CharField(max_length=200)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
     MIX_LIST = [
@@ -303,55 +315,16 @@ class Track(models.Model, SharedModelMixin):
     )
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist", blank=True)
     
-    @property
-    def valid_fields(self):
-        return {
-            'beatport_track_id': {
-                'type': 'integer',
-                'complexity': 0,
-            },
-            'title': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'genre': {
-                'type': 'model',
-                'complexity': 1,
-                'model': Genre,
-                'string_field': 'name',
-                'string_form': 'genre_name',
-            },
-            'artist': {
-                'type': 'queryset',
-                'complexity': 2,
-                'model': Artist,
-                'string_form': 'artist_names',
-            },
-            'remix_artist': {
-                'type': 'queryset',
-                'complexity': 2,
-                'model': Artist,
-                'string_form': 'remix_artist_names',
-            },
-            'mix': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-            },
-        }
-
     def __str__(self):
         value = self.title
         artists = self.display_artist()
         remixers = self.display_remix_artist()
-        if remixers.__len__() >= 1:
-            value += ' (' + remixers + 'remix)'
-        else:
-            value += ' ' + self.get_mix_display()
-        if artists.__len__() >= 1:
+        mix = self.get_mix_display()
+        if len(remixers) >= 1:
+            value += ' (' + remixers + ' Remix)'
+        elif mix is not None:
+            value += ' ' + mix
+        if len(artists) >= 1:
             value += ' by ' + artists
         return value
     
@@ -371,8 +344,11 @@ class Track(models.Model, SharedModelMixin):
     
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        for artist in self.artist.get_queryset_can_view(user, 'artist'):
-            viewable_artists = viewable_artists | Artist.objects.filter(id=artist.id)
+        user_viewable_artists = Artist.objects.get_queryset_can_view(user, 'artist')
+        for artist in self.artist.all():
+            viewable_artist = user_viewable_artists.get(id=artist.id)
+            if viewable_artist and artist == viewable_artist:
+                viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
         return viewable_artists
     
     def display_viewable_artists(self, user):
@@ -382,8 +358,11 @@ class Track(models.Model, SharedModelMixin):
     
     def get_viewable_remix_artists_on_track(self, user):
         viewable_remix_artists = Artist.objects.none()
-        for remix_artist in self.remix_artist.get_queryset_can_view(user, 'artist'):
-            viewable_remix_artists = viewable_remix_artists | Artist.objects.filter(id=remix_artist.id)
+        user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user, 'artist')
+        for remix_artist in self.remix_artist.all():
+            viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
+            if viewable_remix_artist and remix_artist == viewable_remix_artist:
+                viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
         return viewable_remix_artists
     
     def display_viewable_remix_artists(self, user):
@@ -392,12 +371,20 @@ class Track(models.Model, SharedModelMixin):
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        return Genre.objects.get_queryset_can_view(user, 'genre').filter(track=self).get(id=self.genre.id)
+        return Genre.objects.get_queryset_can_view(user, 'genre').get(id=self.genre.id)
     
     def get_viewable_instances_of_track(self, user):
         return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(track=self)
     
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                'beatport_track_id',
+                name='beatport_track_id_if_set_unique',
+                condition=models.Q(beatport_track_id__isnull=False),
+                violation_error_message="This track ID from Beatport is already attached to another track.",
+            ),
+        ]
         ordering = [
             'title',
         ]
@@ -413,7 +400,7 @@ class Track(models.Model, SharedModelMixin):
         )
 
 
-# user requests
+# user shared model requests with permissions manager
 
 
 class UserRequestPermissionManager(models.Manager):
@@ -442,31 +429,13 @@ class UserRequestPermissionManager(models.Manager):
             raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
 
-class ArtistRequest(models.Model, SharedModelMixin):
+class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
-    
-    @property
-    def valid_fields(self):
-        return {
-            'name': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-            },
-            'artist': {
-                'type': 'model',
-                'complexity': 1,
-                'model': Artist,
-            },
-        }
 
     def __str__(self):
         message = self.name
@@ -499,31 +468,13 @@ class ArtistRequest(models.Model, SharedModelMixin):
         )
 
 
-class GenreRequest(models.Model, SharedModelMixin):
+class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
-    
-    @property
-    def valid_fields(self):
-        return {
-            'name': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-            },
-            'genre': {
-                'type': 'model',
-                'complexity': 1,
-                'model': Genre,
-            },
-        }
 
     def __str__(self):
         message = self.name
@@ -556,8 +507,8 @@ class GenreRequest(models.Model, SharedModelMixin):
         )
 
 
-class TrackRequest(models.Model, SharedModelMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', unique=True, help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     title = models.CharField(max_length=200)
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
@@ -581,68 +532,28 @@ class TrackRequest(models.Model, SharedModelMixin):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
-    
-    @property
-    def valid_fields(self):
-        return {
-            'beatport_track_id': {
-                'type': 'integer',
-                'complexity': 0,
-            },
-            'title': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'genre': {
-                'type': 'model',
-                'complexity': 1,
-                'model': Genre,
-            },
-            'artist': {
-                'type': 'queryset',
-                'complexity': 2,
-                'model': Artist,
-            },
-            'remix_artist': {
-                'type': 'queryset',
-                'complexity': 2,
-                'model': Artist,
-            },
-            'mix': {
-                'type': 'string',
-                'complexity': 0,
-            },
-            'public': {
-                'type': 'boolean',
-                'complexity': 0,
-            },
-            'track': {
-                'type': 'model',
-                'complexity': 1,
-                'model': Track,
-            }
-        }
 
     def __str__(self):
         message = self.title
         if self.track:
             message = 'Modify track request: ' + message
-            if self.beatport_track_id != self.track.beatport_track_id:
-                message = message + ', change Beatport track ID to ' + self.beatport_track_id
-            if self.title != self.track.title:
-                message = message + ', change title'
-            if self.genre != self.track.genre:
-                message = message + ', change genre to ' + self.genre
-            if self.display_artist() != self.track.display_artist():
-                message = message + ', change artist to ' + self.display_artist()
-            if self.display_remix_artist() != self.track.display_remix_artist():
-                message = message + ', change remix artist to ' + self.display_remix_artist()
-            if self.get_mix_display != self.track.get_mix_display:
-                message = message + ', change mix to ' + self.get_mix_display
-            if self.public != self.artist.public:
-                message = message + ', change public to ' + str(self.public)
+            message = self.field_substr(message, 'beatport_track_id', self.beatport_track_id, self.track.beatport_track_id)
+            message = self.field_substr(message, 'title', self.title, self.track.title)
+            message = self.field_substr(message, 'genre', self.genre, self.track.genre)
+            message = self.field_substr(message, 'artist', self.display_artist(), self.track.display_artist())
+            message = self.field_substr(message, 'remix artist', self.display_remix_artist(), self.track.display_remix_artist())
+            message = self.field_substr(message, 'mix', self.get_mix_display(), self.track.get_mix_display())
+            message = self.field_substr(message, 'public', self.public, self.track.public)
         else:
             message = 'New track request: ' + message
+        return message
+
+    def field_substr(self, message, field_name, request_value, existing_value):
+        if request_value:
+            if not(existing_value) or (request_value != existing_value):
+                message += ', change ' + field_name + ' to ' + str(request_value)
+        elif not(request_value) and existing_value:
+            message += ', remove ' + field_name
         return message
     
     def display_artist(self):

@@ -70,42 +70,53 @@ class ObjectFormMixin:
 
     def save(self, model, action_model, user, existing_obj, obj_name, commit=True):
 
-        # get or create object based on use case
-        if model == action_model:
-            if existing_obj:
-                obj = action_model.objects.get(id=existing_obj.id)
-            else:
-                obj = action_model.objects.create()
-                create_flag = True
-        else:
-            obj = action_model.objects.create(user=user, date_added=datetime.date.today())
-            if existing_obj:
-                obj.set_field(obj_name.lower(), existing_obj)
-            potential_matches = action_model.objects.exclude(id=obj.id)
-
-        # try to set object fields with cleaned data
-        try:
-            for field, value in self.cleaned_data:
+        # the case for directly modifying an nobject requires a get
+        if model == action_model and existing_obj:
+            obj = action_model.objects.get(id=existing_obj.id)
+            for field, value in self.cleaned_data.items():
                 obj.set_field(field, value)
-                if model != action_model:
-                    filter_kwargs = {field: value}
-                    potential_matches = potential_matches.filter(**filter_kwargs)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            if create_flag:
+            obj = self.append_many_to_many_data(obj)
+
+        # all other cases are a create requiring duplicate checks
+        else:
+            obj_kwargs = self.cleaned_data
+            if model != action_model:
+                obj_kwargs['user'] = user
+                obj_kwargs['date_requested'] = datetime.date.today()
+                if existing_obj:
+                    obj_kwargs[obj_name] = existing_obj
+            obj = action_model.objects.create(**obj_kwargs)
+            obj = self.append_many_to_many_data(obj)
+            potential_duplicates = False
+            if model != action_model and existing_obj:
+                print('testing existing object')
+                potential_duplicates = obj.is_equivalent(existing_obj)
+                print('result: '+str(potential_duplicates))
+            test_set = action_model.objects.exclude(id=obj.id)
+            if test_set.count() >= 1:
+                for dup in test_set:
+                    if dup.is_equivalent(obj):
+                        potential_duplicates = True
+                        print('Duplicate found: '+str(dup))
+                        break
+            if potential_duplicates is True:
                 obj.delete()
-            return None, False
+                return None, False
         
-        # check for duplicate requests
-        if model != action_model and potential_matches.count() >= 1:
-            obj.delete()
-            return None, False
-        
-        # when otherwise successful
-        print(model,': ',obj,' (new = ',str(existing_obj is None).strip(),')')
+        # save and return object upon success
         if commit:
             obj.save()
         return obj, True
+    
+    def append_many_to_many_data(self, obj):
+        if self.many_to_many_data:
+            for field, value in self.many_to_many_data.items():
+                id_list = []
+                for item in value['values']:
+                    id_list.append(item.id)
+                queryset = value['model'].objects.filter(id__in=id_list)
+                obj.set_field(field, queryset)
+        return obj
 
 
 class ArtistForm(forms.Form, ObjectFormMixin):
@@ -118,6 +129,10 @@ class ArtistForm(forms.Form, ObjectFormMixin):
         required=False,
     )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        self.many_to_many_data = None
+
 
 class GenreForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
@@ -128,6 +143,10 @@ class GenreForm(forms.Form, ObjectFormMixin):
         help_text="Indicate whether you want this genre to be made public on MoxToolSite (default is false).",
         required=False,
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.many_to_many_data = None
 
 
 class TrackForm(forms.Form, ObjectFormMixin):
@@ -146,7 +165,7 @@ class TrackForm(forms.Form, ObjectFormMixin):
     )
     artist_names = forms.CharField(
         help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
-        required=True,
+        required=False,
     )
     remix_artist_names = forms.CharField(
         help_text="Enter the remix artist names, separated by commas, which can be found on Beatport.",
@@ -161,44 +180,49 @@ class TrackForm(forms.Form, ObjectFormMixin):
         help_text="Indicate whether you want this track to be made public on MoxToolSite (default is false).",
         required=False,
     )
-        
-    # def save(self, commit=True):
-        
-    #     # track
-    #     track, track_created = Track.objects.get_or_create(beatport_track_id=self.cleaned_data.get('beatport_track_id'))
-    #     track.title = self.cleaned_data.get('title')
-    #     track.mix = self.cleaned_data.get('mix')
-    #     track.public = self.cleaned_data.get('public')
-    #     print('Track: ',track,' (new = ',track_created,')')
 
-    #     # genre
-    #     genre, genre_created = Genre.objects.get_or_create(name=self.cleaned_data.get('genre_name'))
-    #     print('Genre: ',genre,' (new = ',genre_created,')')
-    #     if genre_created == True:
-    #         genre.save()
-    #     track.genre = genre
+    def clean(self):
+        cleaned_data = super().clean()
+        self.many_to_many_data = {
+            'artist': {
+                'model': Artist,
+                'values': [],
+            },
+            'remix_artist': {
+                'model': Artist,
+                'values': [],
+            },
+        }
 
-    #     # artist
-    #     artists = Artist.objects.none()
-    #     for artist_name in [element.strip() for element in self.cleaned_data.get('artist_names').split(',')]:
-    #         artist, artist_created = Artist.objects.get_or_create(name=artist_name)
-    #         artists = artists | Artist.objects.filter(id=artist.id)
-    #         print('Artist: ',artist,' (new = ',artist_created,')')
-    #         if artist_created == True:
-    #             artist.save()
-    #     track.artist.set(artists)
+        # genre
+        genre_name = cleaned_data.get('genre_name')
+        if genre_name and len(genre_name) >= 1:
+            genre, genre_created = Genre.objects.get_or_create(name=genre_name.strip())
+            if genre_created is True:
+                print('A new genre was created.')
+        else:
+            genre = None
+        cleaned_data['genre'] = genre
+        del cleaned_data['genre_name']
 
-    #     # remix artist
-    #     remix_artists = Artist.objects.none()
-    #     for remix_artist_name in [element.strip() for element in self.cleaned_data.get('remix_artist_names').split(',')]:
-    #         remix_artist, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name)
-    #         remix_artists = remix_artists | Artist.objects.filter(id=remix_artist.id)
-    #         print('Remix Artist: ',remix_artist,' (new = ',remix_artist_created,')')
-    #         if remix_artist_created == True:
-    #             remix_artist.save()
-    #     track.remix_artist.set(remix_artists)
+        # artist
+        artist_names = cleaned_data.get('artist_names')
+        if artist_names and len(artist_names) >= 1:
+            for artist_name in artist_names.split(','):
+                artist_obj, artist_created = Artist.objects.get_or_create(name=artist_name.strip())
+                if artist_created is True:
+                    print('A new artist was created.')
+                self.many_to_many_data['artist']['values'].append(artist_obj)
+        del cleaned_data['artist_names']
 
-    #     # save and return
-    #     if commit:
-    #         track.save()
-    #     return track
+        # remix artist
+        remix_artist_names = cleaned_data.get('remix_artist_names')
+        if remix_artist_names and len(remix_artist_names) >= 1:
+            for remix_artist_name in remix_artist_names.split(','):
+                remix_artist_obj, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name.strip())
+                if remix_artist_created is True:
+                    print('A new artist was created.')
+                self.many_to_many_data['remix_artist']['values'].append(remix_artist_obj)
+        del cleaned_data['remix_artist_names']
+
+        return cleaned_data

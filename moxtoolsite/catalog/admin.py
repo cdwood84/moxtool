@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance, TrackRequest
 
 
 @admin.register(Artist)
@@ -39,6 +39,11 @@ class TrackAdmin(admin.ModelAdmin):
     list_display = ['title', 'display_artist', 'genre', 'beatport_track_id']
     list_filter = ['genre', 'artist']
     inlines = [TrackInstanceInline]
+
+
+@admin.register(TrackRequest)
+class ArtistRequestAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(TrackInstance)
