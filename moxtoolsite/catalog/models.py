@@ -93,19 +93,6 @@ class TrackMixin:
     def create_by_field(self):
         return 'beatport_track_id'
 
-    # def add_fields_to_initial(self, initial={}):
-    #     initial['beatport_track_id'] = self.beatport_track_id
-    #     initial['title'] = self.title
-    #     if self.genre and self.genre.name:
-    #         initial['genre_name'] = self.genre.name
-    #     if self.artist and self.artist.all().count() >= 1:
-    #         initial['artist_names'] = ', '.join(str(artist) for artist in self.artist.all())
-    #     if self.remix_artist and self.remix_artist.all().count() >= 1:
-    #         initial['remix_artist_names'] = ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
-    #     initial['mix'] = self.mix
-    #     initial['public'] = self.public
-    #     return initial
-
 
 class SharedModelMixin:
 
@@ -142,16 +129,16 @@ class SharedModelMixin:
 
     def add_fields_to_initial(self, initial={}):
         for field, data in self.useful_field_list.items():
-            print('try '+field)
+            print('starting '+field)
             if data['type'] == 'model':
                 obj = self.get_field(field)
                 initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
             elif data['type'] == 'queryset':
                 obj_set = self.get_field(field)
-                initial[field+'_'+obj_set.first.create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
+                if obj_set.count() >= 1:
+                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
             else:
                 initial[field] = self.get_field(field)
-            print(initial)
         return initial
         
     def is_equivalent(self, obj, equal=False):
@@ -168,16 +155,7 @@ class SharedModelMixin:
         print(field_name)
         if self_field and obj_field:
             if self.useful_field_list[field_name]['type'] == 'queryset':
-                self_array = []
-                for self_item in self_field.all():
-                    self_array.append(self_item.id)
-                obj_array = []
-                for obj_item in obj_field.all():
-                    obj_array.append(obj_item.id)
-                print(self_array)
-                print(obj_array)
-                print(self_array.sort() == obj_array.sort())
-                return self_array.sort() == obj_array.sort()
+                return set(self_field) == set(obj_field)
             else:
                 print(self_field)
                 print(obj_field)
@@ -364,7 +342,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         if len(remixers) >= 1:
             value += ' (' + remixers + ' Remix)'
         elif mix is not None:
-            value += ' ' + mix
+            value += ' (' + mix + ')'
         if len(artists) >= 1:
             value += ' by ' + artists
         return value
