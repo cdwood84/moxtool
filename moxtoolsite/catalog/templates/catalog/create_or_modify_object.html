@@ -2,6 +2,9 @@
 
 {% block content %}
     <h1>{{ text.action.title }} {{ text.type.title }}{% if text.action == 'modify' %}: {{ obj }}{% endif %}</h1>
+    {% if message %}
+        <p style="color:red;">{{ message }}</p>
+    {% endif %}
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}

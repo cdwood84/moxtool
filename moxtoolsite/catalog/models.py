@@ -16,70 +16,95 @@ import uuid
 
 class ArtistMixin:
 
-    useful_field_list = [
-        'name',
-        'public',
-    ]
-
-    def add_fields_to_initial(self, initial={}):
-        initial['name'] = self.name
-        initial['public'] = self.public
-        return initial
-        
-    def is_equivalent(self, obj):
-        equivalence = True
-        if self.name != obj.name:
-            equivalence = False
-        if self.public != obj.public:
-            equivalence = False
-        return equivalence
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'name'
 
 
 class GenreMixin:
 
-    useful_field_list = [
-        'name',
-        'public',
-    ]
-
-    def add_fields_to_initial(self, initial={}):
-        initial['name'] = self.name
-        initial['public'] = self.public
-        return initial
-        
-    def is_equivalent(self, obj):
-        equivalence = True
-        if self.name != obj.name:
-            equivalence = False
-        if self.public != obj.public:
-            equivalence = False
-        return equivalence
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'name'
 
 
 class TrackMixin:
 
-    useful_field_list = [
-        'beatport_track_id',
-        'title',
-        'genre',
-        'artist',
-        'remix_artist',
-        'mix',
-        'public',
-    ]
+    @property
+    def useful_field_list(self):
+        return {
+            'beatport_track_id': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'title': {
+                'type': 'string',
+                'equal': True,
+            },
+            'genre': {
+                'type': 'model',
+                'equal': True,
+            },
+            'artist': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'remix_artist': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'mix': {
+                'type': 'string',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'beatport_track_id'
 
-    def add_fields_to_initial(self, initial={}):
-        initial['beatport_track_id'] = self.beatport_track_id
-        initial['title'] = self.title
-        if self.genre and self.genre.name:
-            initial['genre_name'] = self.genre.name
-        if self.artist and self.artist.all().count() >= 1:
-            initial['artist_names'] = ', '.join(str(artist) for artist in self.artist.all())
-        if self.remix_artist and self.remix_artist.all().count() >= 1:
-            initial['remix_artist_names'] = ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
-        initial['mix'] = self.mix
-        initial['public'] = self.public
-        return initial
+    # def add_fields_to_initial(self, initial={}):
+    #     initial['beatport_track_id'] = self.beatport_track_id
+    #     initial['title'] = self.title
+    #     if self.genre and self.genre.name:
+    #         initial['genre_name'] = self.genre.name
+    #     if self.artist and self.artist.all().count() >= 1:
+    #         initial['artist_names'] = ', '.join(str(artist) for artist in self.artist.all())
+    #     if self.remix_artist and self.remix_artist.all().count() >= 1:
+    #         initial['remix_artist_names'] = ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
+    #     initial['mix'] = self.mix
+    #     initial['public'] = self.public
+    #     return initial
 
 
 class SharedModelMixin:
@@ -114,11 +139,27 @@ class SharedModelMixin:
     def get_modify_url(self):
         obj_name = self.__class__.__name__.lower()
         return reverse('modify-object', args=[obj_name,str(self.id)])
+
+    def add_fields_to_initial(self, initial={}):
+        for field, data in self.useful_field_list.items():
+            print('try '+field)
+            if data['type'] == 'model':
+                obj = self.get_field(field)
+                initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
+            elif data['type'] == 'queryset':
+                obj_set = self.get_field(field)
+                initial[field+'_'+obj_set.first.create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
+            else:
+                initial['field'] = self.get_field(field)
+            print(initial)
+        return initial
         
-    def is_equivalent(self, obj):
-        for field in self.useful_field_list:
-            if self.field_is_equivalent(obj, field) is False:
-                return False
+    def is_equivalent(self, obj, equal=False):
+        print('testing equivalence between '+str(self)+' and '+str(obj))
+        for field, data in self.useful_field_list.items():
+            if equal is False or data['equal'] is False:
+                if self.field_is_equivalent(obj, field) is False:
+                    return False
         return True
     
     def field_is_equivalent(self, obj, field_name):
@@ -126,7 +167,7 @@ class SharedModelMixin:
         obj_field = obj.get_field(field_name)
         print(field_name)
         if self_field and obj_field:
-            if 'queryset' in str(self_field.__class__).lower():
+            if self.useful_field_list[field_name]['type'] == 'queryset':
                 self_array = []
                 for self_item in self_field.all():
                     self_array.append(self_item.id)
@@ -158,7 +199,7 @@ class SharedModelPermissionManager(models.Manager):
     valid_shared_models = ['artist','genre','track']
 
     def get_queryset_can_view(self, user, shared_model):
-        if shared_model in self.valid_shared_models:
+        if shared_model:
             model = apps.get_model('catalog', shared_model.title())
             user_queryset = model.objects.none()
             for trackinstance in TrackInstance.objects.filter(user=user):

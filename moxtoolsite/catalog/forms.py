@@ -85,20 +85,31 @@ class ObjectFormMixin:
                 obj_kwargs['date_requested'] = datetime.date.today()
                 if existing_obj:
                     obj_kwargs[obj_name] = existing_obj
+                else:
+                    try: 
+                        create_field = model.objects.first().create_by_field
+                        print(create_field)
+                        existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
+                        print(existing_create_kwargs)
+                        existing_obj = model.objects.get(**existing_create_kwargs)
+                        print('Matching '+obj_name+' found: '+str(existing_obj))
+                    except:
+                        print('A matching '+obj_name+' does not exist.')
             obj = action_model.objects.create(**obj_kwargs)
             obj = self.append_many_to_many_data(obj)
             potential_duplicates = False
             if model != action_model and existing_obj:
                 print('testing existing object')
-                potential_duplicates = obj.is_equivalent(existing_obj)
+                potential_duplicates = obj.is_equivalent(existing_obj, True)
                 print('result: '+str(potential_duplicates))
-            test_set = action_model.objects.exclude(id=obj.id)
-            if test_set.count() >= 1:
-                for dup in test_set:
-                    if dup.is_equivalent(obj):
-                        potential_duplicates = True
-                        print('Duplicate found: '+str(dup))
-                        break
+            if potential_duplicates is False:
+                test_set = action_model.objects.exclude(id=obj.id)
+                if test_set.count() >= 1:
+                    for dup in test_set:
+                        if dup.is_equivalent(obj):
+                            potential_duplicates = True
+                            print('Duplicate found: '+str(dup))
+                            break
             if potential_duplicates is True:
                 obj.delete()
                 return None, False

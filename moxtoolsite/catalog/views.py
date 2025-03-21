@@ -15,31 +15,41 @@ import importlib
 
 
 def index(request):
-    """View function returns the home page for the catalog application."""
+    if str(request.user) != 'AnonymousUser':
 
-    # get data from model objects
-    num_tracks = Track.objects.filter(public=True).count()
-    num_tracks_tech_house = Track.objects.filter(Q(genre__name='Tech House') & Q(public=True)).count()
-    num_instances = TrackInstance.objects.filter(public=True).count()
-    num_artists = Artist.objects.filter(public=True).count()
-    num_playlists = Playlist.objects.filter(public=True).count()
-    num_playlists_starting_with_s = Playlist.objects.filter(Q(name__istartswith='s') & Q(public=True)).count()
+        # get data from model objects
+        viewable_genres = Genre.objects.get_queryset_can_view(request.user, 'genre')
+        viewable_artists = Artist.objects.get_queryset_can_view(request.user, 'artist')
+        viewable_tracks = Track.objects.get_queryset_can_view(request.user, 'track')
+        user_trackinstances = TrackInstance.objects.filter(user=request.user)
+        user_playlists = Playlist.objects.filter(user=request.user)
+        user_tags = Tag.objects.filter(user=request.user)
 
-    # get data from request
-    num_visits = request.session.get('num_visits', 0)
-    num_visits += 1
-    request.session['num_visits'] = num_visits
+        # set context values
+        num_genres_viewable = viewable_genres.count()
+        num_artists_viewable = viewable_artists.count()
+        num_tracks_viewable = viewable_tracks.count()
+        num_tracks_user = user_trackinstances.count()
+        num_playlists_user = user_playlists.count()
+        num_tags_user = user_tags.count()
 
-    # define model context
-    context = {
-        'num_tracks': num_tracks,
-        'num_tracks_tech_house': num_tracks_tech_house,
-        'num_instances': num_instances,
-        'num_artists': num_artists,
-        'num_playlists': num_playlists,
-        'num_playlists_starting_with_s': num_playlists_starting_with_s,
-        'num_visits': num_visits,
-    }
+        # get data from request
+        # num_visits = request.session.get('num_visits', 0)
+        # num_visits += 1
+        # request.session['num_visits'] = num_visits
+
+        # define model context
+        context = {
+            'viewable_genre_count': num_genres_viewable,
+            'viewable_artist_count': num_artists_viewable,
+            'viewable_track_count': num_tracks_viewable,
+            'user_trackinstance_count': num_tracks_user,
+            'user_playlist_count': num_playlists_user,
+            'user_tag_count': num_tags_user,
+        }
+    
+    else:
+        context = {}
 
     # render HTML template
     return render(request, 'index.html', context=context)
@@ -47,6 +57,7 @@ def index(request):
 
 @login_required
 def modify_object(request, obj_name, pk=None):
+    context = {}
 
     try:
 
@@ -86,7 +97,10 @@ def modify_object(request, obj_name, pk=None):
                     else:
                         return HttpResponseRedirect(reverse(obj_name.lower()+'s'))
                 else:
-                    print('No change detected.')
+                    if model == action_model:
+                        context['message'] = 'This ' + obj_name + ' already exists.'
+                    else:
+                        context['message'] = 'Your '+ obj_name +' request is a duplicate.'
             else:
                 print(form.errors)
         else:
@@ -97,14 +111,12 @@ def modify_object(request, obj_name, pk=None):
                 form = form_class()
 
         # set context for HTML
-        context = {
-            'form': form,
-            'obj': existing_obj,
-            'text': {
-                'type': obj_name,
-                'action': action,
-                'perm': perm_level,
-            },
+        context['form'] = form
+        context['obj'] = existing_obj
+        context['text'] = {
+            'type': obj_name,
+            'action': action,
+            'perm': perm_level,
         }
 
         # render the page
@@ -565,6 +577,19 @@ class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
             Playlist.objects
             .filter(user=self.request.user)
             .order_by('name')
+        )
+
+
+class UserTagView(LoginRequiredMixin, generic.ListView):
+    model = Tag
+    template_name = 'catalog/user_tag_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Tag.objects
+            .filter(user=self.request.user)
+            .order_by('type', 'value')
         )
 
 
