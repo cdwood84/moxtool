@@ -1,0 +1,19 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if genre_list %}
+        <h1>Genres</h1>
+        <ul>{% for genre in genre_list %}
+            <li>
+                <a href="{{ genre.get_absolute_url }}">{{ genre.name }}</a>
+            </li>
+        {% endfor %}</ul>
+    {% else %}
+        <p>There aren't any genres publicly shared on this site.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_any_genre %}
+      <p><a href="{% url 'create-object' 'genre' %}">Create a new genre</a></p>
+    {% elif perms.catalog.moxtool_can_create_public_genre %}
+      <p><a href="{% url 'create-object' 'genre' %}">Request a new genre</a></p>
+    {% endif %}
+{% endblock %}

@@ -2,27 +2,27 @@
 
 
 {% block title %}
-    <title>Your Music Library</title>
+    <title>Music Library</title>
 {% endblock %}
 
 
 {% block content %}
-    <h1>Music Library Home</h1>
-        <p>
-            Welcome to MoxToolSite, a website developed by
-            <em>EnterTheMox</em>!
-        </p>
-    <h2>Dynamic content</h2>
-    <p>The library has the following record counts:</p>
-    <ul>
-        <li><strong>Unique Tracks:</strong> {{ num_tracks }}</li>
-        <li><strong>Unique Tech House Tracks:</strong> {{ num_tracks_tech_house }}</li>
-        <li><strong>Track Files:</strong> {{ num_instances }}</li>
-        <li><strong>Artists:</strong> {{ num_artists }}</li>
-        <li><strong>Playlists:</strong> {{ num_playlists }}</li>
-        <li><strong>Playlists starting with 'S':</strong> {{ num_playlists_starting_with_s }}</li>
-    </ul>
-    <p>
-        You have visited this page {{ num_visits }} time{{ num_visits|pluralize }}.
-    </p>
+    {% if user.is_authenticated %}
+        <h1>MOXTOOLSITE</h1>
+        <p>Welcome to MoxToolSite, a website developed by <em>EnterTheMox</em>!</p>
+        <h2>Music Library</h2>
+        <p>The library has the following record counts:</p>
+        <ul>
+            <li><strong>Available Genres:</strong> {{ viewable_genre_count }}</li>
+            <li><strong>Available Artists:</strong> {{ viewable_artist_count }}</li>
+            <li><strong>Available Tracks:</strong> {{ viewable_track_count }}</li>
+            <li><strong>Your Tracks:</strong> {{ user_trackinstance_count }}</li>
+            <li><strong>Your Playlists:</strong> {{ user_playlist_count }}</li>
+            <li><strong>Your Tags:</strong> {{ user_tag_count }}</li>
+        </ul>
+    {% else %}
+        <h1>Welcome to MoxToolSite</h1>
+        <p>Please <a href="{% url 'login' %}">login</a> to use this tool.</p>
+    {% endif %}
+    <!-- <p>You have visited this page {{ num_visits }} time{{ num_visits|pluralize }}.</p> -->
 {% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>{{ tag.get_type_display }}: {{ tag.value }}</h1>
+
+  <p>a <strong>{% if tag.public == True %}public{% else %}private{% endif %}</strong> tag created by <strong>{{ tag.user }}</strong></p>
+  <p><strong>Date Added:</strong> {{ tag.date_added }}</p>
+  <p><strong>User Detail:</strong> {{ tag.detail }}</p>
+
+  <div style="margin-left:20px;margin-top:20px">
+    <h4>Playlists</h4>
+
+    {% for playlist in viewable_playlists %}
+      <hr />
+      <p><strong>Name:</strong> <a href="{{ playlist.get_absolute_url }}">{{ playlist.name }}</a></p>
+      <p><strong>Owner:</strong> {{ playlist.user }}</p>
+    {% endfor %}
+  </div>
+  {% if tag.user == request.user %}
+    <!-- <p><a href="{{ playlist.get_url_to_add_track }}">Add a playlist to this tag</a></p> -->
+  {% endif %}
+
+  <div style="margin-left:20px;margin-top:20px">
+    <h4>Tracks</h4>
+
+    {% for trackinstance in viewable_trackinstances %}
+      <hr />
+      <p><strong>Title:</strong> <a href="{{ trackinstance.track.get_absolute_url }}">{{ trackinstance.track.title }}</a></p>
+      <p><strong>Artist:</strong> {% for artist in trackinstance.track.artist.all %}
+        {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
+        {% endfor %}</p>
+      <p><strong>Rating:</strong> <span class="{% if trackinstance.rating_numeric >= 9 %}text-success{% elif trackinstance.rating_numeric <= 6 %}text-danger{% else %}text-warning{% endif %}">{{ trackinstance.get_rating_display }}</span></p>
+    {% endfor %}
+  </div>
+  {% if tag.user == request.user %}
+    <!-- <p><a href="{{ playlist.get_url_to_add_track }}">Add a track to this tag</a></p> -->
+  {% endif %}
+{% endblock %}

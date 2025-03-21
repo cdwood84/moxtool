@@ -1,28 +1,57 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-  <h1>Title: {{ track.title }}</h1>
-
-  <p>
-    <strong>Artist:</strong> 
-    {% for artist in track.artist.all %}
-      {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
-    {% endfor %}
-  </p>
-  <p><strong>Genre:</strong> {{ track.genre }}</p>
+  <h1>{{ track.title }} {% if track.mix %}({{ track.get_mix_display }}){% endif %}</h1>
+  <p><strong>Mix:</strong> {{ track.get_mix_display }}</p>
+  {% if viewable_artists %}
+    <p>
+      <strong>Artist:</strong> 
+      {% for artist in viewable_artists %}
+        {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
+      {% endfor %}
+    </p>
+  {% else %}
+    <p class="text-muted"><strong>Artist:</strong> the artist on this track is either undefined or not public</p>
+  {% endif %}
+  {% if track.remix_artist.count < 1 %}{% if viewable_remix_artists %}
+    <p>
+      <strong>Remix Artist:</strong> 
+      {% for artist in viewable_remix_artists %}
+        {% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist }}</a>
+      {% endfor %}
+    </p>
+  {% else %}
+    <p class="text-muted"><strong>Remix Artist:</strong> the remix artist on this track is not public</p>
+  {% endif %}{% endif %}
+  {% if viewable_genre %}
+    <p><strong>Genre:</strong> {{ viewable_genre }}</p>
+  {% else %}
+    <p class="text-muted"><strong>Genre:</strong> the genre on this track is either undefined or not public</p>
+  {% endif %}
+  {% if perms.catalog.moxtool_can_modify_any_track %}
+    <p><a href="{{ track.get_modify_url }}">Modify this track</a></p>
+  {% elif perms.catalog.moxtool_can_modify_public_track %}
+    <p><a href="{{ track.get_modify_url }}">Request changes to this track</a></p>
+  {% endif %}
 
   <div style="margin-left:20px;margin-top:20px">
-    <h4>Instances</h4>
-
-    {% for instance in track.trackinstance_set.all %}
-      <hr />
-      <p class="{% if instance.rating_numeric >= 9 %}text-success{% elif instance.rating_numeric <= 6 %}text-danger{% else %}text-warning{% endif %}">
-        {{ instance.get_rating_display }} </p>
-      {% if instance.date_added != None %}
-        <p><strong>Track added:</strong> {{ instance.date_added }}</p>
-      {% endif %}
-      <p><strong>Playcount:</strong> {{ instance.play_count }}</p>
-      <p class="text-muted"><strong>Id:</strong> {{ instance.id }}</p>
-    {% endfor %}
+    <h4>DJs with this track in their library</h4>
+    {% if viewable_artists %}
+      {% for trackinstance in viewable_trackinstances %}
+        <hr />
+        <p class="{% if trackinstance.rating_numeric >= 9 %}text-success{% elif trackinstance.rating_numeric <= 6 %}text-danger{% else %}text-warning{% endif %}">
+          {{ trackinstance.get_rating_display }} </p>
+        {% if trackinstance.date_added != None %}
+          <p><strong>Track added:</strong> {{ trackinstance.date_added }}</p>
+        {% endif %}
+        <p><strong>Playcount:</strong> {{ trackinstance.play_count }}</p>
+        <p class="text-muted"><strong>Id:</strong> {{ trackinstance.id }}</p>
+        {% if trackinstance.user == request.user %}
+          <p><a href="{{ trackinstance.get_url_to_modify_track }}">Modify this track in your library</a></p>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">there are no DJs with this track listed as public</p>
+    {% endif %}
   </div>
 {% endblock %}

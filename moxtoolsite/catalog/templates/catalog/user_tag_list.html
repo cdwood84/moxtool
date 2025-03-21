@@ -1,0 +1,14 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if tag_list %}
+        <h1>Your Tags</h1>
+        <ul>{% for tag in tag_list %}
+            <li>
+                {{ tag.get_type_display }} - <a href="{{ tag.get_absolute_url }}">{{ tag.value }}</a> by <strong>{{ tag.user }}</strong>
+            </li>
+        {% endfor %}</ul>
+    {% else %}
+        <p>You don't own any tags.</p>
+    {% endif %}
+{% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-    <h1>Favorite tracks</h1>
+    <h1>Your tracks</h1>
     {% if trackinstance_list %}
         <ul>
         {% for trackinstance in trackinstance_list %}
@@ -13,7 +13,9 @@
         </li>
         {% endfor %}
         </ul>
+
     {% else %}
-      <p>You don't like any tracks enough.</p>
+      <p>You don't have any tracks.</p>
     {% endif %}
+    <p><a href="{% url 'add-track-dj' %}">Add a track</a></p>
 {% endblock %}
