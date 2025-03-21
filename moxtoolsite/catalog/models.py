@@ -150,7 +150,7 @@ class SharedModelMixin:
                 obj_set = self.get_field(field)
                 initial[field+'_'+obj_set.first.create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
             else:
-                initial['field'] = self.get_field(field)
+                initial[field] = self.get_field(field)
             print(initial)
         return initial
         
