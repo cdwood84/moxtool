@@ -73,25 +73,17 @@ class ArtistTest(TestCase):
         }
         self.assertEqual(artist.add_fields_to_initial({}), expected_initial)
 
-    def test_is_equivalent_false(self):
+    def test_is_equivalent(self):
         artist1 = Artist.objects.get(id=1)
         artist2 = Artist.objects.get(id=2)
         self.assertFalse(artist1.is_equivalent(artist2))
+        self.assertTrue(artist1.is_equivalent(artist1))
 
-    def test_is_equivalent_true(self):
-        artist1 = Artist.objects.get(id=1)
-        artist2 = Artist.objects.get(id=1)
-        self.assertTrue(artist1.is_equivalent(artist2))
-
-    def test_is_field_is_equivalent_false(self):
+    def test_is_field_is_equivalent(self):
         artist1 = Artist.objects.get(id=1)
         artist2 = Artist.objects.get(id=2)
         self.assertFalse(artist1.field_is_equivalent(artist2, 'name'))
-
-    def test_is_field_is_equivalent_true(self):
-        artist1 = Artist.objects.get(id=1)
-        artist2 = Artist.objects.get(id=1)
-        self.assertTrue(artist1.is_equivalent(artist2, 'public'))
+        self.assertTrue(artist1.field_is_equivalent(artist1, 'name'))
 
 
 class GenreTest(TestCase):
@@ -159,25 +151,17 @@ class GenreTest(TestCase):
         }
         self.assertEqual(genre.add_fields_to_initial({'hitchhiker': 42,}), expected_initial)
 
-    def test_is_equivalent_false(self):
+    def test_is_equivalent(self):
         genre1 = Genre.objects.get(id=1)
         genre2 = Genre.objects.get(id=2)
         self.assertFalse(genre1.is_equivalent(genre2))
+        self.assertTrue(genre1.is_equivalent(genre1))
 
-    def test_is_equivalent_true(self):
-        genre1 = Genre.objects.get(id=1)
-        genre2 = Genre.objects.get(id=1)
-        self.assertTrue(genre1.is_equivalent(genre2))
-
-    def test_is_field_is_equivalent_false(self):
+    def test_is_field_is_equivalent(self):
         genre1 = Genre.objects.get(id=1)
         genre2 = Genre.objects.get(id=2)
         self.assertFalse(genre1.field_is_equivalent(genre2, 'name'))
-
-    def test_is_field_is_equivalent_true(self):
-        genre1 = Genre.objects.get(id=1)
-        genre2 = Genre.objects.get(id=1)
-        self.assertTrue(genre1.field_is_equivalent(genre2, 'public'))
+        self.assertTrue(genre1.field_is_equivalent(genre1, 'name'))
 
 
 class TrackTest(TestCase):
@@ -317,22 +301,14 @@ class TrackTest(TestCase):
         }
         self.assertEqual(track.add_fields_to_initial({}), expected_initial)
 
-    def test_is_equivalent_false(self):
+    def test_is_equivalent(self):
         track1 = Track.objects.get(id=1)
         track2 = Track.objects.get(id=2)
         self.assertFalse(track1.is_equivalent(track2))
+        self.assertTrue(track1.is_equivalent(track1))
 
-    def test_is_equivalent_true(self):
-        track1 = Track.objects.get(id=1)
-        track2 = Track.objects.get(id=1)
-        self.assertTrue(track1.is_equivalent(track2))
-
-    def test_is_field_is_equivalent_false(self):
+    def test_is_field_is_equivalent(self):
         track1 = Track.objects.get(id=1)
         track2 = Track.objects.get(id=2)
-        self.assertFalse(track1.field_is_equivalent(track2, 'artist'))
-
-    def test_is_field_is_equivalent_true(self):
-        track1 = Track.objects.get(id=1)
-        track2 = Track.objects.get(id=1)
-        self.assertTrue(track1.field_is_equivalent(track2, 'genre'))
+        self.assertFalse(track1.field_is_equivalent(track2, 'remix_artist'))
+        self.assertTrue(track1.field_is_equivalent(track1, 'genre'))

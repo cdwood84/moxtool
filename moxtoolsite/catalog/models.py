@@ -129,7 +129,6 @@ class SharedModelMixin:
 
     def add_fields_to_initial(self, initial={}):
         for field, data in self.useful_field_list.items():
-            print('starting '+field)
             if data['type'] == 'model':
                 obj = self.get_field(field)
                 initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
@@ -142,7 +141,6 @@ class SharedModelMixin:
         return initial
         
     def is_equivalent(self, obj, equal=False):
-        print('testing equivalence between '+str(self)+' and '+str(obj))
         for field, data in self.useful_field_list.items():
             if equal is False or data['equal'] is False:
                 if self.field_is_equivalent(obj, field) is False:
@@ -152,21 +150,14 @@ class SharedModelMixin:
     def field_is_equivalent(self, obj, field_name):
         self_field = self.get_field(field_name)
         obj_field = obj.get_field(field_name)
-        print(field_name)
         if self_field and obj_field:
             if self.useful_field_list[field_name]['type'] == 'queryset':
                 return set(self_field) == set(obj_field)
             else:
-                print(self_field)
-                print(obj_field)
-                print(self_field == obj_field)
                 return self_field == obj_field
         elif not(self_field) and not(obj_field):
-            print(True)
             return True
         else:
-            print(self_field)
-            print(obj_field)
             return False
     
 
