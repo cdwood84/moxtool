@@ -193,7 +193,7 @@ class SharedModelPermissionManager(models.Manager):
 
     def get_queryset_can_direct_modify(self, user, shared_model):
         if shared_model in self.valid_shared_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_artist'):
+            if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
                 return self.get_queryset()
             else:
                 raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")

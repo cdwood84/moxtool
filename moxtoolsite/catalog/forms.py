@@ -72,32 +72,41 @@ class ObjectFormMixin:
 
         # the case for directly modifying an nobject requires a get
         if model == action_model and existing_obj:
-            obj = action_model.objects.get(id=existing_obj.id)
-            for field, value in self.cleaned_data.items():
-                obj.set_field(field, value)
-            obj = self.append_many_to_many_data(obj)
+            if user.has_perm("catalog.moxtool_can_modify_any_artist"):
+                obj = existing_obj
+                for field, value in self.cleaned_data.items():
+                    obj.set_field(field, value)
+                obj = self.append_many_to_many_data(obj)
+            else:
+                raise PermissionError
 
         # all other cases are a create requiring duplicate checks
         else:
             obj_kwargs = self.cleaned_data
             if model != action_model:
-                obj_kwargs['user'] = user
-                obj_kwargs['date_requested'] = datetime.date.today()
-                if existing_obj:
-                    obj_kwargs[obj_name] = existing_obj
+                if user.has_perm("catalog.moxtool_can_modify_public_artist"):
+                    obj_kwargs['user'] = user
+                    obj_kwargs['date_requested'] = datetime.date.today()
+                    if existing_obj:
+                        obj_kwargs[obj_name] = existing_obj
+                    else:
+                        try: 
+                            create_field = model.objects.first().create_by_field
+                            existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
+                            existing_obj = model.objects.get(**existing_create_kwargs)
+                            print('Matching '+obj_name+' found: '+str(existing_obj))
+                        except:
+                            print('A matching '+obj_name+' does not exist.')
                 else:
-                    try: 
-                        create_field = model.objects.first().create_by_field
-                        existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
-                        existing_obj = model.objects.get(**existing_create_kwargs)
-                        print('Matching '+obj_name+' found: '+str(existing_obj))
-                    except:
-                        print('A matching '+obj_name+' does not exist.')
+                    raise PermissionError
+            else:
+                if not(user.has_perm("catalog.moxtool_can_modify_public_artist")):
+                    raise PermissionError
             obj = action_model.objects.create(**obj_kwargs)
             obj = self.append_many_to_many_data(obj)
             potential_duplicates = False
             if model != action_model and existing_obj:
-                potential_duplicates = obj.is_equivalent(existing_obj, True)
+                potential_duplicates = obj.is_equivalent(existing_obj, False)
             if potential_duplicates is False:
                 test_set = action_model.objects.exclude(id=obj.id)
                 if test_set.count() >= 1:
@@ -130,6 +139,7 @@ class ArtistForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the artist name.",
         required=True,
+        max_length=200,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this artist to be made public on MoxToolSite (default is false).",
@@ -139,6 +149,7 @@ class ArtistForm(forms.Form, ObjectFormMixin):
     def clean(self):
         cleaned_data = super().clean()
         self.many_to_many_data = None
+        return cleaned_data
 
 
 class GenreForm(forms.Form, ObjectFormMixin):
@@ -154,6 +165,7 @@ class GenreForm(forms.Form, ObjectFormMixin):
     def clean(self):
         cleaned_data = super().clean()
         self.many_to_many_data = None
+        return cleaned_data
 
 
 class TrackForm(forms.Form, ObjectFormMixin):

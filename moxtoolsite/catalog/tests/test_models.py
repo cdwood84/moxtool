@@ -2,7 +2,7 @@ from django.test import TestCase
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackRequest
 
 
-class ArtistTest(TestCase):
+class ArtistModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         Artist.objects.create(name='EnterTheMox', public=True)
@@ -87,7 +87,7 @@ class ArtistTest(TestCase):
         self.assertTrue(artist1.field_is_equivalent(artist1, 'name'))
 
 
-class GenreTest(TestCase):
+class GenreModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         Genre.objects.create(name='House', public=True)
@@ -166,7 +166,7 @@ class GenreTest(TestCase):
         self.assertTrue(genre1.field_is_equivalent(genre1, 'name'))
 
 
-class TrackTest(TestCase):
+class TrackModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         Artist.objects.create(name='EnterTheMox', public=True)
