@@ -1,5 +1,7 @@
-from django.test import TestCase
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackRequest
+from django.contrib.auth.models import Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.test import TestCase
 
 
 class ArtistModelTest(TestCase):
@@ -86,12 +88,54 @@ class ArtistModelTest(TestCase):
         self.assertFalse(artist1.field_is_equivalent(artist2, 'name'))
         self.assertTrue(artist1.field_is_equivalent(artist1, 'name'))
 
+    # test permissions
+
+    # view
+
+    # request
+
+    # modify
+
 
 class GenreModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         Genre.objects.create(name='House', public=True)
         Genre.objects.create(name='Techno', public=False)
+        Artist.objects.create(name='EnterTheMox', public=True)
+        Track.objects.create(
+            beatport_track_id=1, 
+            title='Not in my Haus', 
+            genre=Genre.objects.get(id=1),
+            mix='e',
+            public=False,
+        )
+        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
+        dj_group = Group.objects.create(name="DJ")
+        admin_group = Group.objects.create(name="Admin")
+        content_type = ContentType.objects.get_for_model(Genre)
+        perm_genre_view_any = Permission.objects.get(
+            codename="moxtool_can_view_any_genre",
+            content_type=content_type
+        )
+        perm_genre_view_public = Permission.objects.get(
+            codename="moxtool_can_view_public_genre",
+            content_type=content_type
+        )
+        perm_genre_view_own = Permission.objects.get(
+            codename="moxtool_can_view_own_genre",
+            content_type=content_type
+        )
+        dj_group.permissions.add(perm_genre_view_public, perm_genre_view_own)
+        admin_group.permissions.add(perm_genre_view_any, perm_genre_view_public, perm_genre_view_own)
+        cls.dj_user = User.objects.create_user(
+            username="dj", password="djtestpassword"
+        )
+        cls.admin_user = User.objects.create_user(
+            username="admin", password="admintestpassword"
+        )
+        cls.dj_user.groups.add(dj_group)
+        cls.admin_user.groups.add(admin_group)
 
     # fields
 
@@ -121,8 +165,12 @@ class GenreModelTest(TestCase):
         genre = Genre.objects.get(id=1)
         self.assertEqual(genre.get_absolute_url(), '/catalog/genre/1/house')
 
-    # def get_viewable_tracks_in_genre(self):
-    # ***** FIX SOON *****
+    def test_get_viewable_tracks_in_genre(self):
+        self.client.force_login(self.dj_user)
+        genre = Genre.objects.get(id=1)
+        tracks = Track.objects.filter(genre=genre)
+        expected_result = ', '.join(track.title for track in tracks.all())
+        self.assertEqual(genre.get_viewable_tracks_in_genre(self.dj_user), expected_result)
 
     # def get_viewable_artists_in_genre(self):
     # ***** FIX SOON *****
@@ -164,6 +212,14 @@ class GenreModelTest(TestCase):
         genre2 = Genre.objects.get(id=2)
         self.assertFalse(genre1.field_is_equivalent(genre2, 'name'))
         self.assertTrue(genre1.field_is_equivalent(genre1, 'name'))
+
+    # test permissions
+
+    # view
+
+    # request
+
+    # modify
 
 
 class TrackModelTest(TestCase):
@@ -318,3 +374,11 @@ class TrackModelTest(TestCase):
         track2 = Track.objects.get(id=2)
         self.assertFalse(track1.field_is_equivalent(track2, 'remix_artist'))
         self.assertTrue(track1.field_is_equivalent(track1, 'genre'))
+
+    # test permissions
+
+    # view
+
+    # request
+
+    # modify
