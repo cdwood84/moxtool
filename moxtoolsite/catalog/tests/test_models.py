@@ -53,6 +53,7 @@ class ArtistTest(TestCase):
 
     def test_set_field(self):
         artist = Artist.objects.get(id=2)
+        self.assertEqual(artist.public, False)
         artist.set_field('public', True)
         self.assertEqual(artist.public, True)
 
@@ -130,6 +131,7 @@ class GenreTest(TestCase):
 
     def test_set_field(self):
         genre = Genre.objects.get(id=2)
+        self.assertEqual(genre.public, False)
         genre.set_field('public', True)
         self.assertEqual(genre.public, True)
 
@@ -183,7 +185,7 @@ class TrackTest(TestCase):
             beatport_track_id=2, 
             title='TechYES!', 
             genre=Genre.objects.get(id=2),
-            mix='r',
+            mix='x',
             public=False,
         )
         Track.objects.get(id=2).artist.set(Artist.objects.filter(id=2))
@@ -239,9 +241,12 @@ class TrackTest(TestCase):
     # Genre specific functions
 
     def test_object_name_is_name(self):
-        track = Track.objects.get(id=1)
-        expected_object_name = track.title + ' (' + track.get_mix_display() +') by ' + track.display_artist()
-        self.assertEqual(str(track), expected_object_name)
+        track_1 = Track.objects.get(id=1)
+        expected_object_name_1 = track_1.title + ' (' + track_1.get_mix_display() +') by ' + track_1.display_artist()
+        self.assertEqual(str(track_1), expected_object_name_1)
+        track_2 = Track.objects.get(id=2)
+        expected_object_name_2 = track_2.title + ' (' + track_2.display_remix_artist() + ' ' + track_2.get_mix_display() +') by ' + track_2.display_artist()
+        self.assertEqual(str(track_2), expected_object_name_2)
 
     def test_get_absolute_url(self):
         track = Track.objects.get(id=1)
@@ -253,7 +258,7 @@ class TrackTest(TestCase):
 
     def display_remix_artist(self):
         track = Track.objects.get(id=2)
-        self.assertEqual(track.display_artist(), track.remix_artist.first().name)
+        self.assertEqual(track.display_remix_artist(), track.remix_artist.first().name)
 
     # def get_viewable_artists_on_track(self):
     # ***** FIX SOON *****
@@ -277,6 +282,7 @@ class TrackTest(TestCase):
 
     def test_set_field(self):
         track = Track.objects.get(id=2)
+        self.assertEqual(track.public, False)
         track.set_field('public', True)
         self.assertEqual(track.public, True)
 
