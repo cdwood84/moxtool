@@ -168,28 +168,31 @@ class SharedModelPermissionManager(models.Manager):
     valid_shared_models = ['artist','genre','track']
 
     def get_queryset_can_view(self, user, shared_model):
-        if shared_model:
-            model = apps.get_model('catalog', shared_model.title())
-            user_queryset = model.objects.none()
-            for trackinstance in TrackInstance.objects.filter(user=user):
-                if shared_model == 'artist':
-                    user_queryset = user_queryset | trackinstance.track.artist.all()
-                elif shared_model == 'genre':
-                    user_queryset = user_queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
-                elif shared_model == 'track':
-                    user_queryset = user_queryset | Track.objects.filter(id=trackinstance.track.id)
-            if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model) or user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                return self.get_queryset().filter(public=True) | user_queryset
-            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
-                return self.get_queryset().filter(public=True)
-            elif user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                return user_queryset
-            else:
-                raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+            if shared_model:
+                model = apps.get_model('catalog', shared_model.title())
+                user_queryset = model.objects.none()
+                for trackinstance in TrackInstance.objects.filter(user=user):
+                    if shared_model == 'artist':
+                        user_queryset = user_queryset | trackinstance.track.artist.all()
+                    elif shared_model == 'genre':
+                        user_queryset = user_queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                    elif shared_model == 'track':
+                        user_queryset = user_queryset | Track.objects.filter(id=trackinstance.track.id)
+                if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model) or user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                    return self.get_queryset().filter(public=True) | user_queryset
+                elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
+                    return self.get_queryset().filter(public=True)
+                elif user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                    return user_queryset
+                else:
+                    raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
+            else:
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
     def get_queryset_can_direct_modify(self, user, shared_model):
         if shared_model in self.valid_shared_models:

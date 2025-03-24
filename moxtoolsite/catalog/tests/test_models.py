@@ -1,7 +1,9 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackRequest
-from django.contrib.auth.models import Group, Permission, User
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackInstance, TrackRequest
+from django.apps import apps
+from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
+from django.core.exceptions import PermissionDenied
+from django.test import Client, TestCase
 
 
 class ArtistModelTest(TestCase):
@@ -100,6 +102,27 @@ class ArtistModelTest(TestCase):
 class GenreModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
+        dj_group = Group.objects.create(name="DJ")
+        admin_group = Group.objects.create(name="Admin")
+        perms = {}
+        for model_name in ['artist', 'genre', 'track', 'trackinstance']:
+            perms[model_name] = {}
+            content_type = ContentType.objects.get_for_model(apps.get_model('catalog', model_name.title()))
+            for type in ['view']:
+                perms[model_name][type] = {}
+                for perm in ['any', 'public', 'own']:
+                    perms[model_name][type][perm] = Permission.objects.get(
+                        codename="moxtool_can_"+type+"_"+perm+"_"+model_name,
+                        content_type=content_type
+                    )
+                    admin_group.permissions.add(perms[model_name][type][perm])
+                    if perm != 'any':
+                        dj_group.permissions.add(perms[model_name][type][perm])
+        cls.no_user = AnonymousUser()
+        cls.dj_user = User.objects.create_user(username="dj", password="djtestpassword")
+        cls.admin_user = User.objects.create_user(username="admin", password="admintestpassword")
+        cls.dj_user.groups.add(dj_group)
+        cls.admin_user.groups.add(admin_group)
         Genre.objects.create(name='House', public=True)
         Genre.objects.create(name='Techno', public=False)
         Artist.objects.create(name='EnterTheMox', public=True)
@@ -111,31 +134,19 @@ class GenreModelTest(TestCase):
             public=False,
         )
         Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
-        dj_group = Group.objects.create(name="DJ")
-        admin_group = Group.objects.create(name="Admin")
-        content_type = ContentType.objects.get_for_model(Genre)
-        perm_genre_view_any = Permission.objects.get(
-            codename="moxtool_can_view_any_genre",
-            content_type=content_type
+        TrackInstance.objects.create(
+            track=Track.objects.get(id=1),
+            user=cls.dj_user,
+            rating='10',
         )
-        perm_genre_view_public = Permission.objects.get(
-            codename="moxtool_can_view_public_genre",
-            content_type=content_type
+        Track.objects.create(
+            beatport_track_id=2, 
+            title='House of House', 
+            genre=Genre.objects.get(id=1),
+            mix='e',
+            public=True,
         )
-        perm_genre_view_own = Permission.objects.get(
-            codename="moxtool_can_view_own_genre",
-            content_type=content_type
-        )
-        dj_group.permissions.add(perm_genre_view_public, perm_genre_view_own)
-        admin_group.permissions.add(perm_genre_view_any, perm_genre_view_public, perm_genre_view_own)
-        cls.dj_user = User.objects.create_user(
-            username="dj", password="djtestpassword"
-        )
-        cls.admin_user = User.objects.create_user(
-            username="admin", password="admintestpassword"
-        )
-        cls.dj_user.groups.add(dj_group)
-        cls.admin_user.groups.add(admin_group)
+        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
 
     # fields
 
@@ -166,11 +177,13 @@ class GenreModelTest(TestCase):
         self.assertEqual(genre.get_absolute_url(), '/catalog/genre/1/house')
 
     def test_get_viewable_tracks_in_genre(self):
-        self.client.force_login(self.dj_user)
         genre = Genre.objects.get(id=1)
         tracks = Track.objects.filter(genre=genre)
-        expected_result = ', '.join(track.title for track in tracks.all())
-        self.assertEqual(genre.get_viewable_tracks_in_genre(self.dj_user), expected_result)
+        self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.no_user))
+        self.client.force_login(self.dj_user)
+        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.dj_user)), set(tracks))
+        self.client.force_login(self.admin_user)
+        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.admin_user)), set(tracks))
 
     # def get_viewable_artists_in_genre(self):
     # ***** FIX SOON *****
