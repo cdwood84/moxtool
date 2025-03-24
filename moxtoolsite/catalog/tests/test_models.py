@@ -3,7 +3,7 @@ from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
-from django.test import Client, TestCase
+from django.test import TestCase
 
 
 class ArtistModelTest(TestCase):
@@ -147,6 +147,14 @@ class GenreModelTest(TestCase):
             public=True,
         )
         Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
+        Track.objects.create(
+            beatport_track_id=3, 
+            title='Mau5 Hau5', 
+            genre=Genre.objects.get(id=1),
+            mix='e',
+            public=False,
+        )
+        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
 
     # fields
 
@@ -181,7 +189,7 @@ class GenreModelTest(TestCase):
         tracks = Track.objects.filter(genre=genre)
         self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.no_user))
         self.client.force_login(self.dj_user)
-        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.dj_user)), set(tracks))
+        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.dj_user)), set(tracks.exclude(id=3)))
         self.client.force_login(self.admin_user)
         self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.admin_user)), set(tracks))
 
