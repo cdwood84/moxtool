@@ -386,11 +386,12 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        user_viewable_artists = Artist.objects.get_queryset_can_view(user)
-        for artist in self.artist.all():
-            viewable_artist = user_viewable_artists.get(id=artist.id)
-            if viewable_artist and artist == viewable_artist:
-                viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            user_viewable_artists = Artist.objects.get_queryset_can_view(user)
+            for artist in self.artist.all():
+                viewable_artist = user_viewable_artists.get(id=artist.id)
+                if viewable_artist and artist == viewable_artist:
+                    viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
         return viewable_artists.distinct()
     
     def display_viewable_artists(self, user):
@@ -400,11 +401,12 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     
     def get_viewable_remix_artists_on_track(self, user):
         viewable_remix_artists = Artist.objects.none()
-        user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user)
-        for remix_artist in self.remix_artist.all():
-            viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
-            if viewable_remix_artist and remix_artist == viewable_remix_artist:
-                viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user)
+            for remix_artist in self.remix_artist.all():
+                viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
+                if viewable_remix_artist and remix_artist == viewable_remix_artist:
+                    viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
         return viewable_remix_artists.distinct()
     
     def display_viewable_remix_artists(self, user):
