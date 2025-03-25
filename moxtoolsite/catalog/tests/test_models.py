@@ -175,7 +175,7 @@ class ArtistModelTest(TestCase, ModelTestMixin):
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Artist.objects.get_queryset_can_view(self.users['admin'])), set(all_artists))
 
-    def get_queryset_can_direct_modify(self):
+    def test_get_queryset_can_direct_modify(self):
         all_artists = Artist.objects.all()
         self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
         self.client.force_login(self.users['dj'])
@@ -183,7 +183,7 @@ class ArtistModelTest(TestCase, ModelTestMixin):
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Artist.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artists))
 
-    def get_queryset_can_request_modify(self):
+    def test_get_queryset_can_request_modify(self):
         all_artists = Artist.objects.all()
         self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_request_modify, (self.users['anonymous']))
         self.client.force_login(self.users['dj'])
@@ -230,19 +230,36 @@ class GenreModelTest(TestCase, ModelTestMixin):
         self.assertEqual(genre.get_absolute_url(), '/catalog/genre/1/house')
 
     def test_get_viewable_tracks_in_genre(self):
-        genre = Genre.objects.get(id=1)
-        self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        tracks_dj = Track.objects.filter(genre=genre).filter(public=True)
-        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
-            tracks_dj = tracks_dj | Track.objects.filter(id=trackinstance.track.id).filter(genre=genre)
-        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['dj'])), set(tracks_dj))
-        self.client.force_login(self.users['admin'])
-        tracks_admin = Track.objects.filter(genre=genre)
-        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['admin'])), set(tracks_admin))
+        for genre in Genre.objects.all():
+            self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            tracks_dj = Track.objects.filter(genre=genre).filter(public=True)
+            for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+                tracks_dj = tracks_dj | Track.objects.filter(id=trackinstance.track.id).filter(genre=genre)
+            self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['dj'])), set(tracks_dj))
+            self.client.force_login(self.users['admin'])
+            tracks_admin = Track.objects.filter(genre=genre)
+            self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['admin'])), set(tracks_admin))
 
-    # def get_viewable_artists_in_genre(self):
-    # ***** FIX SOON *****
+    def test_get_viewable_artists_in_genre(self):
+        for genre in Genre.objects.all():
+            artists_dj = Artist.objects.none()
+            artists_admin = Artist.objects.none()
+            for track in Track.objects.filter(genre=genre):
+                artists_admin = artists_admin | track.artist.all()
+                artists_admin = artists_admin | track.remix_artist.all()
+                if track.public is True:
+                    artists_dj = artists_dj | track.artist.filter(public=True)
+                    artists_dj = artists_dj | track.remix_artist.filter(public=True)
+            for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+                if trackinstance.track.genre == genre:
+                    artists_dj = artists_dj | trackinstance.track.artist.all()
+                    artists_dj = artists_dj | trackinstance.track.remix_artist.all()
+            self.assertEqual(set(genre.get_viewable_artists_in_genre(self.users['dj'])), set(artists_dj))
+            self.client.force_login(self.users['admin'])
+            self.assertRaises(PermissionDenied, genre.get_viewable_artists_in_genre, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            self.assertEqual(set(genre.get_viewable_artists_in_genre(self.users['admin'])), set(artists_admin))
 
     # Shared model functions
 
@@ -284,11 +301,35 @@ class GenreModelTest(TestCase, ModelTestMixin):
 
     # test permissions
 
-    # view
+    def test_get_queryset_can_view(self):
+        all_genres = Genre.objects.all()
+        self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        genres_dj = Genre.objects.filter(public=True)
+        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+            genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
+        self.assertEqual(set(Genre.objects.get_queryset_can_view(self.users['dj'])), set(genres_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Genre.objects.get_queryset_can_view(self.users['admin'])), set(all_genres))
 
-    # request
+    def test_get_queryset_can_direct_modify(self):
+        all_genres = Genre.objects.all()
+        self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_direct_modify, (self.users['dj']))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Genre.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genres))
 
-    # modify
+    def test_get_queryset_can_request_modify(self):
+        all_genres = Genre.objects.all()
+        self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        genres_dj = Genre.objects.filter(public=True)
+        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+            genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
+        self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['dj'])), set(genres_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_genres))
 
 
 class TrackModelTest(TestCase, ModelTestMixin):

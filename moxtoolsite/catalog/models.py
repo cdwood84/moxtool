@@ -190,7 +190,7 @@ class SharedModelPermissionManager(models.Manager):
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
                 if queryset.count() >= 1:
-                    return queryset
+                    return queryset.distinct()
                 else:
                     raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
             else:
@@ -217,7 +217,7 @@ class SharedModelPermissionManager(models.Manager):
             shared_model = self.model.__name__.lower()
             if shared_model:
                 if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
-                    queryset = self.get_queryset()
+                    return self.get_queryset()
                 else:
                     queryset = model.objects.none()
                     if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
@@ -233,6 +233,8 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
                     else:
                         raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
             else:
@@ -306,7 +308,8 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
         viewable_artists = Artist.objects.none()
         for track in viewable_tracks:
             viewable_artists = viewable_artists | track.get_viewable_artists_on_track(user)
-        return viewable_artists
+            viewable_artists = viewable_artists | track.get_viewable_remix_artists_on_track(user)
+        return viewable_artists.distinct()
     
     class Meta:
         constraints = [
@@ -388,7 +391,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             viewable_artist = user_viewable_artists.get(id=artist.id)
             if viewable_artist and artist == viewable_artist:
                 viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
-        return viewable_artists
+        return viewable_artists.distinct()
     
     def display_viewable_artists(self, user):
         return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
@@ -402,7 +405,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
             if viewable_remix_artist and remix_artist == viewable_remix_artist:
                 viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
-        return viewable_remix_artists
+        return viewable_remix_artists.distinct()
     
     def display_viewable_remix_artists(self, user):
         return ', '.join(remix_artist.name for remix_artist in self.get_viewable_remix_artists_on_track(user))
