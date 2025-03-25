@@ -196,23 +196,47 @@ class SharedModelPermissionManager(models.Manager):
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
-    def get_queryset_can_direct_modify(self, user, shared_model):
-        if shared_model in self.valid_shared_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
-                return self.get_queryset()
-            else:
-                raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    return self.get_queryset()
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
+            else:
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
-    def get_queryset_can_request_modify(self, user, shared_model):
-        if shared_model in self.valid_shared_models:
-            if user.has_perm('catalog.moxtool_can_modify_public_artist'):
-                return self.get_queryset().filter(public=True)
-            else:
-                raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+    def get_queryset_can_request_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+            model = self.model
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    queryset = self.get_queryset()
+                else:
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
+                        for trackinstance in TrackInstance.objects.filter(user=user):
+                            if shared_model == 'track':
+                                queryset = queryset | Track.objects.filter(id=trackinstance.track.id)
+                            elif shared_model == 'artist':
+                                queryset = queryset | trackinstance.track.artist.all()
+                                queryset = queryset | trackinstance.track.remix_artist.all()
+                            elif shared_model == 'genre':
+                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            else:
+                                raise ValidationError("Data for "+shared_model+" is not currently available.")
+                    else:
+                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+            else:
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):

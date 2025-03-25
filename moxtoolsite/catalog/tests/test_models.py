@@ -163,21 +163,43 @@ class ArtistModelTest(TestCase, ModelTestMixin):
 
     # test permissions
 
-    # view
+    def test_get_queryset_can_view(self):
+        all_artists = Artist.objects.all()
+        self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        artists_dj = Artist.objects.filter(public=True)
+        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+            artists_dj = artists_dj | trackinstance.track.artist.all()
+            artists_dj = artists_dj | trackinstance.track.remix_artist.all()
+        self.assertEqual(set(Artist.objects.get_queryset_can_view(self.users['dj'])), set(artists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Artist.objects.get_queryset_can_view(self.users['admin'])), set(all_artists))
 
-    # request
+    def get_queryset_can_direct_modify(self):
+        all_artists = Artist.objects.all()
+        self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_direct_modify, (self.users['dj']))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Artist.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artists))
 
-    # modify
+    def get_queryset_can_request_modify(self):
+        all_artists = Artist.objects.all()
+        self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        artists_dj = Artist.objects.filter(public=True)
+        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+            artists_dj = artists_dj | trackinstance.track.artist.all()
+            artists_dj = artists_dj | trackinstance.track.remix_artist.all()
+        self.assertEqual(set(Artist.objects.get_queryset_can_request_modify(self.users['dj'])), set(artists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Artist.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_artists))
 
 
 class GenreModelTest(TestCase, ModelTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
-        print(cls.groups)
-        for group, data in cls.groups.items():
-            print(group)
-            print(data.permissions)
 
     # fields
 
