@@ -415,7 +415,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
+        else:
+            return None
     
     def get_viewable_instances_of_track(self, user):
         return TrackInstance.objects.get_queryset_can_view(user).filter(track=self)
@@ -639,8 +642,8 @@ class UserModelPermissionManager(models.Manager):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
-            user_model = self.__class__.__name__
-            try:
+            user_model = self.model.__name__.lower()
+            if user_model:
                 if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
                     return self.get_queryset()
                 elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) and user.has_perm('catalog.moxtool_can_view_own_'+user_model):
@@ -651,7 +654,7 @@ class UserModelPermissionManager(models.Manager):
                     return self.get_queryset().filter(user=user)
                 else:
                     raise PermissionDenied("You do not have permission to view any tags.")
-            except:
+            else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
     def get_queryset_can_direct_modify(self, user, user_model):

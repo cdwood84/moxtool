@@ -429,22 +429,52 @@ class TrackModelTest(TestCase, ModelTestMixin):
             expected_text_admin = ', '.join(artist.name for artist in expected_artists_admin)
             self.assertEqual(set(track.get_viewable_artists_on_track(self.users['admin'])), set(expected_artists_admin))
             self.assertEqual(track.display_viewable_artists(self.users['admin']), expected_text_admin)
-            
 
-    # def display_viewable_artists(self):
-    # ***** FIX SOON *****
+    def test_get_viewable_remix_artists_on_track_with_display(self):
+        for track in Track.objects.all():
+            self.assertRaises(PermissionDenied, track.get_viewable_remix_artists_on_track, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            expected_remix_artists_dj = Artist.objects.none()
+            if track.public is True:
+                for remix_artist in track.remix_artist.all():
+                    if remix_artist.public is True or Artist.objects.get_queryset_can_view(self.users['dj']).filter(id=remix_artist.id).count() > 0:
+                        expected_remix_artists_dj = expected_remix_artists_dj | track.artist.filter(id=remix_artist.id)
+            for trackinstance in TrackInstance.objects.filter(track=track, user=self.users['dj']):
+                expected_remix_artists_dj = expected_remix_artists_dj | trackinstance.track.remix_artist.all()
+            expected_remix_artists_dj = expected_remix_artists_dj.distinct()
+            expected_remix_text_dj = ', '.join(remix_artist.name for remix_artist in expected_remix_artists_dj)
+            self.assertEqual(set(track.get_viewable_remix_artists_on_track(self.users['dj'])), set(expected_remix_artists_dj))
+            self.assertEqual(track.display_viewable_remix_artists(self.users['dj']), expected_remix_text_dj)
+            self.client.force_login(self.users['admin'])
+            expected_remix_artists_admin = track.remix_artist.all()
+            expected_remix_text_admin = ', '.join(remix_artist.name for remix_artist in expected_remix_artists_admin)
+            self.assertEqual(set(track.get_viewable_remix_artists_on_track(self.users['admin'])), set(expected_remix_artists_admin))
+            self.assertEqual(track.display_viewable_remix_artists(self.users['admin']), expected_remix_text_admin)
 
-    # def get_viewable_remix_artists_on_track(self):
-    # ***** FIX SOON *****
+    def test_get_viewable_genre_on_track(self):
+        for track in Track.objects.all():
+            self.assertRaises(PermissionDenied, track.get_viewable_genre_on_track, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            expected_genre_dj = None
+            if track.public is True:
+                if track.genre.public is True or Genre.objects.get_queryset_can_view(self.users['dj']).filter(id=track.genre.id).count() > 0:
+                    expected_genre_dj = track.genre
+            if expected_genre_dj is None:
+                for trackinstance in TrackInstance.objects.filter(track=track, user=self.users['dj']):
+                    expected_genre_dj = trackinstance.track.genre
+            self.assertEqual(track.get_viewable_genre_on_track(self.users['dj']), expected_genre_dj)
+            self.client.force_login(self.users['admin'])
+            self.assertEqual(track.get_viewable_genre_on_track(self.users['admin']), track.genre)
 
-    # def display_viewable_remix_artists(self):
-    # ***** FIX SOON *****
-
-    # def get_viewable_genre_on_track(self):
-    # ***** FIX SOON *****
-
-    # def get_viewable_instances_of_track(self):
-    # ***** FIX SOON *****
+    def test_get_viewable_instances_of_track(self):
+        for track in Track.objects.all():
+            self.assertRaises(PermissionDenied, track.get_viewable_instances_of_track, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            expected_trackinstances_dj = TrackInstance.objects.get_queryset_can_view(self.users['dj']).filter(track=track)
+            self.assertEqual(set(track.get_viewable_instances_of_track(self.users['dj'])), set(expected_trackinstances_dj))
+            self.client.force_login(self.users['admin'])
+            expected_trackinstances_admin = TrackInstance.objects.filter(track=track)
+            self.assertEqual(set(track.get_viewable_instances_of_track(self.users['admin'])), set(expected_trackinstances_admin))
 
     # Shared model functions
 
