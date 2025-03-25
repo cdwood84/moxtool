@@ -165,30 +165,32 @@ class SharedModelMixin:
 
 
 class SharedModelPermissionManager(models.Manager):
-    valid_shared_models = ['artist','genre','track']
-
-    def get_queryset_can_view(self, user, shared_model):
+    def get_queryset_can_view(self, user):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
+            model = self.model
+            shared_model = self.model.__name__.lower()
             if shared_model:
-                model = apps.get_model('catalog', shared_model.title())
-                user_queryset = model.objects.none()
-                for trackinstance in TrackInstance.objects.filter(user=user):
-                    if shared_model == 'artist':
-                        user_queryset = user_queryset | trackinstance.track.artist.all()
-                    elif shared_model == 'genre':
-                        user_queryset = user_queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
-                    elif shared_model == 'track':
-                        user_queryset = user_queryset | Track.objects.filter(id=trackinstance.track.id)
                 if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
-                    return self.get_queryset()
-                elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model) or user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                    return self.get_queryset().filter(public=True) | user_queryset
-                elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
-                    return self.get_queryset().filter(public=True)
-                elif user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                    return user_queryset
+                    queryset = self.get_queryset()
+                else:
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                        for trackinstance in TrackInstance.objects.filter(user=user):
+                            if shared_model == 'track':
+                                queryset = queryset | Track.objects.filter(id=trackinstance.track.id)
+                            elif shared_model == 'artist':
+                                queryset = queryset | trackinstance.track.artist.all()
+                                queryset = queryset | trackinstance.track.remix_artist.all()
+                            elif shared_model == 'genre':
+                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            else:
+                                raise ValidationError("Data for "+shared_model+" is not currently available.")
+                if queryset.count() >= 1:
+                    return queryset
                 else:
                     raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
             else:
@@ -273,7 +275,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
     
     def get_viewable_tracks_in_genre(self, user):
-        return Track.objects.get_queryset_can_view(user, 'track').filter(genre=self)
+        return Track.objects.get_queryset_can_view(user).filter(genre=self)
     
     def get_viewable_artists_in_genre(self, user):
         viewable_tracks = self.get_viewable_tracks_in_genre(user)
@@ -357,7 +359,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        user_viewable_artists = Artist.objects.get_queryset_can_view(user, 'artist')
+        user_viewable_artists = Artist.objects.get_queryset_can_view(user)
         for artist in self.artist.all():
             viewable_artist = user_viewable_artists.get(id=artist.id)
             if viewable_artist and artist == viewable_artist:
@@ -371,7 +373,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     
     def get_viewable_remix_artists_on_track(self, user):
         viewable_remix_artists = Artist.objects.none()
-        user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user, 'artist')
+        user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user)
         for remix_artist in self.remix_artist.all():
             viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
             if viewable_remix_artist and remix_artist == viewable_remix_artist:
@@ -384,10 +386,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        return Genre.objects.get_queryset_can_view(user, 'genre').get(id=self.genre.id)
+        return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
     
     def get_viewable_instances_of_track(self, user):
-        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(track=self)
+        return TrackInstance.objects.get_queryset_can_view(user).filter(track=self)
     
     class Meta:
         constraints = [
@@ -417,18 +419,20 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserRequestPermissionManager(models.Manager):
-    valid_request_models = ['artistrequest', 'genrerequest', 'trackrequest']
-
-    def get_queryset_can_view(self, user, request_model):
-        if request_model in self.valid_request_models:
-            if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to view any tags.")
+    def get_queryset_can_view(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+            request_model = self.__class__.__name__
+            try:
+                if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to view any tags.")
+            except:
+                raise ValidationError("The request for "+request_model+" is not a valid user request model.")
 
     def get_queryset_can_direct_modify(self, user, request_model):
         if request_model in self.valid_request_models:
@@ -602,22 +606,24 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserModelPermissionManager(models.Manager):
-    valid_user_models = ['tag', 'trackinstance', 'playlist']
-
-    def get_queryset_can_view(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) or user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
-            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
-                return self.get_queryset().filter(public=True)
-            elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to view any tags.")
+    def get_queryset_can_view(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+            user_model = self.__class__.__name__
+            try:
+                if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) and user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                    return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
+                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
+                    return self.get_queryset().filter(public=True)
+                elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to view any tags.")
+            except:
+                raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
     def get_queryset_can_direct_modify(self, user, user_model):
         if user_model in self.valid_user_models:
@@ -671,10 +677,10 @@ class Tag(models.Model):
         return reverse('tag-detail', args=[url_friendly_type, url_friendly_value, str(self.id)])
     
     def get_viewable_trackinstances_tagged(self, user):
-        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(tag__in=[self])
+        return TrackInstance.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     def get_viewable_playlists_tagged(self, user):
-        return Playlist.objects.get_queryset_can_view(user, 'playlist').filter(tag__in=[self])
+        return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     class Meta:
         ordering = [

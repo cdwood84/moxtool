@@ -4,14 +4,42 @@ from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
+import re
 
 
-class ArtistModelTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+class ModelTestMixin:
+    def create_test_data():
+        list_data = {
+            'group': ['dj', 'admin'],
+            'perm': ['view', 'create', 'modify'],
+            'model': ['artist', 'genre', 'track', 'trackinstance'],
+            'domain': ['any', 'public', 'own'],
+        }
+        groups = {}
+        users = {}
+        perms = {}
+        for group in list_data['group']:
+            groups[group] = Group.objects.create(name=group.title())
+            for model in list_data['model']:
+                perms[model] = {}
+                content_type = ContentType.objects.get_for_model(apps.get_model('catalog', model.title()))
+                for perm in list_data['perm']:
+                    perms[model][perm] = {}
+                    for domain in list_data['domain']:
+                        if (domain != 'any' or group == 'admin') and (perm != 'create' or domain != 'public'):
+                            perms[model][perm][domain] = Permission.objects.get(
+                                codename="moxtool_can_"+perm+"_"+domain+"_"+model,
+                                content_type=content_type
+                            )
+                            groups[group].permissions.add(perms[model][perm][domain])
+            users[group] = User.objects.create_user(username=group, password=group+"testpassword")
+            users[group].groups.add(groups[group])
+        users['anonymous'] = AnonymousUser()
         Artist.objects.create(name='EnterTheMox', public=True)
         Artist.objects.create(name='Stars Align', public=False)
+        Artist.objects.create(name='m4ri55a', public=False)
         Genre.objects.create(name='House', public=True)
+        Genre.objects.create(name='Techno', public=False)
         Track.objects.create(
             beatport_track_id=1, 
             title='Not in my Haus', 
@@ -20,6 +48,49 @@ class ArtistModelTest(TestCase):
             public=False,
         )
         Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
+        Track.objects.create(
+            beatport_track_id=2, 
+            title='TechYES!', 
+            genre=Genre.objects.get(id=2),
+            mix='x',
+            public=False,
+        )
+        Track.objects.get(id=2).artist.set(Artist.objects.filter(id=2))
+        Track.objects.get(id=2).remix_artist.set(Artist.objects.filter(id=3))
+        Track.objects.create(
+            beatport_track_id=3, 
+            title='Drums in a Cave', 
+            genre=Genre.objects.get(id=2),
+            mix='o',
+            public=True,
+        )
+        Track.objects.get(id=3).artist.set(Artist.objects.filter(id=2))
+        Track.objects.create(
+            beatport_track_id=4, 
+            title='Mau5 Hau5', 
+            genre=Genre.objects.get(id=1),
+            mix='x',
+            public=False,
+        )
+        Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
+        Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
+        TrackInstance.objects.create(
+            track=Track.objects.get(id=1),
+            user=users['dj'],
+            rating='7',
+        )
+        TrackInstance.objects.create(
+            track=Track.objects.get(id=2),
+            user=users['dj'],
+            rating='9',
+        )
+        return users, groups
+
+
+class ArtistModelTest(TestCase, ModelTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
 
     # fields
 
@@ -99,62 +170,14 @@ class ArtistModelTest(TestCase):
     # modify
 
 
-class GenreModelTest(TestCase):
+class GenreModelTest(TestCase, ModelTestMixin):
     @classmethod
     def setUpTestData(cls):
-        dj_group = Group.objects.create(name="DJ")
-        admin_group = Group.objects.create(name="Admin")
-        perms = {}
-        for model_name in ['artist', 'genre', 'track', 'trackinstance']:
-            perms[model_name] = {}
-            content_type = ContentType.objects.get_for_model(apps.get_model('catalog', model_name.title()))
-            for type in ['view']:
-                perms[model_name][type] = {}
-                for perm in ['any', 'public', 'own']:
-                    perms[model_name][type][perm] = Permission.objects.get(
-                        codename="moxtool_can_"+type+"_"+perm+"_"+model_name,
-                        content_type=content_type
-                    )
-                    admin_group.permissions.add(perms[model_name][type][perm])
-                    if perm != 'any':
-                        dj_group.permissions.add(perms[model_name][type][perm])
-        cls.no_user = AnonymousUser()
-        cls.dj_user = User.objects.create_user(username="dj", password="djtestpassword")
-        cls.admin_user = User.objects.create_user(username="admin", password="admintestpassword")
-        cls.dj_user.groups.add(dj_group)
-        cls.admin_user.groups.add(admin_group)
-        Genre.objects.create(name='House', public=True)
-        Genre.objects.create(name='Techno', public=False)
-        Artist.objects.create(name='EnterTheMox', public=True)
-        Track.objects.create(
-            beatport_track_id=1, 
-            title='Not in my Haus', 
-            genre=Genre.objects.get(id=1),
-            mix='e',
-            public=False,
-        )
-        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
-        TrackInstance.objects.create(
-            track=Track.objects.get(id=1),
-            user=cls.dj_user,
-            rating='10',
-        )
-        Track.objects.create(
-            beatport_track_id=2, 
-            title='House of House', 
-            genre=Genre.objects.get(id=1),
-            mix='e',
-            public=True,
-        )
-        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
-        Track.objects.create(
-            beatport_track_id=3, 
-            title='Mau5 Hau5', 
-            genre=Genre.objects.get(id=1),
-            mix='e',
-            public=False,
-        )
-        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
+        cls.users, cls.groups = cls.create_test_data()
+        print(cls.groups)
+        for group, data in cls.groups.items():
+            print(group)
+            print(data.permissions)
 
     # fields
 
@@ -186,12 +209,15 @@ class GenreModelTest(TestCase):
 
     def test_get_viewable_tracks_in_genre(self):
         genre = Genre.objects.get(id=1)
-        tracks = Track.objects.filter(genre=genre)
-        self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.no_user))
-        self.client.force_login(self.dj_user)
-        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.dj_user)), set(tracks.exclude(id=3)))
-        self.client.force_login(self.admin_user)
-        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.admin_user)), set(tracks))
+        self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        tracks_dj = Track.objects.filter(genre=genre).filter(public=True)
+        for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+            tracks_dj = tracks_dj | Track.objects.filter(id=trackinstance.track.id).filter(genre=genre)
+        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['dj'])), set(tracks_dj))
+        self.client.force_login(self.users['admin'])
+        tracks_admin = Track.objects.filter(genre=genre)
+        self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['admin'])), set(tracks_admin))
 
     # def get_viewable_artists_in_genre(self):
     # ***** FIX SOON *****
@@ -243,30 +269,10 @@ class GenreModelTest(TestCase):
     # modify
 
 
-class TrackModelTest(TestCase):
+class TrackModelTest(TestCase, ModelTestMixin):
     @classmethod
     def setUpTestData(cls):
-        Artist.objects.create(name='EnterTheMox', public=True)
-        Artist.objects.create(name='Stars Align', public=False)
-        Genre.objects.create(name='House', public=True)
-        Genre.objects.create(name='Trachno', public=False)
-        Track.objects.create(
-            beatport_track_id=1, 
-            title='Not in my Haus', 
-            genre=Genre.objects.get(id=1),
-            mix='e',
-            public=True,
-        )
-        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
-        Track.objects.create(
-            beatport_track_id=2, 
-            title='TechYES!', 
-            genre=Genre.objects.get(id=2),
-            mix='x',
-            public=False,
-        )
-        Track.objects.get(id=2).artist.set(Artist.objects.filter(id=2))
-        Track.objects.get(id=2).remix_artist.set(Artist.objects.filter(id=1))
+        cls.users, cls.groups = cls.create_test_data()
 
     # fields
 
@@ -318,24 +324,27 @@ class TrackModelTest(TestCase):
     # Genre specific functions
 
     def test_object_name_is_name(self):
-        track_1 = Track.objects.get(id=1)
-        expected_object_name_1 = track_1.title + ' (' + track_1.get_mix_display() +') by ' + track_1.display_artist()
-        self.assertEqual(str(track_1), expected_object_name_1)
-        track_2 = Track.objects.get(id=2)
-        expected_object_name_2 = track_2.title + ' (' + track_2.display_remix_artist() + ' ' + track_2.get_mix_display() +') by ' + track_2.display_artist()
-        self.assertEqual(str(track_2), expected_object_name_2)
+        for track in Track.objects.all():
+            if track.mix == 'x':
+                expected_object_name = track.title + ' (' + track.display_remix_artist() + ' ' + track.get_mix_display() +') by ' + track.display_artist()
+            else:
+                expected_object_name = track.title + ' (' + track.get_mix_display() +') by ' + track.display_artist()
+            self.assertEqual(str(track), expected_object_name)
 
     def test_get_absolute_url(self):
-        track = Track.objects.get(id=1)
-        self.assertEqual(track.get_absolute_url(), '/catalog/track/1/not_in_my_haus')
+        for track in Track.objects.all():
+            expected_url = '/catalog/track/'+str(track.id)+'/'+re.sub(r'[^a-zA-Z0-9]', '_', track.title.lower())
+            self.assertEqual(track.get_absolute_url(), expected_url)
 
     def display_artist(self):
-        track = Track.objects.get(id=1)
-        self.assertEqual(track.display_artist(), track.artist.first().name)
+        for track in Track.objects.all():
+            expected_artists = ', '.join(artist.name for artist in track.artist.all())
+            self.assertEqual(track.display_artist(), expected_artists)
 
     def display_remix_artist(self):
-        track = Track.objects.get(id=2)
-        self.assertEqual(track.display_remix_artist(), track.remix_artist.first().name)
+        for track in Track.objects.all():
+            expected_remix_artists = ', '.join(artist.name for artist in track.remix_artist.all())
+            self.assertEqual(track.display_remix_artist(), expected_remix_artists)
 
     # def get_viewable_artists_on_track(self):
     # ***** FIX SOON *****
