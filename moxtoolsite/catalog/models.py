@@ -614,7 +614,6 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
         if self.track:
             message = 'Modify track request: ' + self.track.title
             for field in self.useful_field_list:
-                print(field)
                 message = self.field_substr(message, field)
             if ',' not in message:
                 message = message + ' (NO CHANGES FOUND)'

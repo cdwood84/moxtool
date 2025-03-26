@@ -68,7 +68,8 @@ class AddTrackToPlaylistForm(forms.Form):
 
 class ObjectFormMixin:
 
-    def save(self, model, action_model, user, existing_obj, obj_name, commit=True):
+    def save(self, model, action_model, user, existing_obj, commit=True):
+        obj_name = model.__name__.lower()
 
         # the case for directly modifying an nobject requires a get
         if model == action_model and existing_obj:

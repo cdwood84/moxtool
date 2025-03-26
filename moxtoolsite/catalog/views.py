@@ -89,7 +89,7 @@ def modify_object(request, obj_name, pk=None):
         if request.method == 'POST':
             form = form_class(request.POST)
             if form.is_valid():
-                obj, success = form.save(model, action_model, request.user, existing_obj, obj_name)
+                obj, success = form.save(model, action_model, request.user, existing_obj)
                 if success is True:
                     print(action.title()+' '+obj_name.title()+': '+str(obj)+' was successful.')
                     if model == action_model:
