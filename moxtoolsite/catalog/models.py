@@ -92,6 +92,16 @@ class TrackMixin:
     @property
     def create_by_field(self):
         return 'beatport_track_id'
+    
+    def display_artist(self):
+        return ', '.join(artist.name for artist in self.artist.all())
+
+    display_artist.short_description = 'Artist'
+    
+    def display_remix_artist(self):
+        return ', '.join(artist.name for artist in self.remix_artist.all())
+
+    display_remix_artist.short_description = 'Remix Artist'
 
 
 class SharedModelMixin:
@@ -374,16 +384,6 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
         return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
-    def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
-
-    display_artist.short_description = 'Artist'
-    
-    def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
-
-    display_remix_artist.short_description = 'Remix Artist'
-    
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
         if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
@@ -600,42 +600,37 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
-    def __str__(self):
-        message = self.title
-        if self.track:
-            message = 'Modify track request: ' + message
-            message = self.field_substr(message, 'beatport_track_id', self.beatport_track_id, self.track.beatport_track_id)
-            message = self.field_substr(message, 'title', self.title, self.track.title)
-            message = self.field_substr(message, 'genre', self.genre, self.track.genre)
-            message = self.field_substr(message, 'artist', self.display_artist(), self.track.display_artist())
-            message = self.field_substr(message, 'remix artist', self.display_remix_artist(), self.track.display_remix_artist())
-            message = self.field_substr(message, 'mix', self.get_mix_display(), self.track.get_mix_display())
-            message = self.field_substr(message, 'public', self.public, self.track.public)
-        else:
-            message = 'New track request: ' + message
-        return message
-
-    def field_substr(self, message, field_name, request_value, existing_value):
+    def field_substr(self, message, field_name):
+        request_value = self.get_field(field_name)
+        existing_value = self.track.get_field(field_name)
         if request_value:
             if not(existing_value) or (request_value != existing_value):
                 message += ', change ' + field_name + ' to ' + str(request_value)
         elif not(request_value) and existing_value:
             message += ', remove ' + field_name
         return message
-    
-    def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
 
-    display_artist.short_description = 'Artist'
-    
-    def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
-
-    display_remix_artist.short_description = 'Remix Artist'
+    def __str__(self):
+        if self.track:
+            message = 'Modify track request: ' + self.track.title
+            for field in self.useful_field_list:
+                print(field)
+                message = self.field_substr(message, field)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
+        else:
+            message = 'New track request: ' + self.title
+            try:
+                track = Track.objects.get(beatport_track_id=self.beatport_track_id)
+            except:
+                track = None
+            if track:
+                message = message + ' (ALREADY EXISTS)'
+        return message
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        return reverse('track-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [

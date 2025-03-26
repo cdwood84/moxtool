@@ -13,7 +13,7 @@ class ModelTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'track', 'trackinstance'],
+            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'track', 'trackinstance', 'trackrequest'],
             'domain': ['any', 'public', 'own'],
         }
         groups = {}
@@ -442,7 +442,17 @@ class TrackModelTest(TestCase, ModelTestMixin):
         create_by = track.create_by_field
         self.assertEqual(create_by, 'beatport_track_id')
 
-    # Genre specific functions
+    def test_display_artist(self):
+        for track in Track.objects.all():
+            expected_artists = ', '.join(artist.name for artist in track.artist.all())
+            self.assertEqual(track.display_artist(), expected_artists)
+
+    def test_display_remix_artist(self):
+        for track in Track.objects.all():
+            expected_remix_artists = ', '.join(artist.name for artist in track.remix_artist.all())
+            self.assertEqual(track.display_remix_artist(), expected_remix_artists)
+
+    # Track specific functions
 
     def test_object_name_is_name(self):
         for track in Track.objects.all():
@@ -456,16 +466,6 @@ class TrackModelTest(TestCase, ModelTestMixin):
         for track in Track.objects.all():
             expected_url = '/catalog/track/'+str(track.id)+'/'+re.sub(r'[^a-zA-Z0-9]', '_', track.title.lower())
             self.assertEqual(track.get_absolute_url(), expected_url)
-
-    def test_display_artist(self):
-        for track in Track.objects.all():
-            expected_artists = ', '.join(artist.name for artist in track.artist.all())
-            self.assertEqual(track.display_artist(), expected_artists)
-
-    def test_display_remix_artist(self):
-        for track in Track.objects.all():
-            expected_remix_artists = ', '.join(artist.name for artist in track.remix_artist.all())
-            self.assertEqual(track.display_remix_artist(), expected_remix_artists)
 
     def test_get_viewable_artists_on_track_with_display(self):
         for track in Track.objects.all():
@@ -946,3 +946,264 @@ class GenreRequestModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(genrerequests_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genrerequests))
+
+
+class TrackRequestModelTest(TestCase, ModelTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+        TrackRequest.objects.create(
+            track=Track.objects.get(id=1),
+            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
+            title='Frisco Disco',
+            genre=Track.objects.get(id=1).genre,
+            mix=Track.objects.get(id=1).mix,
+            public=Track.objects.get(id=1).public,
+            user=cls.users['dj'],
+            date_requested=date(2025, 3, 1),
+        )
+        TrackRequest.objects.get(id=1).artist.set(Track.objects.get(id=1).artist.all())
+        TrackRequest.objects.get(id=1).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+        TrackRequest.objects.create(
+            track=Track.objects.get(id=2),
+            beatport_track_id=Track.objects.get(id=2).beatport_track_id,
+            title=Track.objects.get(id=2).title,
+            genre=Track.objects.get(id=2).genre,
+            mix=Track.objects.get(id=2).mix,
+            public=not(Track.objects.get(id=2).public),
+            user=cls.users['dj'],
+            date_requested=date(2025, 3, 2),
+        )
+        TrackRequest.objects.get(id=2).artist.set(Track.objects.get(id=2).artist.all())
+        TrackRequest.objects.get(id=2).remix_artist.set(Track.objects.get(id=2).remix_artist.all())
+        TrackRequest.objects.create(
+            beatport_track_id=2384,
+            title='0ur Hau5',
+            genre=Genre.objects.get(id=1),
+            mix='o',
+            public=False,
+            user=cls.users['admin'],
+            date_requested=date(2025, 3, 3),
+        )
+        TrackRequest.objects.get(id=3).artist.set(Artist.objects.filter(id__lt=2))
+        TrackRequest.objects.create(
+            track=Track.objects.get(id=1),
+            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
+            title=Track.objects.get(id=1).title,
+            genre=Track.objects.get(id=1).genre,
+            mix=Track.objects.get(id=1).mix,
+            public=Track.objects.get(id=1).public,
+            user=cls.users['dj'],
+            date_requested=date(2025, 3, 4),
+        )
+        TrackRequest.objects.get(id=4).artist.set(Track.objects.get(id=1).artist.all())
+        TrackRequest.objects.get(id=4).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+        TrackRequest.objects.create(
+            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
+            title=Track.objects.get(id=1).title,
+            genre=Track.objects.get(id=1).genre,
+            mix=Track.objects.get(id=1).mix,
+            public=Track.objects.get(id=1).public,
+            user=cls.users['dj'],
+            date_requested=date(2025, 3, 5),
+        )
+        TrackRequest.objects.get(id=5).artist.set(Track.objects.get(id=1).artist.all())
+        TrackRequest.objects.get(id=5).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+
+    # fields
+
+    def test_beatport_track_id_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('beatport_track_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Track ID')
+
+    def test_title_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('title').verbose_name
+        self.assertEqual(field_label, 'title')
+
+    def test_genre_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('genre').verbose_name
+        self.assertEqual(field_label, 'genre')
+
+    def test_artist_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('artist').verbose_name
+        self.assertEqual(field_label, 'artist')
+
+    def test_remix_artist_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('remix_artist').verbose_name
+        self.assertEqual(field_label, 'remix artist')
+
+    def test_mix_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('mix').verbose_name
+        self.assertEqual(field_label, 'mix')
+
+    def test_public_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
+    def test_track_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('track').verbose_name
+        self.assertEqual(field_label, 'track')
+
+    def test_user_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_date_requested_label(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('date_requested').verbose_name
+        self.assertEqual(field_label, 'date requested')
+
+    def test_title_max_length(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        max_length = trackrequest._meta.get_field('title').max_length
+        self.assertEqual(max_length, 200)
+
+    def test_mix_max_length(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        max_length = trackrequest._meta.get_field('mix').max_length
+        self.assertEqual(max_length, 12)
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        useful_field_list = trackrequest.useful_field_list
+        self.assertEqual(useful_field_list['beatport_track_id']['type'], 'integer')
+        self.assertTrue(useful_field_list['beatport_track_id']['equal'])
+        self.assertEqual(useful_field_list['title']['type'], 'string')
+        self.assertTrue(useful_field_list['title']['equal'])
+        self.assertEqual(useful_field_list['genre']['type'], 'model')
+        self.assertTrue(useful_field_list['genre']['equal'])
+        self.assertEqual(useful_field_list['artist']['type'], 'queryset')
+        self.assertTrue(useful_field_list['artist']['equal'])
+        self.assertEqual(useful_field_list['remix_artist']['type'], 'queryset')
+        self.assertTrue(useful_field_list['remix_artist']['equal'])
+        self.assertEqual(useful_field_list['mix']['type'], 'string')
+        self.assertTrue(useful_field_list['mix']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        create_by = trackrequest.create_by_field
+        self.assertEqual(create_by, 'beatport_track_id')
+
+    def test_display_artist(self):
+        for trackrequest in TrackRequest.objects.all():
+            expected_artists = ', '.join(artist.name for artist in trackrequest.artist.all())
+            self.assertEqual(trackrequest.display_artist(), expected_artists)
+
+    def test_display_remix_artist(self):
+        for trackrequest in TrackRequest.objects.all():
+            expected_remix_artists = ', '.join(artist.name for artist in trackrequest.remix_artist.all())
+            self.assertEqual(trackrequest.display_remix_artist(), expected_remix_artists)
+
+    # TrackRequest specific functions
+
+    def test_field_substr(self):
+        trackrequest1 = TrackRequest.objects.get(id=1)
+        expected_text1 = ', change title to ' + trackrequest1.title
+        self.assertEqual(trackrequest1.field_substr('', 'title'), expected_text1)
+        self.assertEqual(trackrequest1.field_substr('', 'public'), '')
+        trackrequest2 = TrackRequest.objects.get(id=2)
+        expected_text2 = ', change public to ' + str(trackrequest2.public)
+        self.assertEqual(trackrequest2.field_substr('', 'title'), '')
+        self.assertEqual(trackrequest2.field_substr('', 'public'), expected_text2)
+
+    def test_object_string_is_request(self):
+        for trackrequest in TrackRequest.objects.all():
+            if trackrequest.track:
+                expected_object_string = 'Modify track request: ' + trackrequest.track.title
+                for field in trackrequest.useful_field_list:
+                    expected_object_string = trackrequest.field_substr(expected_object_string, field)
+                if ',' not in expected_object_string:
+                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+            else:
+                expected_object_string = 'New track request: ' + trackrequest.title
+                try:
+                    track = Track.objects.get(beatport_track_id=trackrequest.beatport_track_id)
+                except:
+                    track = None
+                if track:
+                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+            self.assertEqual(str(trackrequest), expected_object_string)
+
+    def test_get_absolute_url(self):
+        for trackrequest in TrackRequest.objects.all():
+            expected_url = '/catalog/trackrequest/' + str(trackrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', trackrequest.title.lower())
+            self.assertEqual(trackrequest.get_absolute_url(), expected_url)
+
+    # Shared model functions
+
+    def test_set_field(self):
+        trackrequest = TrackRequest.objects.get(id=3)
+        self.assertFalse(trackrequest.public)
+        trackrequest.set_field('public', True)
+        self.assertTrue(trackrequest.public)
+
+    def test_get_field(self):
+        for trackrequest in TrackRequest.objects.all():
+            field_value = trackrequest.get_field('title')
+            self.assertEqual(field_value, trackrequest.title)
+
+    def test_get_modify_url(self):
+        for trackrequest in TrackRequest.objects.all():
+            self.assertEqual(trackrequest.get_modify_url(), '/catalog/trackrequest/modify/' + str(trackrequest.id))
+
+    def test_add_fields_to_initial(self):
+        for trackrequest in TrackRequest.objects.all():
+            expected_initial = {
+                'beatport_track_id': trackrequest.beatport_track_id,
+                'title': trackrequest.title,
+                'genre_name': trackrequest.genre.name,
+                'mix': trackrequest.mix,
+                'public': trackrequest.public,
+            }
+            artists = trackrequest.display_artist()
+            if len(artists) > 0:
+                expected_initial['artist_names'] = artists
+            remix_artists = trackrequest.display_remix_artist()
+            if len(remix_artists) > 0:
+                expected_initial['remix_artist_names'] = remix_artists
+            self.assertEqual(trackrequest.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        trackrequest1 = TrackRequest.objects.get(id=1)
+        trackrequest2 = TrackRequest.objects.get(id=2)
+        self.assertFalse(trackrequest1.is_equivalent(trackrequest2))
+        self.assertTrue(trackrequest1.is_equivalent(trackrequest1))
+
+    def test_is_field_is_equivalent(self):
+        trackrequest1 = TrackRequest.objects.get(id=1)
+        trackrequest2 = TrackRequest.objects.get(id=2)
+        self.assertFalse(trackrequest1.field_is_equivalent(trackrequest2, 'title'))
+        self.assertTrue(trackrequest1.field_is_equivalent(trackrequest1, 'title'))
+
+    # test permissions
+
+    def test_get_queryset_can_view(self):
+        all_trackrequestss = TrackRequest.objects.all()
+        self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['dj'])), set(trackrequests_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_trackrequestss))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_trackrequests = TrackRequest.objects.all()
+        self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(trackrequests_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_trackrequests))
