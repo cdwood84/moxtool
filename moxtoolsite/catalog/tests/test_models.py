@@ -28,7 +28,7 @@ class ModelTestMixin:
                     perms[model][perm] = {}
                     for domain in list_data['domain']:
                         if (domain != 'any' or group == 'admin') \
-                            and (perm != 'create' or domain != 'public') \
+                            and (domain != 'public' or 'instance' not in model or perm != 'create') \
                             and (domain != 'public' or 'request' not in model):
                             perms[model][perm][domain] = Permission.objects.get(
                                 codename="moxtool_can_"+perm+"_"+domain+"_"+model,

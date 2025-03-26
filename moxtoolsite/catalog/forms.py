@@ -69,61 +69,139 @@ class AddTrackToPlaylistForm(forms.Form):
 class ObjectFormMixin:
 
     def save(self, model, action_model, user, existing_obj, commit=True):
-        obj_name = model.__name__.lower()
+        
+        try:
+            obj_name = model.__name__.lower()
+            potential_duplicates = False
 
-        # the case for directly modifying an nobject requires a get
-        if model == action_model and existing_obj:
-            if user.has_perm("catalog.moxtool_can_modify_any_artist"):
-                obj = existing_obj
-                for field, value in self.cleaned_data.items():
-                    obj.set_field(field, value)
-                obj = self.append_many_to_many_data(obj)
+            # admin section
+            if model == action_model:
+                # case 1: direct modify
+                if existing_obj:
+                    if user.has_perm("catalog.moxtool_can_modify_any_"+obj_name):
+                        obj = existing_obj
+                        for field, value in self.cleaned_data.items():
+                            obj.set_field(field, value)
+                        obj = self.append_many_to_many_data(obj)
+                    else:
+                        raise PermissionError
+                # case 2: direct create
+                else:
+                    if user.has_perm("catalog.moxtool_can_create_any_"+obj_name):
+                        obj_kwargs = self.cleaned_data
+                        obj = action_model.objects.create(**obj_kwargs)
+                        obj = self.append_many_to_many_data(obj)
+                    else:
+                        raise PermissionError
+                    
+            # general user section
             else:
-                raise PermissionError
-
-        # all other cases are a create requiring duplicate checks
-        else:
-            obj_kwargs = self.cleaned_data
-            if model != action_model:
-                if user.has_perm("catalog.moxtool_can_modify_public_artist"):
-                    obj_kwargs['user'] = user
-                    obj_kwargs['date_requested'] = datetime.date.today()
-                    if existing_obj:
+                obj_kwargs = self.cleaned_data
+                obj_kwargs['user'] = user
+                obj_kwargs['date_requested'] = datetime.date.today()
+                # case 3: request modify
+                if existing_obj:
+                    if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
                         obj_kwargs[obj_name] = existing_obj
                     else:
-                        try: 
-                            create_field = model.objects.first().create_by_field
-                            existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
-                            existing_obj = model.objects.get(**existing_create_kwargs)
-                            print('Matching '+obj_name+' found: '+str(existing_obj))
-                        except:
-                            print('A matching '+obj_name+' does not exist.')
+                        raise PermissionError
+                # case 4: request create
                 else:
-                    raise PermissionError
-            else:
-                if not(user.has_perm("catalog.moxtool_can_modify_public_artist")):
-                    raise PermissionError
-            obj = action_model.objects.create(**obj_kwargs)
-            obj = self.append_many_to_many_data(obj)
-            potential_duplicates = False
-            if model != action_model and existing_obj:
+                    if user.has_perm("catalog.moxtool_can_create_public_"+obj_name):
+                        create_field = model.objects.first().create_by_field
+                        existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
+                        existing_queryset = model.objects.filter(**existing_create_kwargs)
+                        if existing_queryset.count() > 0:
+                            if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
+                                existing_obj = existing_queryset.first()
+                                obj_kwargs[obj_name] = existing_obj
+                            else:
+                                raise PermissionError
+                    else:
+                        raise PermissionError
+                obj = action_model.objects.create(**obj_kwargs)
+                obj = self.append_many_to_many_data(obj)
+
+            # delete object if duplicated
+            if potential_duplicates is False and existing_obj and model != action_model:
                 potential_duplicates = obj.is_equivalent(existing_obj, False)
             if potential_duplicates is False:
                 test_set = action_model.objects.exclude(id=obj.id)
-                if test_set.count() >= 1:
+                if test_set.count() > 0:
                     for dup in test_set:
                         if dup.is_equivalent(obj):
                             potential_duplicates = True
-                            print('Duplicate found: '+str(dup))
                             break
             if potential_duplicates is True:
-                obj.delete()
+                if model != action_model or existing_obj is None:
+                    obj.delete()
                 return None, False
         
-        # save and return object upon success
-        if commit:
-            obj.save()
-        return obj, True
+            # save and return object upon success
+            if commit:
+                obj.save()
+            return obj, True
+
+        except PermissionError:
+            print("Permission Denied!")
+            return None, False
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+        # # the case for directly modifying an nobject requires a get
+        # if model == action_model and existing_obj:
+        #     if user.has_perm("catalog.moxtool_can_modify_any_artist"):
+        #         obj = existing_obj
+        #         for field, value in self.cleaned_data.items():
+        #             obj.set_field(field, value)
+        #         obj = self.append_many_to_many_data(obj)
+        #     else:
+        #         raise PermissionError
+
+        # # all other cases are a create requiring duplicate checks
+        # else:
+        #     obj_kwargs = self.cleaned_data
+        #     if model != action_model:
+        #         if user.has_perm("catalog.moxtool_can_modify_public_artist"):
+        #             obj_kwargs['user'] = user
+        #             obj_kwargs['date_requested'] = datetime.date.today()
+        #             if existing_obj:
+        #                 obj_kwargs[obj_name] = existing_obj
+        #             else:
+        #                 try: 
+        #                     create_field = model.objects.first().create_by_field
+        #                     existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
+        #                     existing_obj = model.objects.get(**existing_create_kwargs)
+        #                     print('Matching '+obj_name+' found: '+str(existing_obj))
+        #                 except:
+        #                     print('A matching '+obj_name+' does not exist.')
+        #         else:
+        #             raise PermissionError
+        #     else:
+        #         if not(user.has_perm("catalog.moxtool_can_modify_any_artist")):
+        #             raise PermissionError
+        #     obj = action_model.objects.create(**obj_kwargs)
+        #     obj = self.append_many_to_many_data(obj)
+        #     potential_duplicates = False
+        #     if model != action_model and existing_obj:
+        #         potential_duplicates = obj.is_equivalent(existing_obj, False)
+        #     if potential_duplicates is False:
+        #         test_set = action_model.objects.exclude(id=obj.id)
+        #         if test_set.count() >= 1:
+        #             for dup in test_set:
+        #                 if dup.is_equivalent(obj):
+        #                     potential_duplicates = True
+        #                     print('Duplicate found: '+str(dup))
+        #                     break
+        #     if potential_duplicates is True:
+        #         obj.delete()
+        #         return None, False
+        
+        # # save and return object upon success
+        # if commit:
+        #     obj.save()
+        # return obj, True
     
     def append_many_to_many_data(self, obj):
         if self.many_to_many_data:

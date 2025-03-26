@@ -27,7 +27,7 @@ class FormTestMixin:
                     perms[model][perm] = {}
                     for domain in list_data['domain']:
                         if (domain != 'any' or group == 'admin') \
-                            and (perm != 'create' or domain != 'public') \
+                            and (domain != 'public' or 'instance' not in model or perm != 'create') \
                             and (domain != 'public' or 'request' not in model):
                             perms[model][perm][domain] = Permission.objects.get(
                                 codename="moxtool_can_"+perm+"_"+domain+"_"+model,
@@ -118,79 +118,77 @@ class ArtistFormTest(TestCase, FormTestMixin):
     # Shared form functions
 
     def test_save_create_request(self):
-        self.client.force_login(self.users['dj'])
-        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_public_artist"))
-        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_modify_any_artist"))
         data = {
             'name': 'Space 455',
         }
-        expected_string = 'New artist request: ' + data['name']
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
-        artist, success = form.save(
-            Artist,
-            ArtistRequest,
-            self.users['dj'],
-            None,
-        )
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_own_artist"))
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_any_artist"))
+        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_artist, None)
+        self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_create_own_artist"))
+        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_create_any_artist"))
+        artist, success = form.save(Artist, ArtistRequest, self.users['dj'], None)
         self.assertTrue(success)
+        expected_string = 'New artist request: ' + data['name']
         self.assertEqual(str(artist), expected_string)
 
     def test_save_create_direct(self):
-        self.client.force_login(self.users['admin'])
-        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_public_artist"))
-        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_any_artist"))
         data = {
             'name': 'C4ution T4pe',
         }
-        expected_string = data['name']
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
-        artist, success = form.save(
-            Artist,
-            Artist,
-            self.users['admin'],
-            None,
-        )
+        self.client.force_login(self.users['dj'])
+        bad_artist, failure = form.save(Artist, Artist, self.users['dj'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_artist, None)
+        self.client.force_login(self.users['admin'])
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_create_public_artist"))
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_create_any_artist"))
+        artist, success = form.save(Artist, Artist, self.users['admin'], None)
         self.assertTrue(success)
+        expected_string = data['name']
         self.assertEqual(str(artist), expected_string)
 
     def test_save_modify_request(self):
-        self.client.force_login(self.users['dj'])
-        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_public_artist"))
-        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_modify_any_artist"))
         data = {
             'name': 'EnterTheMox',
             'public': False,
         }
-        expected_string = 'Modify artist request: ' + data['name'] + ', change public to ' + str(data['public'])
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
-        artist, success = form.save(
-            Artist,
-            ArtistRequest,
-            self.users['dj'],
-            Artist.objects.get(id=1),
-        )
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_own_artist"))
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_any_artist"))
+        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_artist, None)
+        self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_own_artist"))
+        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_modify_any_artist"))
+        artist, success = form.save(Artist, ArtistRequest, self.users['dj'], None)
         self.assertTrue(success)
+        expected_string = 'Modify artist request: ' + data['name'] + ', change public to ' + str(data['public'])
         self.assertEqual(str(artist), expected_string)
 
     def test_save_modify_direct(self):
-        self.client.force_login(self.users['admin'])
-        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_public_artist"))
-        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_any_artist"))
         data = {
             'name': 'EnterTheMox',
             'public': False,
         }
-        expected_string = data['name']
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
-        artist, success = form.save(
-            Artist,
-            Artist,
-            self.users['admin'],
-            Artist.objects.get(id=1),
-        )
+        self.client.force_login(self.users['dj'])
+        bad_artist, failure = form.save(Artist, Artist, self.users['dj'], Artist.objects.get(id=1))
+        self.assertFalse(failure)
+        self.assertEqual(bad_artist, None)
+        self.client.force_login(self.users['admin'])
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_public_artist"))
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_any_artist"))
+        artist, success = form.save(Artist, Artist, self.users['admin'], Artist.objects.get(id=1))
         self.assertTrue(success)
+        expected_string = data['name']
         self.assertEqual(str(artist), expected_string)

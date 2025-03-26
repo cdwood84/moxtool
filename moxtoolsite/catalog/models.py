@@ -283,6 +283,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             'name',
         ]
         permissions = (
+            ('moxtool_can_create_public_artist', 'Artist - Create Public - DJ'),
             ('moxtool_can_create_own_artist', 'Artist - Create Own - DJ'),
             ('moxtool_can_create_any_artist', 'Artist - Create Any - MOX'),
             ('moxtool_can_view_public_artist', 'Artist - View Public - DJ'),
@@ -333,6 +334,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             'name',
         ]
         permissions = (
+            ('moxtool_can_create_public_genre', 'Genre - Create Public - DJ'),
             ('moxtool_can_create_own_genre', 'Genre - Create Own - DJ'),
             ('moxtool_can_create_any_genre', 'Genre - Create Any - MOX'),
             ('moxtool_can_view_public_genre', 'Genre - View Public - DJ'),
@@ -436,6 +438,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             'title',
         ]
         permissions = (
+            ('moxtool_can_create_public_track', 'Track - Create Public - DJ'),
             ('moxtool_can_create_own_track', 'Track - Create Own - DJ'),
             ('moxtool_can_create_any_track', 'Track - Create Any - MOX'),
             ('moxtool_can_view_public_track', 'Track - View Public - DJ'),
