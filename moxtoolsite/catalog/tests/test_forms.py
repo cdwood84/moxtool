@@ -1,4 +1,4 @@
-from catalog.forms import ArtistForm
+from catalog.forms import ArtistForm, GenreForm, TrackForm
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackInstance, TrackRequest
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
@@ -192,3 +192,108 @@ class ArtistFormTest(TestCase, FormTestMixin):
         self.assertTrue(success)
         expected_string = data['name']
         self.assertEqual(str(artist), expected_string)
+
+
+class GenreFormTest(TestCase, FormTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_name_field(self):
+        form = GenreForm()
+        self.assertTrue(form.fields['name'].label is None or form.fields['name'].label == 'name')
+        self.assertTrue(form.fields['name'].help_text == 'Enter the genre name.')
+
+    def test_public_field(self):
+        form = GenreForm()
+        self.assertTrue(form.fields['public'].label is None or form.fields['public'].label == 'public')
+        self.assertTrue(form.fields['public'].help_text == 'Indicate whether you want this genre to be made public on MoxToolSite (default is false).')
+
+    # GenreForm specific functions
+
+    def test_data_cleaning(self):
+        data = {
+            'name': "So you want some supersaws, do ya?!  Well I got some sonic chaos for ya that'll melt your skull.  It's going to be great, seriously!  I'm talking perished rodent plucks bouncing around a Berlin nightclub.  You down?",
+        }
+        form = GenreForm(data)
+        self.assertFalse(form.is_valid())
+
+    # Shared form functions
+
+    def test_save_create_request(self):
+        data = {
+            'name': 'IDM',
+        }
+        form = GenreForm(data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_own_genre"))
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_any_genre"))
+        bad_genre, failure = form.save(Genre, GenreRequest, self.users['anonymous'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_genre, None)
+        self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_create_own_genre"))
+        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_create_any_genre"))
+        genre, success = form.save(Genre, GenreRequest, self.users['dj'], None)
+        self.assertTrue(success)
+        expected_string = 'New genre request: ' + data['name']
+        self.assertEqual(str(genre), expected_string)
+
+    def test_save_create_direct(self):
+        data = {
+            'name': 'Pop',
+        }
+        form = GenreForm(data)
+        self.assertTrue(form.is_valid())
+        self.client.force_login(self.users['dj'])
+        bad_genre, failure = form.save(Genre, Genre, self.users['dj'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_genre, None)
+        self.client.force_login(self.users['admin'])
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_create_public_genre"))
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_create_any_genre"))
+        genre, success = form.save(Genre, Genre, self.users['admin'], None)
+        self.assertTrue(success)
+        expected_string = data['name']
+        self.assertEqual(str(genre), expected_string)
+
+    def test_save_modify_request(self):
+        data = {
+            'name': 'House',
+            'public': False,
+        }
+        form = GenreForm(data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_own_genre"))
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_any_genre"))
+        bad_genre, failure = form.save(Genre, GenreRequest, self.users['anonymous'], None)
+        self.assertFalse(failure)
+        self.assertEqual(bad_genre, None)
+        self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_own_genre"))
+        self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_modify_any_genre"))
+        genre, success = form.save(Genre, GenreRequest, self.users['dj'], None)
+        self.assertTrue(success)
+        expected_string = 'Modify genre request: ' + data['name'] + ', change public to ' + str(data['public'])
+        self.assertEqual(str(genre), expected_string)
+
+    def test_save_modify_direct(self):
+        data = {
+            'name': 'House',
+            'public': False,
+        }
+        form = GenreForm(data)
+        self.assertTrue(form.is_valid())
+        self.client.force_login(self.users['dj'])
+        bad_genre, failure = form.save(Genre, Genre, self.users['dj'], Genre.objects.get(id=1))
+        self.assertFalse(failure)
+        self.assertEqual(bad_genre, None)
+        self.client.force_login(self.users['admin'])
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_public_genre"))
+        self.assertTrue(self.users['admin'].has_perm("catalog.moxtool_can_modify_any_genre"))
+        genre, success = form.save(Genre, Genre, self.users['admin'], Genre.objects.get(id=1))
+        self.assertTrue(success)
+        expected_string = data['name']
+        self.assertEqual(str(genre), expected_string)
