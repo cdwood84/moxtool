@@ -533,24 +533,31 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
     def __str__(self):
-        message = self.name
         if self.genre:
-            message = 'Modify genre request: ' + message
+            message = 'Modify genre request: ' + self.genre.name
             if self.name != self.genre.name:
-                message = message + ', change name'
+                message = message + ', change name to ' + self.name
             if self.public != self.genre.public:
                 message = message + ', change public to ' + str(self.public)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
         else:
-            message = 'New genre request: ' + message
+            message = 'New genre request: ' + self.name
+            try:
+                genre = Genre.objects.get(name=self.name)
+            except:
+                genre = None
+            if genre:
+                message = message + ' (ALREADY EXISTS)'
         return message
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('genre-request-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [
@@ -570,7 +577,7 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
 class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     title = models.CharField(max_length=200)
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True, related_name="request_genre")
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist", blank=True)
     MIX_LIST = [

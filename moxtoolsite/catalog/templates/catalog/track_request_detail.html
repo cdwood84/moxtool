@@ -1,0 +1,19 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if trackrequest.track %}
+        <h1>Modify Track Request:</h1>
+        <p>Title: {{ trackrequest.track.title }}{% if trackrequest.title != trackrequest.track.title %} to {{ trackrequest.title }}{% endif %}</p>
+        <p>Public: {{ trackrequest.track.public }}{% if trackrequest.public != trackrequest.track.public %} to {{ trackrequest.public }}{% endif %}</p>
+    {% else %}
+        <h1>Create Track Request:</h1>
+        <p><strong>Title:</strong> {{ trackrequest.title }}</p>
+        <p><strong>Public:</strong> {{ trackrequest.public }}</p>
+    {% endif %}
+    <p>requested by <strong>{{ trackrequest.user }}</strong> on <strong>{{ trackrequest.date_requested }}</strong></p>
+    {% if perms.catalog.moxtool_can_modify_any_trackrequest %}
+        <p><a href="">Delete this request</a></p>
+    {% elif perms.catalog.moxtool_can_modify_own_trackrequest and request.user == trackrequest.user %}
+        <p><a href="">Delete this request</a></p>
+    {% endif %}
+{% endblock %}

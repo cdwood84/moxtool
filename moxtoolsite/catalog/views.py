@@ -9,7 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
 import importlib
 
@@ -169,7 +169,7 @@ class GenreListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Genre.objects.get_queryset_can_view(self.request.user, 'genre')
+        return Genre.objects.get_queryset_can_view(self.request.user)
 
 
 class GenreDetailView(LoginRequiredMixin, generic.DetailView):
@@ -179,7 +179,7 @@ class GenreDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Genre.objects.get_queryset_can_view(self.request.user, 'genre').get(id=pk)
+        return Genre.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -187,6 +187,16 @@ class GenreDetailView(LoginRequiredMixin, generic.DetailView):
         context['viewable_artists'] = context['genre'].get_viewable_artists_in_genre(self.request.user)
         return context
 
+
+class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = GenreRequest
+    context_object_name = 'genrerequest'
+    template_name = "catalog/genre_reequest_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return GenreRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+    
 
 # track
 
@@ -198,7 +208,7 @@ class TrackListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Track.objects.get_queryset_can_view(self.request.user, 'track')
+        return Track.objects.get_queryset_can_view(self.request.user)
 
 
 class TrackDetailView(LoginRequiredMixin, generic.DetailView):
@@ -208,7 +218,7 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Track.objects.get_queryset_can_view(self.request.user, 'track').get(id=pk)
+        return Track.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -218,6 +228,16 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
         context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user)
         return context
 
+
+class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = TrackRequest
+    context_object_name = 'trackrequest'
+    template_name = "catalog/track_request_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+    
 
 # playlist
 
