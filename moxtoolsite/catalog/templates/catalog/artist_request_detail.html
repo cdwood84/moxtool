@@ -1,0 +1,19 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if artistrequest.artist %}
+        <h1>Modify Artist Request:</h1>
+        <p>Name: {{ artistrequest.artist.name }}{% if artistrequest.name != artistrequest.artist.name %} to {{ artistrequest.name }}{% endif %}</p>
+        <p>Public: {{ artistrequest.artist.public }}{% if artistrequest.public != artistrequest.artist.public %} to {{ artistrequest.public }}{% endif %}</p>
+    {% else %}
+        <h1>Create Artist Request:</h1>
+        <p><strong>Name:</strong> {{ artistrequest.name }}</p>
+        <p><strong>Public:</strong> {{ artistrequest.public }}</p>
+    {% endif %}
+    <p>requested by <strong>{{ artistrequest.user }}</strong> on <strong>{{ artistrequest.date_requested }}</strong></p>
+    {% if perms.catalog.moxtool_can_modify_any_artistrequest %}
+        <p><a href="">Delete this request</a></p>
+    {% elif perms.catalog.moxtool_can_modify_own_artistrequest and request.user == artistrequest.user %}
+        <p><a href="">Delete this request</a></p>
+    {% endif %}
+{% endblock %}

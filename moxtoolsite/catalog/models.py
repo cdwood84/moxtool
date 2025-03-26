@@ -455,7 +455,7 @@ class UserRequestPermissionManager(models.Manager):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
-            request_model = self.__class__.__name__
+            request_model = self.model.__name__.lower()
             try:
                 if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
                     return self.get_queryset()
@@ -466,16 +466,20 @@ class UserRequestPermissionManager(models.Manager):
             except:
                 raise ValidationError("The request for "+request_model+" is not a valid user request model.")
 
-    def get_queryset_can_direct_modify(self, user, request_model):
-        if request_model in self.valid_request_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_'+request_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to directly modify any tags.")
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+            request_model = self.model.__name__.lower()
+            try:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+request_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify any tags.")
+            except:
+                raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
 
 class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
@@ -487,20 +491,27 @@ class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
     objects = UserRequestPermissionManager()
 
     def __str__(self):
-        message = self.name
         if self.artist:
-            message = 'Modify artist request: ' + message
+            message = 'Modify artist request: ' + self.artist.name
             if self.name != self.artist.name:
-                message = message + ', change name to'
+                message = message + ', change name to ' + self.name
             if self.public != self.artist.public:
                 message = message + ', change public to ' + str(self.public)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
         else:
-            message = 'New artist request: ' + message
+            message = 'New artist request: ' + self.name
+            try:
+                artist = Artist.objects.get(name=self.name)
+            except:
+                artist = None
+            if artist:
+                message = message + ' (ALREADY EXISTS)'
         return message
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [

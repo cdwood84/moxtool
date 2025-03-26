@@ -1,4 +1,5 @@
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackInstance, TrackRequest
+from datetime import date
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -12,7 +13,7 @@ class ModelTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'genre', 'track', 'trackinstance'],
+            'model': ['artist', 'artistrequest', 'genre', 'track', 'trackinstance'],
             'domain': ['any', 'public', 'own'],
         }
         groups = {}
@@ -26,7 +27,9 @@ class ModelTestMixin:
                 for perm in list_data['perm']:
                     perms[model][perm] = {}
                     for domain in list_data['domain']:
-                        if (domain != 'any' or group == 'admin') and (perm != 'create' or domain != 'public'):
+                        if (domain != 'any' or group == 'admin') \
+                            and (perm != 'create' or domain != 'public') \
+                            and (domain != 'public' or 'request' not in model):
                             perms[model][perm][domain] = Permission.objects.get(
                                 codename="moxtool_can_"+perm+"_"+domain+"_"+model,
                                 content_type=content_type
@@ -108,6 +111,21 @@ class ArtistModelTest(TestCase, ModelTestMixin):
         artist = Artist.objects.get(id=1)
         max_length = artist._meta.get_field('name').max_length
         self.assertEqual(max_length, 200)
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        artist = Artist.objects.get(id=1)
+        useful_field_list = artist.useful_field_list
+        self.assertEqual(useful_field_list['name']['type'], 'string')
+        self.assertTrue(useful_field_list['name']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        artist = Artist.objects.get(id=1)
+        create_by = artist.create_by_field
+        self.assertEqual(create_by, 'name')
 
     # Artist specific functions
 
@@ -217,6 +235,21 @@ class GenreModelTest(TestCase, ModelTestMixin):
         genre = Genre.objects.get(id=1)
         max_length = genre._meta.get_field('name').max_length
         self.assertEqual(max_length, 200)
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        genre = Genre.objects.get(id=1)
+        useful_field_list = genre.useful_field_list
+        self.assertEqual(useful_field_list['name']['type'], 'string')
+        self.assertTrue(useful_field_list['name']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        genre = Genre.objects.get(id=1)
+        create_by = genre.create_by_field
+        self.assertEqual(create_by, 'name')
 
     # Genre specific functions
 
@@ -384,6 +417,31 @@ class TrackModelTest(TestCase, ModelTestMixin):
         max_length = track._meta.get_field('mix').max_length
         self.assertEqual(max_length, 12)
 
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        track = Track.objects.get(id=1)
+        useful_field_list = track.useful_field_list
+        self.assertEqual(useful_field_list['beatport_track_id']['type'], 'integer')
+        self.assertTrue(useful_field_list['beatport_track_id']['equal'])
+        self.assertEqual(useful_field_list['title']['type'], 'string')
+        self.assertTrue(useful_field_list['title']['equal'])
+        self.assertEqual(useful_field_list['genre']['type'], 'model')
+        self.assertTrue(useful_field_list['genre']['equal'])
+        self.assertEqual(useful_field_list['artist']['type'], 'queryset')
+        self.assertTrue(useful_field_list['artist']['equal'])
+        self.assertEqual(useful_field_list['remix_artist']['type'], 'queryset')
+        self.assertTrue(useful_field_list['remix_artist']['equal'])
+        self.assertEqual(useful_field_list['mix']['type'], 'string')
+        self.assertTrue(useful_field_list['mix']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        track = Track.objects.get(id=1)
+        create_by = track.create_by_field
+        self.assertEqual(create_by, 'beatport_track_id')
+
     # Genre specific functions
 
     def test_object_name_is_name(self):
@@ -548,3 +606,173 @@ class TrackModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(Track.objects.get_queryset_can_request_modify(self.users['dj'])), set(tracks_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Track.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_tracks))
+
+
+class ArtistRequestModelTest(TestCase, ModelTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+        ArtistRequest.objects.create(
+            artist=Artist.objects.get(id=1),
+            public=True,
+            name='Caution Tape',
+            user=cls.users['dj'],
+            date_requested=date(2017, 4, 30),
+        )
+        ArtistRequest.objects.create(
+            artist=Artist.objects.get(id=2),
+            public=True,
+            name=Artist.objects.get(id=2).get_field('name'),
+            user=cls.users['dj'],
+            date_requested=date(2025, 3, 14),
+        )
+        ArtistRequest.objects.create(
+            public=True,
+            name='Alivera7',
+            user=cls.users['admin'],
+            date_requested=date(2025, 3, 26),
+        )
+        ArtistRequest.objects.create(
+            artist=Artist.objects.get(id=1),
+            public=Artist.objects.get(id=1).public,
+            name=Artist.objects.get(id=1).name,
+            user=cls.users['dj'],
+            date_requested=date(2025, 1, 1),
+        )
+        ArtistRequest.objects.create(
+            public=Artist.objects.get(id=1).public,
+            name=Artist.objects.get(id=1).name,
+            user=cls.users['dj'],
+            date_requested=date(2024, 8, 4),
+        )
+
+    # fields
+
+    def test_name_label(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('name').verbose_name
+        self.assertEqual(field_label, 'name')
+
+    def test_public_label(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
+    def test_artist_label(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('artist').verbose_name
+        self.assertEqual(field_label, 'artist')
+
+    def test_user_label(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_date_requested_label(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('date_requested').verbose_name
+        self.assertEqual(field_label, 'date requested')
+
+    def test_name_max_length(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        max_length = artistrequest._meta.get_field('name').max_length
+        self.assertEqual(max_length, 200)
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        useful_field_list = artistrequest.useful_field_list
+        self.assertEqual(useful_field_list['name']['type'], 'string')
+        self.assertTrue(useful_field_list['name']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        create_by = artistrequest.create_by_field
+        self.assertEqual(create_by, 'name')
+
+    # ArtistRequest specific functions
+
+    def test_object_string_is_request(self):
+        for artistrequest in ArtistRequest.objects.all():
+            if artistrequest.artist:
+                expected_object_string = 'Modify artist request: ' + artistrequest.artist.name
+                if artistrequest.name != artistrequest.artist.name:
+                    expected_object_string = expected_object_string + ', change name to ' + artistrequest.name
+                if artistrequest.public != artistrequest.artist.public:
+                    expected_object_string = expected_object_string + ', change public to ' + str(artistrequest.public)
+                if ',' not in expected_object_string:
+                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+            else:
+                expected_object_string = 'New artist request: ' + artistrequest.name
+                try:
+                    artist = Artist.objects.get(name=artistrequest.name)
+                except:
+                    artist = None
+                if artist:
+                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+            self.assertEqual(str(artistrequest), expected_object_string)
+
+    def test_get_absolute_url(self):
+        for artistrequest in ArtistRequest.objects.all():
+            expected_url = '/catalog/artistrequest/' + str(artistrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', artistrequest.name.lower())
+            self.assertEqual(artistrequest.get_absolute_url(), expected_url)
+
+    # Shared model functions
+
+    def test_set_field(self):
+        artistrequest = ArtistRequest.objects.get(id=3)
+        self.assertTrue(artistrequest.public)
+        artistrequest.set_field('public', False)
+        self.assertFalse(artistrequest.public)
+
+    def test_get_field(self):
+        for artistrequest in ArtistRequest.objects.all():
+            field_value = artistrequest.get_field('name')
+            self.assertEqual(field_value, artistrequest.name)
+
+    def test_get_modify_url(self):
+        for artistrequest in ArtistRequest.objects.all():
+            self.assertEqual(artistrequest.get_modify_url(), '/catalog/artistrequest/modify/' + str(artistrequest.id))
+
+    def test_add_fields_to_initial(self):
+        for artistrequest in ArtistRequest.objects.all():
+            expected_initial = {
+                'name': artistrequest.name,
+                'public': artistrequest.public,
+            }
+            self.assertEqual(artistrequest.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        artistrequest1 = ArtistRequest.objects.get(id=1)
+        artistrequest2 = ArtistRequest.objects.get(id=2)
+        self.assertFalse(artistrequest1.is_equivalent(artistrequest2))
+        self.assertTrue(artistrequest1.is_equivalent(artistrequest1))
+
+    def test_is_field_is_equivalent(self):
+        artistrequest1 = ArtistRequest.objects.get(id=1)
+        artistrequest2 = ArtistRequest.objects.get(id=2)
+        self.assertFalse(artistrequest1.field_is_equivalent(artistrequest2, 'name'))
+        self.assertTrue(artistrequest1.field_is_equivalent(artistrequest1, 'name'))
+
+    # test permissions
+
+    def test_get_queryset_can_view(self):
+        all_artistrequestss = ArtistRequest.objects.all()
+        self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['dj'])), set(artistrequests_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_artistrequestss))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_artistrequests = ArtistRequest.objects.all()
+        self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(artistrequests_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artistrequests))

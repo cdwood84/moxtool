@@ -9,7 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
 import importlib
 
@@ -136,7 +136,7 @@ class ArtistListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Artist.objects.get_queryset_can_view(self.request.user, 'artist')
+        return Artist.objects.get_queryset_can_view(self.request.user)
 
 
 class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
@@ -146,7 +146,17 @@ class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Artist.objects.get_queryset_can_view(self.request.user, 'artist').get(id=pk)
+        return Artist.objects.get_queryset_can_view(self.request.user).get(id=pk)
+
+
+class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = ArtistRequest
+    context_object_name = 'artistrequest'
+    template_name = "catalog/artist_request_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return ArtistRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
 # genre
