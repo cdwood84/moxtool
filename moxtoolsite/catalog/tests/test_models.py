@@ -1268,11 +1268,51 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             expected_url = '/catalog/playlist/' + str(playlist.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', playlist.name.lower())
             self.assertEqual(playlist.get_absolute_url(), expected_url)
 
-    # def test_get_url_to_add_track(self):
-
-    # def display_tags(self):
+    def test_get_url_to_add_track(self):
+        for playlist in Playlist.objects.all():
+            expected_url = '/catalog/playlist/' + str(playlist.id) + '/tracks/add'
+            self.assertEqual(playlist.get_url_to_add_track(), expected_url)
 
     # Shared model functions
+
+    def test_set_field(self):
+        playlist = Playlist.objects.get(id=1)
+        self.assertEqual(playlist.public, False)
+        playlist.set_field('public', True)
+        self.assertEqual(playlist.public, True)
+
+    def test_get_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_value = playlist.get_field('track')
+        self.assertEqual(set(field_value), set(playlist.track.all()))
+
+    def test_get_modify_url(self):
+        playlist = Playlist.objects.get(id=1)
+        self.assertEqual(playlist.get_modify_url(), '/catalog/playlist/modify/1')
+
+    def test_add_fields_to_initial(self):
+        playlist = Playlist.objects.get(id=1)
+        expected_initial = {
+            'name': playlist.name,
+            'track_tracks': playlist.track.display(self.users['admin']),
+            'tag_names': playlist.tag.display(self.users['admin']),
+            'user': playlist.user,
+            'date_added': playlist.date_added,
+            'public': playlist.public,
+        }
+        self.assertEqual(playlist.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        playlist1 = Playlist.objects.get(id=1)
+        playlist2 = Playlist.objects.get(id=2)
+        self.assertFalse(playlist1.is_equivalent(playlist2))
+        self.assertTrue(playlist1.is_equivalent(playlist1))
+
+    def test_is_field_is_equivalent(self):
+        playlist1 = Playlist.objects.get(id=1)
+        playlist2 = Playlist.objects.get(id=2)
+        self.assertFalse(playlist1.field_is_equivalent(playlist2, 'name'))
+        self.assertTrue(playlist1.field_is_equivalent(playlist1, 'track'))
 
     # test object manager
 

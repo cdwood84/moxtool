@@ -33,6 +33,7 @@ urlpatterns = [
     # playlist
     path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
     path('playlist/<int:pk>/<str:name>', views.PlaylistDetailView.as_view(), name='playlist-detail'),
+    path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
 
     # tag
     path('tags/', views.TagListView.as_view(), name='tags'),
@@ -46,7 +47,7 @@ urlpatterns = [
     path('myplaylists/add', views.add_playlist_dj, name='add-playlist-dj'),
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
     # path('myplaylists/<uuid:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
-    re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
+    # re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove', views.remove_track_from_playlist_dj, name='remove-track-from-playlist-dj'),
     path('myplaylists/<int:playlist_id>/tracks/<uuid:trackinstance_id>/remove/confirm', views.confirm_remove_track_from_playlist_dj, name='comfirm-remove-track-from-playlist-dj'),
     path('mytags/', views.UserTagView.as_view(), name='user-tags'),

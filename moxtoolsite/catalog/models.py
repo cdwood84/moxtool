@@ -992,12 +992,7 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
         return reverse('playlist-detail', args=[str(self.id), url_friendly_name])
     
     def get_url_to_add_track(self):
-        return reverse('add-track-to-playlist-dj', args=[str(self.id)])
-    
-    def display_tags(self):
-        return ', '.join(str(tag) for tag in self.tag.all()[:3])
-    
-    display_tags.short_description = 'Tags'
+        return reverse('add-track-to-playlist-dj', args=[str(self.id)]) 
 
     class Meta:
         ordering = [
