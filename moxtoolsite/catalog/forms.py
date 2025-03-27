@@ -81,7 +81,8 @@ class ObjectFormMixin:
                     if user.has_perm("catalog.moxtool_can_modify_any_"+obj_name):
                         obj = existing_obj
                         for field, value in self.cleaned_data.items():
-                            obj.set_field(field, value)
+                            if value != obj.get_field(field):
+                                obj.set_field(field, value)
                         obj = self.append_many_to_many_data(obj)
                     else:
                         raise PermissionError
@@ -164,7 +165,7 @@ class ArtistForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the artist name.",
         required=True,
-        max_length=200,
+        max_length=Artist.objects.first()._meta.get_field('name').max_length,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this artist to be made public on MoxToolSite (default is false).",
@@ -181,7 +182,7 @@ class GenreForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the genre name.",
         required=True,
-        max_length=200,
+        max_length=Genre.objects.first()._meta.get_field('name').max_length,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this genre to be made public on MoxToolSite (default is false).",
@@ -203,10 +204,12 @@ class TrackForm(forms.Form, ObjectFormMixin):
     title = forms.CharField(
         help_text="Enter the track title without the mix name, which can be found on Beatport.",
         required=True,
+        max_length=Track.objects.first()._meta.get_field('title').max_length,
     )
     genre_name = forms.CharField(
         help_text="Enter the genre name, which can be found on Beatport.",
         required=True,
+        max_length=Genre.objects.first()._meta.get_field('name').max_length,
     )
     artist_names = forms.CharField(
         help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
@@ -240,34 +243,46 @@ class TrackForm(forms.Form, ObjectFormMixin):
         }
 
         # genre
-        genre_name = cleaned_data.get('genre_name')
-        if genre_name and len(genre_name) >= 1:
-            genre, genre_created = Genre.objects.get_or_create(name=genre_name.strip())
-            if genre_created is True:
-                print('A new genre was created.')
-        else:
-            genre = None
-        cleaned_data['genre'] = genre
-        del cleaned_data['genre_name']
+        if 'genre_name' in cleaned_data:
+            genre_name = cleaned_data.get('genre_name')
+            if genre_name and len(genre_name) >= 1:
+                genre, genre_created = Genre.objects.get_or_create(name=genre_name.strip())
+                if genre_created is True:
+                    print('A new genre was created.')
+            else:
+                genre = None
+            cleaned_data['genre'] = genre
+            if 'genre_name' in cleaned_data:
+                del cleaned_data['genre_name']
 
         # artist
-        artist_names = cleaned_data.get('artist_names')
-        if artist_names and len(artist_names) >= 1:
-            for artist_name in artist_names.split(','):
-                artist_obj, artist_created = Artist.objects.get_or_create(name=artist_name.strip())
-                if artist_created is True:
-                    print('A new artist was created.')
-                self.many_to_many_data['artist']['values'].append(artist_obj)
-        del cleaned_data['artist_names']
+        if 'artist_names' in cleaned_data:
+            artist_names = cleaned_data.get('artist_names')
+            if artist_names and len(artist_names) >= 1:
+                for artist_name in artist_names.split(','):
+                    if len(artist_name) > Artist.objects.first()._meta.get_field('name').max_length:
+                        self.add_error('artist_names', "An artist name is too long.")
+                    else:
+                        artist_obj, artist_created = Artist.objects.get_or_create(name=artist_name.strip())
+                        if artist_created is True:
+                            print('A new artist was created.')
+                        self.many_to_many_data['artist']['values'].append(artist_obj)
+            if 'artist_names' in cleaned_data:
+                del cleaned_data['artist_names']
 
         # remix artist
-        remix_artist_names = cleaned_data.get('remix_artist_names')
-        if remix_artist_names and len(remix_artist_names) >= 1:
-            for remix_artist_name in remix_artist_names.split(','):
-                remix_artist_obj, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name.strip())
-                if remix_artist_created is True:
-                    print('A new artist was created.')
-                self.many_to_many_data['remix_artist']['values'].append(remix_artist_obj)
-        del cleaned_data['remix_artist_names']
+        if 'remix_artist_names' in cleaned_data:
+            remix_artist_names = cleaned_data.get('remix_artist_names')
+            if remix_artist_names and len(remix_artist_names) >= 1:
+                for remix_artist_name in remix_artist_names.split(','):
+                    if len(remix_artist_name) > Artist.objects.first()._meta.get_field('name').max_length:
+                        self.add_error('remix_artist_names', "A remix artist name is too long.")
+                    else:
+                        remix_artist_obj, remix_artist_created = Artist.objects.get_or_create(name=remix_artist_name.strip())
+                        if remix_artist_created is True:
+                            print('A new artist was created.')
+                        self.many_to_many_data['remix_artist']['values'].append(remix_artist_obj)
+            if 'remix_artist_names' in cleaned_data:
+                del cleaned_data['remix_artist_names']
 
         return cleaned_data

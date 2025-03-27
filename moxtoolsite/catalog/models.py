@@ -607,8 +607,13 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
         request_value = self.get_field(field_name)
         existing_value = self.track.get_field(field_name)
         if request_value:
-            if not(existing_value) or (request_value != existing_value):
-                message += ', change ' + field_name + ' to ' + str(request_value)
+            if self.useful_field_list[field_name]['type'] == 'queryset':
+                if not(existing_value) or (set(request_value) != set(existing_value)):
+                    set_text = ', '.join(str(obj) for obj in request_value)
+                    message += ', change ' + field_name + ' to ' + set_text
+            else:
+                if not(existing_value) or (request_value != existing_value):
+                    message += ', change ' + field_name + ' to ' + str(request_value)
         elif not(request_value) and existing_value:
             message += ', remove ' + field_name
         return message
