@@ -1,96 +1,12 @@
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackInstance, TrackRequest
+from catalog.tests.mixins import CatalogTestMixin
 from datetime import date
-from django.apps import apps
-from django.contrib.auth.models import AnonymousUser, Group, Permission, User
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 import re
 
 
-class ModelTestMixin:
-    def create_test_data():
-        list_data = {
-            'group': ['dj', 'admin'],
-            'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'track', 'trackinstance', 'trackrequest'],
-            'domain': ['any', 'public', 'own'],
-        }
-        groups = {}
-        users = {}
-        perms = {}
-        for group in list_data['group']:
-            groups[group] = Group.objects.create(name=group.title())
-            for model in list_data['model']:
-                perms[model] = {}
-                content_type = ContentType.objects.get_for_model(apps.get_model('catalog', model.title()))
-                for perm in list_data['perm']:
-                    perms[model][perm] = {}
-                    for domain in list_data['domain']:
-                        if (domain != 'any' or group == 'admin') \
-                            and (domain != 'public' or 'instance' not in model or perm != 'create') \
-                            and (domain != 'public' or 'request' not in model):
-                            perms[model][perm][domain] = Permission.objects.get(
-                                codename="moxtool_can_"+perm+"_"+domain+"_"+model,
-                                content_type=content_type
-                            )
-                            groups[group].permissions.add(perms[model][perm][domain])
-            users[group] = User.objects.create_user(username=group, password=group+"testpassword")
-            users[group].groups.add(groups[group])
-        users['anonymous'] = AnonymousUser()
-        Artist.objects.create(name='EnterTheMox', public=True)
-        Artist.objects.create(name='Stars Align', public=False)
-        Artist.objects.create(name='m4ri55a', public=False)
-        Genre.objects.create(name='House', public=True)
-        Genre.objects.create(name='Techno', public=False)
-        Track.objects.create(
-            beatport_track_id=1, 
-            title='Not in my Haus', 
-            genre=Genre.objects.get(id=1),
-            mix='e',
-            public=False,
-        )
-        Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
-        Track.objects.create(
-            beatport_track_id=2, 
-            title='TechYES!', 
-            genre=Genre.objects.get(id=2),
-            mix='x',
-            public=False,
-        )
-        Track.objects.get(id=2).artist.set(Artist.objects.filter(id=2))
-        Track.objects.get(id=2).remix_artist.set(Artist.objects.filter(id=3))
-        Track.objects.create(
-            beatport_track_id=3, 
-            title='Drums in a Cave', 
-            genre=Genre.objects.get(id=2),
-            mix='o',
-            public=True,
-        )
-        Track.objects.get(id=3).artist.set(Artist.objects.filter(id=2))
-        Track.objects.create(
-            beatport_track_id=4, 
-            title='Mau5 Hau5', 
-            genre=Genre.objects.get(id=1),
-            mix='x',
-            public=False,
-        )
-        Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
-        Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
-        TrackInstance.objects.create(
-            track=Track.objects.get(id=1),
-            user=users['dj'],
-            rating='7',
-        )
-        TrackInstance.objects.create(
-            track=Track.objects.get(id=2),
-            user=users['dj'],
-            rating='9',
-        )
-        return users, groups
-
-
-class ArtistModelTest(TestCase, ModelTestMixin):
+class ArtistModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
@@ -214,7 +130,7 @@ class ArtistModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(Artist.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_artists))
 
 
-class GenreModelTest(TestCase, ModelTestMixin):
+class GenreModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
@@ -365,7 +281,7 @@ class GenreModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_genres))
 
 
-class TrackModelTest(TestCase, ModelTestMixin):
+class TrackModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
@@ -608,7 +524,7 @@ class TrackModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(Track.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_tracks))
 
 
-class ArtistRequestModelTest(TestCase, ModelTestMixin):
+class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
@@ -778,7 +694,7 @@ class ArtistRequestModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artistrequests))
 
 
-class GenreRequestModelTest(TestCase, ModelTestMixin):
+class GenreRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
@@ -948,7 +864,7 @@ class GenreRequestModelTest(TestCase, ModelTestMixin):
         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genrerequests))
 
 
-class TrackRequestModelTest(TestCase, ModelTestMixin):
+class TrackRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
