@@ -18,9 +18,9 @@ def index(request):
     if str(request.user) != 'AnonymousUser':
 
         # get data from model objects
-        viewable_genres = Genre.objects.get_queryset_can_view(request.user, 'genre')
-        viewable_artists = Artist.objects.get_queryset_can_view(request.user, 'artist')
-        viewable_tracks = Track.objects.get_queryset_can_view(request.user, 'track')
+        viewable_genres = Genre.objects.get_queryset_can_view(request.user)
+        viewable_artists = Artist.objects.get_queryset_can_view(request.user)
+        viewable_tracks = Track.objects.get_queryset_can_view(request.user)
         user_trackinstances = TrackInstance.objects.filter(user=request.user)
         user_playlists = Playlist.objects.filter(user=request.user)
         user_tags = Tag.objects.filter(user=request.user)

@@ -104,6 +104,122 @@ class TrackMixin:
     display_remix_artist.short_description = 'Remix Artist'
 
 
+class PlaylistMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'track': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'name'
+
+
+class TagMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'type': {
+                'type': 'string',
+                'equal': True,
+            },
+            'value': {
+                'type': 'string',
+                'equal': True,
+            },
+            'detail': {
+                'type': 'string',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'name'
+    
+
+class TrackInstanceMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'rating': {
+                'type': 'string',
+                'equal': True,
+            },
+            'play_count': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'track'
+    
+
 class SharedModelMixin:
 
     def set_field(self, field_name, value_input):
@@ -169,7 +285,7 @@ class SharedModelMixin:
             return True
         else:
             return False
-    
+
 
 # shared models with permissions manager
 
@@ -250,6 +366,9 @@ class SharedModelPermissionManager(models.Manager):
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
+    
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
@@ -484,6 +603,9 @@ class UserRequestPermissionManager(models.Manager):
             except:
                 raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
+    
 
 class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
@@ -658,6 +780,7 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserModelPermissionManager(models.Manager):
+    
     def get_queryset_can_view(self, user):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
@@ -677,28 +800,39 @@ class UserModelPermissionManager(models.Manager):
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
-    def get_queryset_can_direct_modify(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to directly modify any tags.")
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
-
-    def get_queryset_can_request_modify(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
-                return self.get_queryset().filter(public=True)
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify any tags.")
             else:
-                raise PermissionDenied("You do not have permission to request modifications to tags.")
+                raise ValidationError("The request for "+user_model+" is not a valid user model.")
+
+    def get_queryset_can_request_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
+                    return self.get_queryset().filter(public=True)
+                else:
+                    raise PermissionDenied("You do not have permission to request modifications to tags.")
+            else:
+                raise ValidationError("The request for "+user_model+" is not a valid user model.")
+
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
 
 
-class Tag(models.Model):
+class Tag(models.Model, SharedModelMixin, TagMixin):
     TYPE_LIST = [
         ('v','vibe'),
         ('c','color'),
@@ -751,8 +885,7 @@ class Tag(models.Model):
         )
 
 
-class TrackInstance(models.Model):
-    """Model representing a music track in a specific user library."""
+class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this track and owner library")
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
@@ -842,23 +975,21 @@ class TrackInstance(models.Model):
         )
 
 
-class Playlist(models.Model):
-    """Model representing a music track, not specifically in any user's library."""
+class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
     name = models.CharField(max_length=200)
-    track = models.ManyToManyField(TrackInstance, help_text="Select a track for this playlist")
+    track = models.ManyToManyField(TrackInstance, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
     date_added = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist", blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        """Function returning a string of the playlist name."""
         return self.name
     
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('playlist-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('playlist-detail', args=[str(self.id), url_friendly_name])
     
     def get_url_to_add_track(self):
         return reverse('add-track-to-playlist-dj', args=[str(self.id)])

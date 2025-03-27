@@ -1,4 +1,5 @@
-from catalog.models import Artist, Genre, Track, TrackInstance
+from catalog.models import Artist, Genre, Playlist, Tag, Track, TrackInstance
+from datetime import date
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -9,9 +10,10 @@ class CatalogTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'track', 'trackinstance', 'trackrequest'],
+            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'playlist', 'tag', 'track', 'trackinstance', 'trackrequest'],
             'domain': ['any', 'public', 'own'],
         }
+        user_models = ['playlist', 'tag', 'trackinstance']
         groups = {}
         users = {}
         perms = {}
@@ -24,7 +26,7 @@ class CatalogTestMixin:
                     perms[model][perm] = {}
                     for domain in list_data['domain']:
                         if (domain != 'any' or group == 'admin') \
-                            and (domain != 'public' or 'instance' not in model or perm != 'create') \
+                            and (domain != 'public' or model not in user_models or perm != 'create') \
                             and (domain != 'public' or 'request' not in model):
                             perms[model][perm][domain] = Permission.objects.get(
                                 codename="moxtool_can_"+perm+"_"+domain+"_"+model,
@@ -73,14 +75,60 @@ class CatalogTestMixin:
         )
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
+        Tag.objects.create(
+            type='s',
+            value='Saxophone',
+            detail='for that sweet, mellow sound',
+            user=users['dj'],
+            date_added=date(2024, 9, 28),
+            public=True,
+        )
+        Tag.objects.create(
+            type='v',
+            value='Soul of House',
+            detail='everything that is a temple to the groovy rise of dance music',
+            user=users['admin'],
+            date_added=date(2024, 12, 5),
+            public=False,
+        )
         TrackInstance.objects.create(
             track=Track.objects.get(id=1),
             user=users['dj'],
             rating='7',
+            public=True,
         )
         TrackInstance.objects.create(
             track=Track.objects.get(id=2),
             user=users['dj'],
             rating='9',
         )
+        TrackInstance.objects.filter(user=users['dj']).last().tag.set(Tag.objects.filter(id=1))
+        TrackInstance.objects.create(
+            track=Track.objects.get(id=3),
+            user=users['admin'],
+            rating='10',
+            public=True,
+        )
+        TrackInstance.objects.create(
+            track=Track.objects.get(id=4),
+            user=users['admin'],
+            rating='8',
+            public=False,
+        )
+        TrackInstance.objects.filter(user=users['dj']).last().tag.set(Tag.objects.filter(id=1))
+        Playlist.objects.create(
+            name='Housey Time',
+            date_added=date(2024, 11, 30),
+            user=users['dj'],
+            public=False,
+        )
+        Playlist.objects.get(id=1).track.set(TrackInstance.objects.filter(user=users['dj']))
+        Playlist.objects.create(
+            name='Secret Bunker',
+            date_added=date(2024, 12, 25),
+            user=users['admin'],
+            public=False,
+        )
+        Playlist.objects.get(id=2).track.set(TrackInstance.objects.filter(user=users['admin']))
+        Playlist.objects.get(id=2).tag.set(Tag.objects.filter(id=2))
         return users, groups

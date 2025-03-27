@@ -1,9 +1,15 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackInstance, TrackRequest
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
 from catalog.tests.mixins import CatalogTestMixin
 from datetime import date
+from django.apps import apps
+from django.contrib.auth.models import AnonymousUser, Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 import re
+
+
+# shared models
 
 
 class ArtistModelTest(TestCase, CatalogTestMixin):
@@ -95,7 +101,7 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(artist1.field_is_equivalent(artist2, 'name'))
         self.assertTrue(artist1.field_is_equivalent(artist1, 'name'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_artists = Artist.objects.all()
@@ -128,6 +134,15 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(Artist.objects.get_queryset_can_request_modify(self.users['dj'])), set(artists_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Artist.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_artists))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Artist.objects.display, self.users['anonymous'])
+        dj_artists = Artist.objects.get_queryset_can_view(self.users['dj'])
+        dj_artist_list = ', '.join(artist.name for artist in dj_artists)
+        self.assertEqual(Artist.objects.display(self.users['dj']), dj_artist_list)
+        admin_artists = Artist.objects.all()
+        admin_artist_list = ', '.join(artist.name for artist in admin_artists)
+        self.assertEqual(Artist.objects.display(self.users['admin']), admin_artist_list)
 
 
 class GenreModelTest(TestCase, CatalogTestMixin):
@@ -248,7 +263,7 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(genre1.field_is_equivalent(genre2, 'name'))
         self.assertTrue(genre1.field_is_equivalent(genre1, 'name'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_genres = Genre.objects.all()
@@ -279,6 +294,15 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['dj'])), set(genres_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_genres))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Genre.objects.display, self.users['anonymous'])
+        dj_genres = Genre.objects.get_queryset_can_view(self.users['dj'])
+        dj_genre_list = ', '.join(genre.name for genre in dj_genres)
+        self.assertEqual(Genre.objects.display(self.users['dj']), dj_genre_list)
+        admin_genres = Genre.objects.all()
+        admin_genre_list = ', '.join(genre.name for genre in admin_genres)
+        self.assertEqual(Genre.objects.display(self.users['admin']), admin_genre_list)
 
 
 class TrackModelTest(TestCase, CatalogTestMixin):
@@ -491,7 +515,7 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(track1.field_is_equivalent(track2, 'remix_artist'))
         self.assertTrue(track1.field_is_equivalent(track1, 'genre'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_tracks = Track.objects.all()
@@ -522,6 +546,18 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(Track.objects.get_queryset_can_request_modify(self.users['dj'])), set(tracks_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Track.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_tracks))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Track.objects.display, self.users['anonymous'])
+        dj_tracks = Track.objects.get_queryset_can_view(self.users['dj'])
+        dj_track_list = ', '.join(str(track) for track in dj_tracks)
+        self.assertEqual(Track.objects.display(self.users['dj']), dj_track_list)
+        admin_tracks = Track.objects.all()
+        admin_track_list = ', '.join(str(track) for track in admin_tracks)
+        self.assertEqual(Track.objects.display(self.users['admin']), admin_track_list)
+
+
+# user shared model requests
 
 
 class ArtistRequestModelTest(TestCase, CatalogTestMixin):
@@ -673,7 +709,7 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(artistrequest1.field_is_equivalent(artistrequest2, 'name'))
         self.assertTrue(artistrequest1.field_is_equivalent(artistrequest1, 'name'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_artistrequestss = ArtistRequest.objects.all()
@@ -692,6 +728,15 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(artistrequests_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artistrequests))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, ArtistRequest.objects.display, self.users['anonymous'])
+        dj_artistrequests = ArtistRequest.objects.filter(user=self.users['dj'])
+        dj_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in dj_artistrequests)
+        self.assertEqual(ArtistRequest.objects.display(self.users['dj']), dj_artistrequest_list)
+        admin_artistrequests = ArtistRequest.objects.all()
+        admin_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in admin_artistrequests)
+        self.assertEqual(ArtistRequest.objects.display(self.users['admin']), admin_artistrequest_list)
 
 
 class GenreRequestModelTest(TestCase, CatalogTestMixin):
@@ -843,7 +888,7 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(genrerequest1.field_is_equivalent(genrerequest2, 'name'))
         self.assertTrue(genrerequest1.field_is_equivalent(genrerequest1, 'name'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_genrerequestss = GenreRequest.objects.all()
@@ -862,6 +907,15 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(genrerequests_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genrerequests))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, GenreRequest.objects.display, self.users['anonymous'])
+        dj_genrerequests = GenreRequest.objects.filter(user=self.users['dj'])
+        dj_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in dj_genrerequests)
+        self.assertEqual(GenreRequest.objects.display(self.users['dj']), dj_genrerequest_list)
+        admin_genrerequests = GenreRequest.objects.all()
+        admin_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in admin_genrerequests)
+        self.assertEqual(GenreRequest.objects.display(self.users['admin']), admin_genrerequest_list)
 
 
 class TrackRequestModelTest(TestCase, CatalogTestMixin):
@@ -1104,7 +1158,7 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(trackrequest1.field_is_equivalent(trackrequest2, 'title'))
         self.assertTrue(trackrequest1.field_is_equivalent(trackrequest1, 'title'))
 
-    # test permissions
+    # test object manager
 
     def test_get_queryset_can_view(self):
         all_trackrequestss = TrackRequest.objects.all()
@@ -1123,3 +1177,155 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(trackrequests_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_trackrequests))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, TrackRequest.objects.display, self.users['anonymous'])
+        dj_trackrequests = TrackRequest.objects.filter(user=self.users['dj'])
+        dj_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in dj_trackrequests)
+        self.assertEqual(TrackRequest.objects.display(self.users['dj']), dj_trackrequest_list)
+        admin_trackrequests = TrackRequest.objects.all()
+        admin_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in admin_trackrequests)
+        self.assertEqual(TrackRequest.objects.display(self.users['admin']), admin_trackrequest_list)
+
+
+# user models
+
+#WIP
+class PlaylistModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_name_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('name').verbose_name
+        self.assertEqual(field_label, 'name')
+        max_length = playlist._meta.get_field('name').max_length
+        self.assertEqual(max_length, 200)
+
+    def test_track_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('track').verbose_name
+        self.assertEqual(field_label, 'tracks')
+        help_text = playlist._meta.get_field('track').help_text
+        self.assertEqual(help_text, 'Select one or more tracks for this playlist.')
+
+    def test_date_added_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('date_added').verbose_name
+        self.assertEqual(field_label, 'date added')
+
+    def test_user_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_tag_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('tag').verbose_name
+        self.assertEqual(field_label, 'tags')
+        help_text = playlist._meta.get_field('tag').help_text
+        self.assertEqual(help_text, 'Select one or more tags for this playlist.')
+
+    def test_public_field(self):
+        playlist = Playlist.objects.get(id=1)
+        field_label = playlist._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        playlist = Playlist.objects.get(id=1)
+        useful_field_list = playlist.useful_field_list
+        self.assertEqual(useful_field_list['name']['type'], 'string')
+        self.assertTrue(useful_field_list['name']['equal'])
+        self.assertEqual(useful_field_list['track']['type'], 'queryset')
+        self.assertTrue(useful_field_list['track']['equal'])
+        self.assertEqual(useful_field_list['tag']['type'], 'queryset')
+        self.assertTrue(useful_field_list['tag']['equal'])
+        self.assertEqual(useful_field_list['user']['type'], 'user')
+        self.assertTrue(useful_field_list['user']['equal'])
+        self.assertEqual(useful_field_list['date_added']['type'], 'date')
+        self.assertFalse(useful_field_list['date_added']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        playlist = Playlist.objects.get(id=1)
+        create_by = playlist.create_by_field
+        self.assertEqual(create_by, 'name')
+
+    # Playlist specific functions
+
+    def test_object_string_is_request(self):
+        for playlist in Playlist.objects.all():
+            self.assertEqual(str(playlist), playlist.name)
+
+    def test_get_absolute_url(self):
+        for playlist in Playlist.objects.all():
+            expected_url = '/catalog/playlist/' + str(playlist.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', playlist.name.lower())
+            self.assertEqual(playlist.get_absolute_url(), expected_url)
+
+    # def test_get_url_to_add_track(self):
+
+    # def display_tags(self):
+
+    # Shared model functions
+
+    # test object manager
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Playlist.objects.display, self.users['anonymous'])
+        dj_playlists = Playlist.objects.filter(public=True) | Playlist.objects.filter(user=self.users['dj'])
+        dj_playlist_list = ', '.join(playlist.name for playlist in dj_playlists)
+        self.assertEqual(Playlist.objects.display(self.users['dj']), dj_playlist_list)
+        admin_playlists = Playlist.objects.all()
+        admin_playlist_list = ', '.join(playlist.name for playlist in admin_playlists)
+        self.assertEqual(Playlist.objects.display(self.users['admin']), admin_playlist_list)
+
+#WIP
+class TagModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_type_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('type').verbose_name
+        self.assertEqual(field_label, 'type')
+        help_text = tag._meta.get_field('type').help_text
+        self.assertEqual(help_text, 'Type of tag (e.g. vibe, chords, etc.)')
+        
+
+    # mixin fields
+
+    # Tag specific functions
+
+    # Shared model functions
+
+    # test permissions
+
+#WIP
+class TrackInstanceModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_track_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('track').verbose_name
+        self.assertEqual(field_label, 'track')
+
+    # mixin fields
+
+    # TrackInstance specific functions
+
+    # Shared model functions
+
+    # test permissions

@@ -32,7 +32,7 @@ urlpatterns = [
 
     # playlist
     path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
-    re_path(r'^playlist/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.PlaylistDetailView.as_view(), name='playlist-detail'),
+    path('playlist/<int:pk>/<str:name>', views.PlaylistDetailView.as_view(), name='playlist-detail'),
 
     # tag
     path('tags/', views.TagListView.as_view(), name='tags'),

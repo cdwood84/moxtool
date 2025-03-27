@@ -1,6 +1,9 @@
 from catalog.forms import ArtistForm, GenreForm, TrackForm
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackRequest
 from catalog.tests.mixins import CatalogTestMixin
+from django.apps import apps
+from django.contrib.auth.models import AnonymousUser, Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 
