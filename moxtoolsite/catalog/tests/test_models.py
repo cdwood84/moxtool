@@ -1294,12 +1294,14 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         playlist = Playlist.objects.get(id=1)
         expected_initial = {
             'name': playlist.name,
-            'track_tracks': playlist.track.display(self.users['admin']),
-            'tag_names': playlist.tag.display(self.users['admin']),
             'user': playlist.user,
             'date_added': playlist.date_added,
             'public': playlist.public,
         }
+        if playlist.track.count() > 0:
+            expected_initial['track_tracks'] = playlist.track.display(self.users['admin'])
+        if playlist.tag.count() > 0:
+            expected_initial['tag_names'] = playlist.tag.display(self.users['admin'])
         self.assertEqual(playlist.add_fields_to_initial({}), expected_initial)
 
     def test_is_equivalent(self):
