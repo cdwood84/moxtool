@@ -1318,6 +1318,33 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
 
     # test object manager
 
+    def test_get_queryset_can_view(self):
+        all_playlists = Playlist.objects.all()
+        self.assertRaises(PermissionDenied, Playlist.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        playlists_dj = Playlist.objects.filter(public=True) | Playlist.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_view(self.users['dj'])), set(playlists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_view(self.users['admin'])), set(all_playlists))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_playlists = Playlist.objects.all()
+        self.assertRaises(PermissionDenied, Playlist.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        playlists_dj = Playlist.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_direct_modify(self.users['dj'])), set(playlists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_playlists))
+
+    def test_get_queryset_can_request_modify(self):
+        all_playlists = Playlist.objects.all()
+        self.assertRaises(PermissionDenied, Playlist.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_playlists = Playlist.objects.filter(public=True) | Playlist.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_playlists))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Playlist.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_playlists))
+
     def test_display(self):
         self.assertRaises(PermissionDenied, Playlist.objects.display, self.users['anonymous'])
         dj_playlists = Playlist.objects.filter(public=True) | Playlist.objects.filter(user=self.users['dj'])
@@ -1359,7 +1386,7 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
-    def test_track_field(self):
+    def test_playlist_field(self):
         trackinstance = TrackInstance.objects.first()
         field_label = trackinstance._meta.get_field('track').verbose_name
         self.assertEqual(field_label, 'track')

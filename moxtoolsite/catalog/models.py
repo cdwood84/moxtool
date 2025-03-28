@@ -819,14 +819,23 @@ class UserModelPermissionManager(models.Manager):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
-            user_model = self.model.__name__.lower()
-            if user_model:
-                if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
-                    return self.get_queryset().filter(public=True)
+            model = self.model
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    return self.get_queryset()
                 else:
-                    raise PermissionDenied("You do not have permission to request modifications to tags.")
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(user=user)
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
+                    else:
+                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
             else:
-                raise ValidationError("The request for "+user_model+" is not a valid user model.")
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
     def display(self, user):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
