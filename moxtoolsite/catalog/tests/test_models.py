@@ -1190,7 +1190,7 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
 
 # user models
 
-#WIP
+
 class PlaylistModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1368,15 +1368,102 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(field_label, 'type')
         help_text = tag._meta.get_field('type').help_text
         self.assertEqual(help_text, 'Type of tag (e.g. vibe, chords, etc.)')
-        
+        max_length = tag._meta.get_field('type').max_length
+        self.assertEqual(max_length, 6)
+
+    def test_value_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('value').verbose_name
+        self.assertEqual(field_label, 'value')
+        max_length = tag._meta.get_field('value').max_length
+        self.assertEqual(max_length, 100)
+
+    def test_detail_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('detail').verbose_name
+        self.assertEqual(field_label, 'detail')
+        max_length = tag._meta.get_field('value').max_length
+        self.assertEqual(max_length, 1000)
+
+    def test_user_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_date_added_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('date_added').verbose_name
+        self.assertEqual(field_label, 'date added')
+
+    def test_public_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
 
     # mixin fields
+
+    def test_useful_field_list_property(self):
+        playlist = Playlist.objects.get(id=1)
+        useful_field_list = playlist.useful_field_list
+        self.assertEqual(useful_field_list['type']['type'], 'string')
+        self.assertTrue(useful_field_list['type']['equal'])
+        self.assertEqual(useful_field_list['value']['type'], 'string')
+        self.assertTrue(useful_field_list['value']['equal'])
+        self.assertEqual(useful_field_list['detail']['type'], 'string')
+        self.assertTrue(useful_field_list['detail']['equal'])
+        self.assertEqual(useful_field_list['user']['type'], 'user')
+        self.assertTrue(useful_field_list['user']['equal'])
+        self.assertEqual(useful_field_list['date_added']['type'], 'date')
+        self.assertFalse(useful_field_list['date_added']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        playlist = Playlist.objects.get(id=1)
+        create_by = playlist.create_by_field
+        self.assertEqual(create_by, 'value')
 
     # Tag specific functions
 
     # Shared model functions
 
     # test permissions
+
+    def test_get_queryset_can_view(self):
+        all_tags = Tag.objects.all()
+        self.assertRaises(PermissionDenied, Tag.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        tags_dj = Tag.objects.filter(public=True) | Tag.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_view(self.users['dj'])), set(tags_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_view(self.users['admin'])), set(all_tags))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_tags = Tag.objects.all()
+        self.assertRaises(PermissionDenied, Tag.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        tags_dj = Tag.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_direct_modify(self.users['dj'])), set(tags_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_tags))
+
+    def test_get_queryset_can_request_modify(self):
+        all_tags = Tag.objects.all()
+        self.assertRaises(PermissionDenied, Tag.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_tags = Tag.objects.filter(public=True) | Tag.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_tags))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Tag.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_tags))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Tag.objects.display, self.users['anonymous'])
+        dj_tags = Tag.objects.filter(public=True) | Tag.objects.filter(user=self.users['dj'])
+        dj_tag_list = ', '.join(str(tag) for tag in dj_tags)
+        self.assertEqual(Tag.objects.display(self.users['dj']), dj_tag_list)
+        admin_tags = Tag.objects.all()
+        admin_tag_list = ', '.join(str(tag) for tag in admin_tags)
+        self.assertEqual(Tag.objects.display(self.users['admin']), admin_tag_list)
 
 #WIP
 class TrackInstanceModelTest(TestCase, CatalogTestMixin):

@@ -173,7 +173,7 @@ class TagMixin:
     
     @property
     def create_by_field(self):
-        return 'name'
+        return 'value'
     
 
 class TrackInstanceMixin:
