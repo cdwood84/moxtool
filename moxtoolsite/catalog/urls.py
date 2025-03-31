@@ -37,7 +37,7 @@ urlpatterns = [
 
     # tag
     path('tags/', views.TagListView.as_view(), name='tags'),
-    re_path(r'^tag/(?P<type>[-\w]+)/(?P<value>[-\w]+)/(?P<pk>\d+)$', views.TagDetailView.as_view(), name='tag-detail'),
+    path('tag/<int:pk>/<str:value>', views.TagDetailView.as_view(), name='tag-detail'),
 
     # user library
     path('mytracks/', views.UserTrackInstanceListView.as_view(), name='user-trackinstances'),

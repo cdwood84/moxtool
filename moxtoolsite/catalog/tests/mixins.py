@@ -84,7 +84,6 @@ class CatalogTestMixin:
             public=True,
         )
         Tag.objects.create(
-            type='v',
             value='Soul of House',
             detail='everything that is a temple to the groovy rise of dance music',
             user=users['admin'],

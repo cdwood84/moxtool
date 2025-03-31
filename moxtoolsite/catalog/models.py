@@ -853,10 +853,12 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
         max_length=6,
         choices=TYPE_LIST,
         blank=True,
+        null=True,
         default=None,
         help_text='Type of tag (e.g. vibe, chords, etc.)',
     )
-    value = models.CharField(max_length=100, null=True)
+
+    value = models.CharField(max_length=100, default=None)
     detail = models.CharField(max_length=1000, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     date_added = models.DateField(null=True, blank=True)
@@ -864,12 +866,14 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        return self.type+' - '+self.value
+        if self.type:
+            return self.type+' - '+self.value
+        else: 
+            return self.value
     
     def get_absolute_url(self):
-        url_friendly_type = re.sub(r'[^a-zA-Z0-9]', '_', self.get_type_display().lower())
         url_friendly_value = re.sub(r'[^a-zA-Z0-9]', '_', self.value.lower())
-        return reverse('tag-detail', args=[url_friendly_type, url_friendly_value, str(self.id)])
+        return reverse('tag-detail', args=[str(self.id), url_friendly_value])
     
     def get_viewable_trackinstances_tagged(self, user):
         return TrackInstance.objects.get_queryset_can_view(user).filter(tag__in=[self])

@@ -1354,7 +1354,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         admin_playlist_list = ', '.join(playlist.name for playlist in admin_playlists)
         self.assertEqual(Playlist.objects.display(self.users['admin']), admin_playlist_list)
 
-#WIP
+
 class TagModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1382,7 +1382,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         tag = Tag.objects.get(id=1)
         field_label = tag._meta.get_field('detail').verbose_name
         self.assertEqual(field_label, 'detail')
-        max_length = tag._meta.get_field('value').max_length
+        max_length = tag._meta.get_field('detail').max_length
         self.assertEqual(max_length, 1000)
 
     def test_user_field(self):
@@ -1403,8 +1403,8 @@ class TagModelTest(TestCase, CatalogTestMixin):
     # mixin fields
 
     def test_useful_field_list_property(self):
-        playlist = Playlist.objects.get(id=1)
-        useful_field_list = playlist.useful_field_list
+        tag = Tag.objects.get(id=1)
+        useful_field_list = tag.useful_field_list
         self.assertEqual(useful_field_list['type']['type'], 'string')
         self.assertTrue(useful_field_list['type']['equal'])
         self.assertEqual(useful_field_list['value']['type'], 'string')
@@ -1419,13 +1419,84 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(useful_field_list['public']['equal'])
 
     def test_create_by_property(self):
-        playlist = Playlist.objects.get(id=1)
-        create_by = playlist.create_by_field
+        tag = Tag.objects.get(id=1)
+        create_by = tag.create_by_field
         self.assertEqual(create_by, 'value')
 
     # Tag specific functions
 
+    def test_object_string_is_request(self):
+        for tag in Tag.objects.all():
+            expected_text = tag.value
+            if tag.type:
+                expected_text = tag.type + ' - ' + expected_text
+            self.assertEqual(str(tag), expected_text)
+
+    def test_get_absolute_url(self):
+        for tag in Tag.objects.all():
+            expected_url = '/catalog/tag/' + str(tag.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', tag.value.lower())
+            self.assertEqual(tag.get_absolute_url(), expected_url)
+
+    def test_get_viewable_trackinstances_tagged(self):
+        tag = Tag.objects.get(id=1)
+        self.assertRaises(PermissionDenied, tag.get_viewable_trackinstances_tagged, self.users['anonymous'])
+        self.client.force_login(self.users['dj'])
+        trackinstances_dj = TrackInstance.objects.get_queryset_can_view(self.users['dj']).filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_trackinstances_tagged(self.users['dj'])), set(trackinstances_dj))
+        self.client.force_login(self.users['admin'])
+        trackinstances_admin = TrackInstance.objects.filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_trackinstances_tagged(self.users['admin'])), set(trackinstances_admin))
+
+    def test_get_viewable_playlists_tagged(self):
+        tag = Tag.objects.get(id=1)
+        self.assertRaises(PermissionDenied, tag.get_viewable_playlists_tagged, self.users['anonymous'])
+        self.client.force_login(self.users['dj'])
+        playlists_dj = Playlist.objects.get_queryset_can_view(self.users['dj']).filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_playlists_tagged(self.users['dj'])), set(playlists_dj))
+        self.client.force_login(self.users['admin'])
+        playlists_admin = Playlist.objects.filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_playlists_tagged(self.users['admin'])), set(playlists_admin))
+
     # Shared model functions
+
+    def test_set_field(self):
+        tag = Tag.objects.get(id=1)
+        self.assertEqual(tag.public, True)
+        tag.set_field('public', False)
+        self.assertEqual(tag.public, False)
+
+    def test_get_field(self):
+        tag = Tag.objects.get(id=1)
+        field_value = tag.get_field('value')
+        self.assertEqual(field_value, tag.value)
+
+    def test_get_modify_url(self):
+        tag = Tag.objects.get(id=1)
+        self.assertEqual(tag.get_modify_url(), '/catalog/tag/modify/1')
+
+    def test_add_fields_to_initial(self):
+        tag = Tag.objects.get(id=1)
+        expected_initial = {
+            'type': tag.type,
+            'value': tag.value,
+            'detail': tag.detail,
+            'user': tag.user,
+            'date_added': tag.date_added,
+            'public': tag.public,
+        }
+        self.assertEqual(tag.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        tag1 = Tag.objects.get(id=1)
+        tag2 = Tag.objects.get(id=2)
+        self.assertFalse(tag1.is_equivalent(tag2))
+        self.assertTrue(tag1.is_equivalent(tag1))
+
+    def test_is_field_is_equivalent(self):
+        tag1 = Tag.objects.get(id=1)
+        tag2 = Tag.objects.get(id=2)
+        self.assertFalse(tag1.field_is_equivalent(tag2, 'value'))
+        self.assertTrue(tag1.field_is_equivalent(tag1, 'type'))
 
     # test permissions
 
