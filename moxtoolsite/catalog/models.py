@@ -901,11 +901,11 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
 class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this track and owner library")
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
-    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.")
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this track", blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
@@ -932,17 +932,22 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     )
 
     def __str__(self):
-        """Function returning a string of the track title."""
-        return f'{self.track.title} ({self.id})'
+        return self.track.title
+    
+    def get_absolute_url(self):
+        return self.track.get_absolute_url()
     
     def get_track_display_artist(self):
-        """Function returning a string of the artists on the underlying track."""
         return self.track.display_artist()
     
     get_track_display_artist.short_description = 'Artist'
     
+    def get_track_display_remix_artist(self):
+        return self.track.display_remix_artist()
+    
+    get_track_display_artist.short_description = 'Remix Artist'
+    
     def get_track_genre(self):
-        """Function returning a string of the genre of the underlying track."""
         return self.track.genre
     
     get_track_genre.short_description = 'Genre'
@@ -963,7 +968,7 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
 
     @property
     def is_a_user_favorite(self):
-        return (self.date_added and date.today >= self.date_added and self.rating and self.rating_numeric >= 9)
+        return self.rating_numeric >= 9
 
     class Meta:
         constraints = [

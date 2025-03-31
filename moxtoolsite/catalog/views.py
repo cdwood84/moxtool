@@ -225,7 +225,8 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
         context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
         context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
         context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
-        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user)
+        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
+        context['user_trackinstnce'] = TrackInstance.objects.get(user=self.request.user, track=context['track'])
         return context
 
 

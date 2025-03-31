@@ -1536,7 +1536,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         admin_tag_list = ', '.join(str(tag) for tag in admin_tags)
         self.assertEqual(Tag.objects.display(self.users['admin']), admin_tag_list)
 
-#WIP
+
 class TrackInstanceModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1544,15 +1544,209 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
-    def test_playlist_field(self):
+    def test_track_field(self):
         trackinstance = TrackInstance.objects.first()
         field_label = trackinstance._meta.get_field('track').verbose_name
         self.assertEqual(field_label, 'track')
 
+    def test_comments_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('comments').verbose_name
+        self.assertEqual(field_label, 'comments')
+        help_text = trackinstance._meta.get_field('comments').help_text
+        self.assertEqual(help_text, 'Enter any notes you want to remember about this track.')
+        max_length = trackinstance._meta.get_field('comments').max_length
+        self.assertEqual(max_length, 1000)
+
+    def test_rating_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('rating').verbose_name
+        self.assertEqual(field_label, 'rating')
+        help_text = trackinstance._meta.get_field('rating').help_text
+        self.assertEqual(help_text, 'Track rating')
+        max_length = trackinstance._meta.get_field('rating').max_length
+        self.assertEqual(max_length, 2)
+
+    def test_play_count_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('play_count').verbose_name
+        self.assertEqual(field_label, 'play count')
+        default = trackinstance._meta.get_field('play_count').default
+        self.assertEqual(default, 0)
+
+    def test_tag_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('tag').verbose_name
+        self.assertEqual(field_label, 'tags')
+        help_text = trackinstance._meta.get_field('tag').help_text
+        self.assertEqual(help_text, 'Select one or more tags for this playlist.')
+
+    def test_user_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_date_added_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('date_added').verbose_name
+        self.assertEqual(field_label, 'date added')
+
+    def test_public_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_label = trackinstance._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
     # mixin fields
+
+    def test_useful_field_list_property(self):
+        trackinstance = TrackInstance.objects.first()
+        useful_field_list = trackinstance.useful_field_list
+        self.assertEqual(useful_field_list['track']['type'], 'model')
+        self.assertTrue(useful_field_list['track']['equal'])
+        self.assertEqual(useful_field_list['comments']['type'], 'string')
+        self.assertTrue(useful_field_list['comments']['equal'])
+        self.assertEqual(useful_field_list['rating']['type'], 'string')
+        self.assertTrue(useful_field_list['rating']['equal'])
+        self.assertEqual(useful_field_list['play_count']['type'], 'integer')
+        self.assertTrue(useful_field_list['play_count']['equal'])
+        self.assertEqual(useful_field_list['tag']['type'], 'queryset')
+        self.assertTrue(useful_field_list['tag']['equal'])
+        self.assertEqual(useful_field_list['user']['type'], 'user')
+        self.assertTrue(useful_field_list['user']['equal'])
+        self.assertEqual(useful_field_list['date_added']['type'], 'date')
+        self.assertFalse(useful_field_list['date_added']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        trackinstance = TrackInstance.objects.first()
+        create_by = trackinstance.create_by_field
+        self.assertEqual(create_by, 'track')
 
     # TrackInstance specific functions
 
+    def test_object_string_is_request(self):
+        for trackinstance in TrackInstance.objects.all():
+            self.assertEqual(str(trackinstance), trackinstance.track.title)
+
+    def test_get_absolute_url(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_url = '/catalog/track/' + str(trackinstance.track.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', trackinstance.track.title.lower())
+            self.assertEqual(trackinstance.get_absolute_url(), expected_url)
+
+    def test_get_track_display_artist(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_artists = ', '.join(artist.name for artist in trackinstance.track.artist.all())
+            self.assertEqual(trackinstance.get_track_display_artist(), expected_artists)
+
+    def test_get_track_display_remix_artist(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_remix_artists = ', '.join(remix_artist.name for remix_artist in trackinstance.track.remix_artist.all())
+            self.assertEqual(trackinstance.get_track_display_remix_artist(), expected_remix_artists)
+
+    def test_get_track_genre(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_genre = trackinstance.track.genre
+            self.assertEqual(trackinstance.get_track_genre(), expected_genre)
+
+    def test_get_track_title(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_genre = trackinstance.track.title
+            self.assertEqual(trackinstance.get_track_title(), expected_genre)
+
+    def test_display_tags(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_tags = ', '.join(str(tag) for tag in trackinstance.tag.all())
+            self.assertEqual(trackinstance.display_tags(), expected_tags)
+
+    def test_rating_numeric(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_rating = int(trackinstance.rating)
+            self.assertEqual(trackinstance.rating_numeric, expected_rating)
+
+    def test_is_a_user_favorite(self):
+        for trackinstance in TrackInstance.objects.all():
+            expected_bool = trackinstance.rating_numeric >= 9
+            self.assertEqual(trackinstance.is_a_user_favorite, expected_bool)
+
     # Shared model functions
 
-    # test permissions
+    def test_set_field(self):
+        trackinstance = TrackInstance.objects.first()
+        self.assertEqual(trackinstance.public, True)
+        trackinstance.set_field('public', False)
+        self.assertEqual(trackinstance.public, False)
+
+    def test_get_field(self):
+        trackinstance = TrackInstance.objects.first()
+        field_value = trackinstance.get_field('tag')
+        self.assertEqual(set(field_value), set(trackinstance.tag.all()))
+
+    def test_get_modify_url(self):
+        trackinstance = TrackInstance.objects.first()
+        self.assertEqual(trackinstance.get_modify_url(), '/catalog/trackinstance/modify/' + str(trackinstance.id))
+
+    def test_add_fields_to_initial(self):
+        trackinstance = TrackInstance.objects.first()
+        expected_initial = {
+            'track_beatport_track_id': trackinstance.track.beatport_track_id,
+            'comments': trackinstance.comments,
+            'rating': trackinstance.rating,
+            'play_count': trackinstance.play_count,
+            'user': trackinstance.user,
+            'date_added': trackinstance.date_added,
+            'public': trackinstance.public,
+        }
+        if trackinstance.tag.count() > 0:
+            expected_initial['tag_values'] = trackinstance.tag.display(self.users['admin'])
+        self.assertEqual(trackinstance.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        trackinstance1 = TrackInstance.objects.filter(user=self.users['dj']).first()
+        trackinstance2 = TrackInstance.objects.filter(user=self.users['admin']).last()
+        self.assertFalse(trackinstance1.is_equivalent(trackinstance2))
+        self.assertTrue(trackinstance1.is_equivalent(trackinstance1))
+
+    def test_field_is_equivalent(self):
+        trackinstance1 = TrackInstance.objects.filter(user=self.users['dj']).first()
+        trackinstance2 = TrackInstance.objects.filter(user=self.users['admin']).last()
+        self.assertFalse(trackinstance1.field_is_equivalent(trackinstance2, 'track'))
+        self.assertTrue(trackinstance1.field_is_equivalent(trackinstance1, 'user'))
+
+    # test object manager
+
+    def test_get_queryset_can_view(self):
+        all_trackinstances = TrackInstance.objects.all()
+        self.assertRaises(PermissionDenied, TrackInstance.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        trackinstances_dj = TrackInstance.objects.filter(public=True) | TrackInstance.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_view(self.users['dj'])), set(trackinstances_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_view(self.users['admin'])), set(all_trackinstances))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_trackinstances = TrackInstance.objects.all()
+        self.assertRaises(PermissionDenied, TrackInstance.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        trackinstances_dj = TrackInstance.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_direct_modify(self.users['dj'])), set(trackinstances_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_trackinstances))
+
+    def test_get_queryset_can_request_modify(self):
+        all_trackinstances = TrackInstance.objects.all()
+        self.assertRaises(PermissionDenied, TrackInstance.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_trackinstances = TrackInstance.objects.filter(public=True) | TrackInstance.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_trackinstances))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(TrackInstance.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_trackinstances))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, TrackInstance.objects.display, self.users['anonymous'])
+        dj_trackinstances = TrackInstance.objects.filter(public=True) | TrackInstance.objects.filter(user=self.users['dj'])
+        dj_trackinstance_list = ', '.join(str(trackinstance) for trackinstance in dj_trackinstances)
+        self.assertEqual(TrackInstance.objects.display(self.users['dj']), dj_trackinstance_list)
+        admin_trackinstances = TrackInstance.objects.all()
+        admin_trackinstance_list = ', '.join(str(trackinstance) for trackinstance in admin_trackinstances)
+        self.assertEqual(TrackInstance.objects.display(self.users['admin']), admin_trackinstance_list)

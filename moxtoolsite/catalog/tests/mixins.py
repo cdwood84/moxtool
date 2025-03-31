@@ -92,6 +92,7 @@ class CatalogTestMixin:
         )
         TrackInstance.objects.create(
             track=Track.objects.get(id=1),
+            comments='This song is good for opening and warming up the crowd.',
             user=users['dj'],
             rating='7',
             public=True,

@@ -7,6 +7,7 @@ urlpatterns = [
     # shared
     path('<str:obj_name>/create', views.modify_object, name='create-object'),
     path('<str:obj_name>/modify/<int:pk>', views.modify_object, name='modify-object'),
+    path('<str:obj_name>/modify/<uuid:pk>', views.modify_object, name='modify-object'),
 
     # genre
     path('genres/', views.GenreListView.as_view(), name='genres'),
