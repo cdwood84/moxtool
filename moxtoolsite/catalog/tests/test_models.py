@@ -564,39 +564,6 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=1),
-            public=True,
-            name='Caution Tape',
-            user=cls.users['dj'],
-            date_requested=date(2017, 4, 30),
-        )
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=2),
-            public=True,
-            name=Artist.objects.get(id=2).get_field('name'),
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 14),
-        )
-        ArtistRequest.objects.create(
-            public=True,
-            name='Alivera7',
-            user=cls.users['admin'],
-            date_requested=date(2025, 3, 26),
-        )
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=1),
-            public=Artist.objects.get(id=1).public,
-            name=Artist.objects.get(id=1).name,
-            user=cls.users['dj'],
-            date_requested=date(2025, 1, 1),
-        )
-        ArtistRequest.objects.create(
-            public=Artist.objects.get(id=1).public,
-            name=Artist.objects.get(id=1).name,
-            user=cls.users['dj'],
-            date_requested=date(2024, 8, 4),
-        )
 
     # fields
 
@@ -743,39 +710,6 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=1),
-            public=True,
-            name='Hau5',
-            user=cls.users['dj'],
-            date_requested=date(2020, 2, 28),
-        )
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=2),
-            public=True,
-            name=Genre.objects.get(id=2).get_field('name'),
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 1),
-        )
-        GenreRequest.objects.create(
-            public=True,
-            name='Trance',
-            user=cls.users['admin'],
-            date_requested=date(2025, 3, 26),
-        )
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=1),
-            public=Genre.objects.get(id=1).public,
-            name=Genre.objects.get(id=1).name,
-            user=cls.users['dj'],
-            date_requested=date(2025, 2, 3),
-        )
-        GenreRequest.objects.create(
-            public=Genre.objects.get(id=1).public,
-            name=Genre.objects.get(id=1).name,
-            user=cls.users['dj'],
-            date_requested=date(2024, 12, 31),
-        )
 
     # fields
 
@@ -922,63 +856,6 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users, cls.groups = cls.create_test_data()
-        TrackRequest.objects.create(
-            track=Track.objects.get(id=1),
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title='Frisco Disco',
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 1),
-        )
-        TrackRequest.objects.get(id=1).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=1).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
-        TrackRequest.objects.create(
-            track=Track.objects.get(id=2),
-            beatport_track_id=Track.objects.get(id=2).beatport_track_id,
-            title=Track.objects.get(id=2).title,
-            genre=Track.objects.get(id=2).genre,
-            mix=Track.objects.get(id=2).mix,
-            public=not(Track.objects.get(id=2).public),
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 2),
-        )
-        TrackRequest.objects.get(id=2).artist.set(Track.objects.get(id=2).artist.all())
-        TrackRequest.objects.get(id=2).remix_artist.set(Track.objects.get(id=2).remix_artist.all())
-        TrackRequest.objects.create(
-            beatport_track_id=2384,
-            title='0ur Hau5',
-            genre=Genre.objects.get(id=1),
-            mix='o',
-            public=False,
-            user=cls.users['admin'],
-            date_requested=date(2025, 3, 3),
-        )
-        TrackRequest.objects.get(id=3).artist.set(Artist.objects.filter(id__lt=2))
-        TrackRequest.objects.create(
-            track=Track.objects.get(id=1),
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title=Track.objects.get(id=1).title,
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 4),
-        )
-        TrackRequest.objects.get(id=4).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=4).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
-        TrackRequest.objects.create(
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title=Track.objects.get(id=1).title,
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=cls.users['dj'],
-            date_requested=date(2025, 3, 5),
-        )
-        TrackRequest.objects.get(id=5).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=5).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
 
     # fields
 

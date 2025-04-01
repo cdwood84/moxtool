@@ -65,7 +65,7 @@ def modify_object(request, obj_name, pk=None):
         model = apps.get_model('catalog', obj_name.title())
         form_class = getattr(
             importlib.import_module("catalog.forms"), 
-            obj_name.title()+'Form'
+            model.__name__+'Form'
         )
         if pk is not None:
             existing_obj = model.objects.get(id=pk)

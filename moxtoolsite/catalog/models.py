@@ -251,7 +251,7 @@ class SharedModelMixin:
 
     def get_modify_url(self):
         obj_name = self.__class__.__name__.lower()
-        return reverse('modify-object', args=[obj_name,str(self.id)])
+        return reverse('modify-object', args=[obj_name, str(self.id)])
 
     def add_fields_to_initial(self, initial={}):
         for field, data in self.useful_field_list.items():
