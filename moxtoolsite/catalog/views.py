@@ -9,7 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, Genre, Playlist, Tag, Track, TrackInstance
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
 import importlib
 
@@ -18,9 +18,9 @@ def index(request):
     if str(request.user) != 'AnonymousUser':
 
         # get data from model objects
-        viewable_genres = Genre.objects.get_queryset_can_view(request.user, 'genre')
-        viewable_artists = Artist.objects.get_queryset_can_view(request.user, 'artist')
-        viewable_tracks = Track.objects.get_queryset_can_view(request.user, 'track')
+        viewable_genres = Genre.objects.get_queryset_can_view(request.user)
+        viewable_artists = Artist.objects.get_queryset_can_view(request.user)
+        viewable_tracks = Track.objects.get_queryset_can_view(request.user)
         user_trackinstances = TrackInstance.objects.filter(user=request.user)
         user_playlists = Playlist.objects.filter(user=request.user)
         user_tags = Tag.objects.filter(user=request.user)
@@ -65,7 +65,7 @@ def modify_object(request, obj_name, pk=None):
         model = apps.get_model('catalog', obj_name.title())
         form_class = getattr(
             importlib.import_module("catalog.forms"), 
-            obj_name.title()+'Form'
+            model.__name__+'Form'
         )
         if pk is not None:
             existing_obj = model.objects.get(id=pk)
@@ -89,7 +89,7 @@ def modify_object(request, obj_name, pk=None):
         if request.method == 'POST':
             form = form_class(request.POST)
             if form.is_valid():
-                obj, success = form.save(model, action_model, request.user, existing_obj, obj_name)
+                obj, success = form.save(model, action_model, request.user, existing_obj)
                 if success is True:
                     print(action.title()+' '+obj_name.title()+': '+str(obj)+' was successful.')
                     if model == action_model:
@@ -136,7 +136,7 @@ class ArtistListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Artist.objects.get_queryset_can_view(self.request.user, 'artist')
+        return Artist.objects.get_queryset_can_view(self.request.user)
 
 
 class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
@@ -146,68 +146,17 @@ class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Artist.objects.get_queryset_can_view(self.request.user, 'artist').get(id=pk)
+        return Artist.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-@login_required
-def modify_artist(request, pk=None):
-
-    try:
-        existing_artist = Artist.objects.get(id=pk)
-        action = 'modify'
-        print('attempting to modifiy '+str(existing_artist))
-        if request.user.has_perm('catalog.moxtool_can_modify_any_artist'):
-            model = 'Artist'
-        elif request.user.has_perm('catalog.moxtool_can_modify_own_artist'):
-            model = 'ArtistRequest'
-        else: 
-            raise PermissionError
-    except:
-        existing_artist = None
-        action = 'create'
-        print('attempting to create a new artist')
-        if request.user.has_perm('catalog.moxtool_can_create_any_artist'):
-            model = 'Artist'
-        elif request.user.has_perm('catalog.moxtool_can_create_own_artist'):
-            model = 'ArtistRequest'
-        else: 
-            raise PermissionError
-
-    if request.method == 'POST':
-        form = ArtistForm(request.POST)
-        if form.is_valid():
-            artist, success = form.save(model, request.user, existing_artist)
-            print(str(success))
-            if success is True:
-                print(artist)
-                if model == 'Artist':
-                    return HttpResponseRedirect(artist.get_absolute_url())
-                else:
-                    return HttpResponseRedirect(reverse('artists'))
-            else:
-                # HttpResponseRedirect(reverse('bad-request', args=['artist']))
-                print('No change detected')
-        else:
-            print(form.errors)
-    else:
-        initial = {'user': request.user}
-        if existing_artist:
-            initial['name'] = existing_artist.name
-            initial['public'] = existing_artist.public
-            form = ArtistForm(initial)
-        else:
-            form = ArtistForm()
-
-    context = {
-        'form': form,
-        'obj': existing_artist,
-        'text': {
-            'type': 'artist',
-            'action': action,
-        },
-    }
-
-    return render(request, 'catalog/create_or_modify_object.html', context)
+class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = ArtistRequest
+    context_object_name = 'artistrequest'
+    template_name = "catalog/artist_request_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return ArtistRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
 # genre
@@ -220,7 +169,7 @@ class GenreListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Genre.objects.get_queryset_can_view(self.request.user, 'genre')
+        return Genre.objects.get_queryset_can_view(self.request.user)
 
 
 class GenreDetailView(LoginRequiredMixin, generic.DetailView):
@@ -230,7 +179,7 @@ class GenreDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Genre.objects.get_queryset_can_view(self.request.user, 'genre').get(id=pk)
+        return Genre.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -239,66 +188,15 @@ class GenreDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-@login_required
-def modify_genre(request, pk=None):
+class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = GenreRequest
+    context_object_name = 'genrerequest'
+    template_name = "catalog/genre_reequest_detail.html"
     
-    try:
-        existing_genre = Genre.objects.get(id=pk)
-        action = 'modify'
-        print('attempting to modifiy '+str(existing_genre))
-        if request.user.has_perm('catalog.moxtool_can_modify_any_genre'):
-            model = 'Genre'
-        elif request.user.has_perm('catalog.moxtool_can_modify_own_genre'):
-            model = 'GenreRequest'
-        else: 
-            raise PermissionError
-    except:
-        existing_genre = None
-        action = 'create'
-        print('attempting to create a new genre')
-        if request.user.has_perm('catalog.moxtool_can_create_any_genre'):
-            model = 'Genre'
-        elif request.user.has_perm('catalog.moxtool_can_create_own_genre'):
-            model = 'GenreRequest'
-        else: 
-            raise PermissionError
-
-    if request.method == 'POST':
-        form = GenreForm(request.POST)
-        if form.is_valid():
-            genre, success = form.save(model, request.user, existing_genre)
-            print(str(success))
-            if success is True:
-                print(genre)
-                if model == 'Artist':
-                    return HttpResponseRedirect(genre.get_absolute_url())
-                else:
-                    return HttpResponseRedirect(reverse('genres'))
-            else:
-                # HttpResponseRedirect(reverse('bad-request', args=['artist']))
-                print('No change detected')
-        else:
-            print(form.errors)
-    else:
-        initial = {'user': request.user}
-        if existing_genre:
-            initial['name'] = existing_genre.name
-            initial['public'] = existing_genre.public
-            form = GenreForm(initial)
-        else:
-            form = GenreForm()
-
-    context = {
-        'form': form,
-        'obj': existing_genre,
-        'text': {
-            'type': 'genre',
-            'action': action,
-        },
-    }
-
-    return render(request, 'catalog/create_or_modify_object.html', context)
-
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return GenreRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+    
 
 # track
 
@@ -310,7 +208,7 @@ class TrackListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Track.objects.get_queryset_can_view(self.request.user, 'track')
+        return Track.objects.get_queryset_can_view(self.request.user)
 
 
 class TrackDetailView(LoginRequiredMixin, generic.DetailView):
@@ -320,82 +218,27 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Track.objects.get_queryset_can_view(self.request.user, 'track').get(id=pk)
+        return Track.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
         context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
         context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
-        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user)
+        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
+        context['user_trackinstnce'] = TrackInstance.objects.get(user=self.request.user, track=context['track'])
         return context
 
 
-@login_required
-def modify_track(request, pk=None):
-
-    try:
-        existing_track = Track.objects.get(id=pk)
-        action = 'modify'
-        print('attempting to modifiy '+str(existing_track))
-        if request.user.has_perm('catalog.moxtool_can_modify_any_track'):
-            model = 'Track'
-        elif request.user.has_perm('catalog.moxtool_can_modify_own_track'):
-            model = 'TrackRequest'
-        else: 
-            raise PermissionError
-    except:
-        existing_track = None
-        action = 'create'
-        print('attempting to create a new artist')
-        if request.user.has_perm('catalog.moxtool_can_create_any_track'):
-            model = 'Track'
-        elif request.user.has_perm('catalog.moxtool_can_create_own_track'):
-            model = 'TrackRequest'
-        else: 
-            raise PermissionError
-
-    if request.method == 'POST':
-        form = TrackForm(request.POST)
-        if form.is_valid():
-            track, success = form.save(model, request.user, existing_track)
-            print(str(success))
-            if success is True:
-                print(track)
-                if model == 'Artist':
-                    return HttpResponseRedirect(track.get_absolute_url())
-                else:
-                    return HttpResponseRedirect(reverse('tracks'))
-            else:
-                # HttpResponseRedirect(reverse('bad-request', args=['artist']))
-                print('No change detected')
-        else:
-            print(form.errors)
-    else:
-        initial = {'user': request.user}
-        if existing_track:
-            initial['beatport_track_id'] = existing_track.beatport_track_id
-            initial['title'] = existing_track.title
-            initial['genre_name'] = existing_track.genre.name
-            initial['artist_names'] = existing_track.display_artist()
-            initial['remix_artist_names'] = existing_track.display_remix_artist()
-            initial['mix'] = existing_track.mix
-            initial['public'] = existing_track.public
-            form = TrackForm(initial)
-        else:
-            form = TrackForm()
-
-    context = {
-        'form': form,
-        'obj': existing_track,
-        'text': {
-            'type': 'track',
-            'action': action,
-        },
-    }
-
-    return render(request, 'catalog/create_or_modify_object.html', context)
-
+class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
+    model = TrackRequest
+    context_object_name = 'trackrequest'
+    template_name = "catalog/track_request_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+    
 
 # playlist
 
@@ -562,7 +405,6 @@ def add_track_dj(request):
     return render(request, 'catalog/add_track_dj.html', context)
 
 
-
 def add_track_failure(request):
     return render(request, 'catalog/add_track_failure.html')
 
@@ -656,41 +498,3 @@ def confirm_remove_track_from_playlist_dj(request, playlist_id, trackinstance_id
         return HttpResponseRedirect(playlist.get_absolute_url())
     else:
         return render(request, 'catalog/remove_track_from_playlist_failure.html', context)
-    
-
-@login_required
-def modify_track_admin(request, track_id=None):
-    
-    # find existing track if an ID is present 
-    track = Track.objects.get_queryset_can_direct_modify(request.user, 'track').get(id=track_id)
-
-    if request.method == 'POST':
-        form = TrackForm(request.POST)
-        if form.is_valid():
-            track = form.save()
-            print(track)
-            return HttpResponseRedirect(track.get_absolute_url())
-        else:
-            print(form.errors)
-    else:
-        if track:
-            initial={
-                'beatport_track_id': track.beatport_track_id,
-                'title': track.title,
-                'genre_name': track.get_viewable_genre_on_track(request.user).name,
-                'artist_names': track.display_viewable_artists(request.user),
-                'remix_artist_names': track.display_viewable_remix_artists(request.user),
-                'mix': track.mix,
-                'public': track.public,
-            }
-            form = TrackForm(initial)
-        else:
-            form = TrackForm()
-
-    context = {
-        'form': form,
-        'track': track,
-    }
-
-    return render(request, 'catalog/modify_track_admin.html', context)
-

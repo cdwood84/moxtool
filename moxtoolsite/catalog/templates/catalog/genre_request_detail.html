@@ -1,0 +1,19 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if genrerequest.genre %}
+        <h1>Modify Genre Request:</h1>
+        <p>Name: {{ genrerequest.genre.name }}{% if genrerequest.name != genrerequest.genre.name %} to {{ genrerequest.name }}{% endif %}</p>
+        <p>Public: {{ genrerequest.genre.public }}{% if genrerequest.public != genrerequest.genre.public %} to {{ genrerequest.public }}{% endif %}</p>
+    {% else %}
+        <h1>Create Genre Request:</h1>
+        <p><strong>Name:</strong> {{ genrerequest.name }}</p>
+        <p><strong>Public:</strong> {{ genrerequest.public }}</p>
+    {% endif %}
+    <p>requested by <strong>{{ genrerequest.user }}</strong> on <strong>{{ genrerequest.date_requested }}</strong></p>
+    {% if perms.catalog.moxtool_can_modify_any_genrerequest %}
+        <p><a href="">Delete this request</a></p>
+    {% elif perms.catalog.moxtool_can_modify_own_genrerequest and request.user == genrerequest.user %}
+        <p><a href="">Delete this request</a></p>
+    {% endif %}
+{% endblock %}

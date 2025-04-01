@@ -92,20 +92,133 @@ class TrackMixin:
     @property
     def create_by_field(self):
         return 'beatport_track_id'
+    
+    def display_artist(self):
+        return ', '.join(artist.name for artist in self.artist.all())
 
-    # def add_fields_to_initial(self, initial={}):
-    #     initial['beatport_track_id'] = self.beatport_track_id
-    #     initial['title'] = self.title
-    #     if self.genre and self.genre.name:
-    #         initial['genre_name'] = self.genre.name
-    #     if self.artist and self.artist.all().count() >= 1:
-    #         initial['artist_names'] = ', '.join(str(artist) for artist in self.artist.all())
-    #     if self.remix_artist and self.remix_artist.all().count() >= 1:
-    #         initial['remix_artist_names'] = ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
-    #     initial['mix'] = self.mix
-    #     initial['public'] = self.public
-    #     return initial
+    display_artist.short_description = 'Artist'
+    
+    def display_remix_artist(self):
+        return ', '.join(artist.name for artist in self.remix_artist.all())
 
+    display_remix_artist.short_description = 'Remix Artist'
+
+
+class PlaylistMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'track': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'name'
+
+
+class TagMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'type': {
+                'type': 'string',
+                'equal': True,
+            },
+            'value': {
+                'type': 'string',
+                'equal': True,
+            },
+            'detail': {
+                'type': 'string',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'value'
+    
+
+class TrackInstanceMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'rating': {
+                'type': 'string',
+                'equal': True,
+            },
+            'play_count': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_added': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'track'
+    
 
 class SharedModelMixin:
 
@@ -138,24 +251,22 @@ class SharedModelMixin:
 
     def get_modify_url(self):
         obj_name = self.__class__.__name__.lower()
-        return reverse('modify-object', args=[obj_name,str(self.id)])
+        return reverse('modify-object', args=[obj_name, str(self.id)])
 
     def add_fields_to_initial(self, initial={}):
         for field, data in self.useful_field_list.items():
-            print('try '+field)
             if data['type'] == 'model':
                 obj = self.get_field(field)
                 initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
             elif data['type'] == 'queryset':
                 obj_set = self.get_field(field)
-                initial[field+'_'+obj_set.first.create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
+                if obj_set.count() >= 1:
+                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
             else:
-                initial['field'] = self.get_field(field)
-            print(initial)
+                initial[field] = self.get_field(field)
         return initial
         
     def is_equivalent(self, obj, equal=False):
-        print('testing equivalence between '+str(self)+' and '+str(obj))
         for field, data in self.useful_field_list.items():
             if equal is False or data['equal'] is False:
                 if self.field_is_equivalent(obj, field) is False:
@@ -165,81 +276,99 @@ class SharedModelMixin:
     def field_is_equivalent(self, obj, field_name):
         self_field = self.get_field(field_name)
         obj_field = obj.get_field(field_name)
-        print(field_name)
         if self_field and obj_field:
             if self.useful_field_list[field_name]['type'] == 'queryset':
-                self_array = []
-                for self_item in self_field.all():
-                    self_array.append(self_item.id)
-                obj_array = []
-                for obj_item in obj_field.all():
-                    obj_array.append(obj_item.id)
-                print(self_array)
-                print(obj_array)
-                print(self_array.sort() == obj_array.sort())
-                return self_array.sort() == obj_array.sort()
+                return set(self_field) == set(obj_field)
             else:
-                print(self_field)
-                print(obj_field)
-                print(self_field == obj_field)
                 return self_field == obj_field
         elif not(self_field) and not(obj_field):
-            print(True)
             return True
         else:
-            print(self_field)
-            print(obj_field)
             return False
-    
+
 
 # shared models with permissions manager
 
 
 class SharedModelPermissionManager(models.Manager):
-    valid_shared_models = ['artist','genre','track']
-
-    def get_queryset_can_view(self, user, shared_model):
-        if shared_model:
-            model = apps.get_model('catalog', shared_model.title())
-            user_queryset = model.objects.none()
-            for trackinstance in TrackInstance.objects.filter(user=user):
-                if shared_model == 'artist':
-                    user_queryset = user_queryset | trackinstance.track.artist.all()
-                elif shared_model == 'genre':
-                    user_queryset = user_queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
-                elif shared_model == 'track':
-                    user_queryset = user_queryset | Track.objects.filter(id=trackinstance.track.id)
-            if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model) or user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                return self.get_queryset().filter(public=True) | user_queryset
-            elif user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
-                return self.get_queryset().filter(public=True)
-            elif user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
-                return user_queryset
-            else:
-                raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
+    def get_queryset_can_view(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
-
-    def get_queryset_can_direct_modify(self, user, shared_model):
-        if shared_model in self.valid_shared_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_artist'):
-                return self.get_queryset()
+            model = self.model
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_view_any_'+shared_model):
+                    queryset = self.get_queryset()
+                else:
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_view_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_view_own_'+shared_model):
+                        for trackinstance in TrackInstance.objects.filter(user=user):
+                            if shared_model == 'track':
+                                queryset = queryset | Track.objects.filter(id=trackinstance.track.id)
+                            elif shared_model == 'artist':
+                                queryset = queryset | trackinstance.track.artist.all()
+                                queryset = queryset | trackinstance.track.remix_artist.all()
+                            elif shared_model == 'genre':
+                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            else:
+                                raise ValidationError("Data for "+shared_model+" is not currently available.")
+                if queryset.count() >= 1:
+                    return queryset.distinct()
+                else:
+                    raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
             else:
-                raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
-        else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
-    def get_queryset_can_request_modify(self, user, shared_model):
-        if shared_model in self.valid_shared_models:
-            if user.has_perm('catalog.moxtool_can_modify_public_artist'):
-                return self.get_queryset().filter(public=True)
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
+        else:
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    return self.get_queryset()
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
             else:
-                raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
-        else:
-            raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
+    def get_queryset_can_request_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
+        else:
+            model = self.model
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    return self.get_queryset()
+                else:
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
+                        for trackinstance in TrackInstance.objects.filter(user=user):
+                            if shared_model == 'track':
+                                queryset = queryset | Track.objects.filter(id=trackinstance.track.id)
+                            elif shared_model == 'artist':
+                                queryset = queryset | trackinstance.track.artist.all()
+                                queryset = queryset | trackinstance.track.remix_artist.all()
+                            elif shared_model == 'genre':
+                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            else:
+                                raise ValidationError("Data for "+shared_model+" is not currently available.")
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
+                    else:
+                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+            else:
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
+    
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
@@ -273,6 +402,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             'name',
         ]
         permissions = (
+            ('moxtool_can_create_public_artist', 'Artist - Create Public - DJ'),
             ('moxtool_can_create_own_artist', 'Artist - Create Own - DJ'),
             ('moxtool_can_create_any_artist', 'Artist - Create Any - MOX'),
             ('moxtool_can_view_public_artist', 'Artist - View Public - DJ'),
@@ -301,14 +431,15 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
     
     def get_viewable_tracks_in_genre(self, user):
-        return Track.objects.get_queryset_can_view(user, 'track').filter(genre=self)
+        return Track.objects.get_queryset_can_view(user).filter(genre=self)
     
     def get_viewable_artists_in_genre(self, user):
         viewable_tracks = self.get_viewable_tracks_in_genre(user)
         viewable_artists = Artist.objects.none()
         for track in viewable_tracks:
             viewable_artists = viewable_artists | track.get_viewable_artists_on_track(user)
-        return viewable_artists
+            viewable_artists = viewable_artists | track.get_viewable_remix_artists_on_track(user)
+        return viewable_artists.distinct()
     
     class Meta:
         constraints = [
@@ -322,6 +453,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             'name',
         ]
         permissions = (
+            ('moxtool_can_create_public_genre', 'Genre - Create Public - DJ'),
             ('moxtool_can_create_own_genre', 'Genre - Create Own - DJ'),
             ('moxtool_can_create_any_genre', 'Genre - Create Any - MOX'),
             ('moxtool_can_view_public_genre', 'Genre - View Public - DJ'),
@@ -364,7 +496,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         if len(remixers) >= 1:
             value += ' (' + remixers + ' Remix)'
         elif mix is not None:
-            value += ' ' + mix
+            value += ' (' + mix + ')'
         if len(artists) >= 1:
             value += ' by ' + artists
         return value
@@ -373,24 +505,15 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
         return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
-    def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
-
-    display_artist.short_description = 'Artist'
-    
-    def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
-
-    display_remix_artist.short_description = 'Remix Artist'
-    
     def get_viewable_artists_on_track(self, user):
         viewable_artists = Artist.objects.none()
-        user_viewable_artists = Artist.objects.get_queryset_can_view(user, 'artist')
-        for artist in self.artist.all():
-            viewable_artist = user_viewable_artists.get(id=artist.id)
-            if viewable_artist and artist == viewable_artist:
-                viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
-        return viewable_artists
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            user_viewable_artists = Artist.objects.get_queryset_can_view(user)
+            for artist in self.artist.all():
+                viewable_artist = user_viewable_artists.get(id=artist.id)
+                if viewable_artist and artist == viewable_artist:
+                    viewable_artists = viewable_artists | user_viewable_artists.filter(id=artist.id)
+        return viewable_artists.distinct()
     
     def display_viewable_artists(self, user):
         return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
@@ -399,12 +522,13 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     
     def get_viewable_remix_artists_on_track(self, user):
         viewable_remix_artists = Artist.objects.none()
-        user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user, 'artist')
-        for remix_artist in self.remix_artist.all():
-            viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
-            if viewable_remix_artist and remix_artist == viewable_remix_artist:
-                viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
-        return viewable_remix_artists
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            user_viewable_remix_artists = Artist.objects.get_queryset_can_view(user)
+            for remix_artist in self.remix_artist.all():
+                viewable_remix_artist = user_viewable_remix_artists.get(id=remix_artist.id)
+                if viewable_remix_artist and remix_artist == viewable_remix_artist:
+                    viewable_remix_artists = viewable_remix_artists | user_viewable_remix_artists.filter(id=remix_artist.id)
+        return viewable_remix_artists.distinct()
     
     def display_viewable_remix_artists(self, user):
         return ', '.join(remix_artist.name for remix_artist in self.get_viewable_remix_artists_on_track(user))
@@ -412,10 +536,13 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        return Genre.objects.get_queryset_can_view(user, 'genre').get(id=self.genre.id)
+        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
+            return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
+        else:
+            return None
     
     def get_viewable_instances_of_track(self, user):
-        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(track=self)
+        return TrackInstance.objects.get_queryset_can_view(user).filter(track=self)
     
     class Meta:
         constraints = [
@@ -430,6 +557,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             'title',
         ]
         permissions = (
+            ('moxtool_can_create_public_track', 'Track - Create Public - DJ'),
             ('moxtool_can_create_own_track', 'Track - Create Own - DJ'),
             ('moxtool_can_create_any_track', 'Track - Create Any - MOX'),
             ('moxtool_can_view_public_track', 'Track - View Public - DJ'),
@@ -445,30 +573,39 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserRequestPermissionManager(models.Manager):
-    valid_request_models = ['artistrequest', 'genrerequest', 'trackrequest']
-
-    def get_queryset_can_view(self, user, request_model):
-        if request_model in self.valid_request_models:
-            if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to view any tags.")
+    def get_queryset_can_view(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+            request_model = self.model.__name__.lower()
+            try:
+                if user.has_perm('catalog.moxtool_can_view_any_'+request_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to view any tags.")
+            except:
+                raise ValidationError("The request for "+request_model+" is not a valid user request model.")
 
-    def get_queryset_can_direct_modify(self, user, request_model):
-        if request_model in self.valid_request_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_'+request_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to directly modify any tags.")
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+request_model+" is not a valid user model.")
+            request_model = self.model.__name__.lower()
+            try:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+request_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify any tags.")
+            except:
+                raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
+    
 
 class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
     name = models.CharField(max_length=200)
@@ -479,20 +616,27 @@ class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
     objects = UserRequestPermissionManager()
 
     def __str__(self):
-        message = self.name
         if self.artist:
-            message = 'Modify artist request: ' + message
+            message = 'Modify artist request: ' + self.artist.name
             if self.name != self.artist.name:
-                message = message + ', change name to'
+                message = message + ', change name to ' + self.name
             if self.public != self.artist.public:
                 message = message + ', change public to ' + str(self.public)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
         else:
-            message = 'New artist request: ' + message
+            message = 'New artist request: ' + self.name
+            try:
+                artist = Artist.objects.get(name=self.name)
+            except:
+                artist = None
+            if artist:
+                message = message + ' (ALREADY EXISTS)'
         return message
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [
@@ -514,24 +658,31 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    genre = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
     def __str__(self):
-        message = self.name
         if self.genre:
-            message = 'Modify genre request: ' + message
+            message = 'Modify genre request: ' + self.genre.name
             if self.name != self.genre.name:
-                message = message + ', change name'
+                message = message + ', change name to ' + self.name
             if self.public != self.genre.public:
                 message = message + ', change public to ' + str(self.public)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
         else:
-            message = 'New genre request: ' + message
+            message = 'New genre request: ' + self.name
+            try:
+                genre = Genre.objects.get(name=self.name)
+            except:
+                genre = None
+            if genre:
+                message = message + ' (ALREADY EXISTS)'
         return message
 
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('genre-request-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [
@@ -551,7 +702,7 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
 class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
     title = models.CharField(max_length=200)
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True, related_name="request_genre")
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist", blank=True)
     MIX_LIST = [
@@ -574,42 +725,41 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
-    def __str__(self):
-        message = self.title
-        if self.track:
-            message = 'Modify track request: ' + message
-            message = self.field_substr(message, 'beatport_track_id', self.beatport_track_id, self.track.beatport_track_id)
-            message = self.field_substr(message, 'title', self.title, self.track.title)
-            message = self.field_substr(message, 'genre', self.genre, self.track.genre)
-            message = self.field_substr(message, 'artist', self.display_artist(), self.track.display_artist())
-            message = self.field_substr(message, 'remix artist', self.display_remix_artist(), self.track.display_remix_artist())
-            message = self.field_substr(message, 'mix', self.get_mix_display(), self.track.get_mix_display())
-            message = self.field_substr(message, 'public', self.public, self.track.public)
-        else:
-            message = 'New track request: ' + message
-        return message
-
-    def field_substr(self, message, field_name, request_value, existing_value):
+    def field_substr(self, message, field_name):
+        request_value = self.get_field(field_name)
+        existing_value = self.track.get_field(field_name)
         if request_value:
-            if not(existing_value) or (request_value != existing_value):
-                message += ', change ' + field_name + ' to ' + str(request_value)
+            if self.useful_field_list[field_name]['type'] == 'queryset':
+                if not(existing_value) or (set(request_value) != set(existing_value)):
+                    set_text = ', '.join(str(obj) for obj in request_value)
+                    message += ', change ' + field_name + ' to ' + set_text
+            else:
+                if not(existing_value) or (request_value != existing_value):
+                    message += ', change ' + field_name + ' to ' + str(request_value)
         elif not(request_value) and existing_value:
             message += ', remove ' + field_name
         return message
-    
-    def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
 
-    display_artist.short_description = 'Artist'
-    
-    def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
-
-    display_remix_artist.short_description = 'Remix Artist'
+    def __str__(self):
+        if self.track:
+            message = 'Modify track request: ' + self.track.title
+            for field in self.useful_field_list:
+                message = self.field_substr(message, field)
+            if ',' not in message:
+                message = message + ' (NO CHANGES FOUND)'
+        else:
+            message = 'New track request: ' + self.title
+            try:
+                track = Track.objects.get(beatport_track_id=self.beatport_track_id)
+            except:
+                track = None
+            if track:
+                message = message + ' (ALREADY EXISTS)'
+        return message
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('artist-request-detail', args=[url_friendly_name, str(self.id)])
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        return reverse('track-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
         ordering = [
@@ -630,45 +780,68 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserModelPermissionManager(models.Manager):
-    valid_user_models = ['tag', 'trackinstance', 'playlist']
-
-    def get_queryset_can_view(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) or user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
-            elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
-                return self.get_queryset().filter(public=True)
-            elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                return self.get_queryset().filter(user=user)
-            else:
-                raise PermissionDenied("You do not have permission to view any tags.")
+    
+    def get_queryset_can_view(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
-
-    def get_queryset_can_direct_modify(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
-                return self.get_queryset()
-            elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
-                return self.get_queryset().filter(user=user)
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) and user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                    return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
+                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
+                    return self.get_queryset().filter(public=True)
+                elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to view any tags.")
             else:
-                raise PermissionDenied("You do not have permission to directly modify any tags.")
-        else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+                raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
-    def get_queryset_can_request_modify(self, user, user_model):
-        if user_model in self.valid_user_models:
-            if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
-                return self.get_queryset().filter(public=True)
+    def get_queryset_can_direct_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
+        else:
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
+                    return self.get_queryset()
+                elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
+                    return self.get_queryset().filter(user=user)
+                else:
+                    raise PermissionDenied("You do not have permission to directly modify any tags.")
             else:
-                raise PermissionDenied("You do not have permission to request modifications to tags.")
+                raise ValidationError("The request for "+user_model+" is not a valid user model.")
+
+    def get_queryset_can_request_modify(self, user):
+        if user.is_anonymous:
+            raise PermissionDenied("You must login.")
         else:
-            raise ValidationError("The request for "+user_model+" is not a valid user model.")
+            model = self.model
+            shared_model = self.model.__name__.lower()
+            if shared_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+                    return self.get_queryset()
+                else:
+                    queryset = model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(public=True)
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
+                        queryset = queryset | self.get_queryset().filter(user=user)
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
+                    else:
+                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+            else:
+                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+
+    def display(self, user):
+        return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
 
 
-class Tag(models.Model):
+class Tag(models.Model, SharedModelMixin, TagMixin):
     TYPE_LIST = [
         ('v','vibe'),
         ('c','color'),
@@ -680,10 +853,12 @@ class Tag(models.Model):
         max_length=6,
         choices=TYPE_LIST,
         blank=True,
+        null=True,
         default=None,
         help_text='Type of tag (e.g. vibe, chords, etc.)',
     )
-    value = models.CharField(max_length=100, null=True)
+
+    value = models.CharField(max_length=100, default=None)
     detail = models.CharField(max_length=1000, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     date_added = models.DateField(null=True, blank=True)
@@ -691,18 +866,20 @@ class Tag(models.Model):
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        return self.type+' - '+self.value
+        if self.type:
+            return self.type+' - '+self.value
+        else: 
+            return self.value
     
     def get_absolute_url(self):
-        url_friendly_type = re.sub(r'[^a-zA-Z0-9]', '_', self.get_type_display().lower())
         url_friendly_value = re.sub(r'[^a-zA-Z0-9]', '_', self.value.lower())
-        return reverse('tag-detail', args=[url_friendly_type, url_friendly_value, str(self.id)])
+        return reverse('tag-detail', args=[str(self.id), url_friendly_value])
     
     def get_viewable_trackinstances_tagged(self, user):
-        return TrackInstance.objects.get_queryset_can_view(user, 'trackinstance').filter(tag__in=[self])
+        return TrackInstance.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     def get_viewable_playlists_tagged(self, user):
-        return Playlist.objects.get_queryset_can_view(user, 'playlist').filter(tag__in=[self])
+        return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     class Meta:
         ordering = [
@@ -721,15 +898,14 @@ class Tag(models.Model):
         )
 
 
-class TrackInstance(models.Model):
-    """Model representing a music track in a specific user library."""
+class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this track and owner library")
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
-    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track")
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.")
     date_added = models.DateField(null=True, blank=True)
     play_count = models.IntegerField(default=0)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this track", blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
@@ -756,17 +932,22 @@ class TrackInstance(models.Model):
     )
 
     def __str__(self):
-        """Function returning a string of the track title."""
-        return f'{self.track.title} ({self.id})'
+        return self.track.title
+    
+    def get_absolute_url(self):
+        return self.track.get_absolute_url()
     
     def get_track_display_artist(self):
-        """Function returning a string of the artists on the underlying track."""
         return self.track.display_artist()
     
     get_track_display_artist.short_description = 'Artist'
     
+    def get_track_display_remix_artist(self):
+        return self.track.display_remix_artist()
+    
+    get_track_display_artist.short_description = 'Remix Artist'
+    
     def get_track_genre(self):
-        """Function returning a string of the genre of the underlying track."""
         return self.track.genre
     
     get_track_genre.short_description = 'Genre'
@@ -787,7 +968,7 @@ class TrackInstance(models.Model):
 
     @property
     def is_a_user_favorite(self):
-        return (self.date_added and date.today >= self.date_added and self.rating and self.rating_numeric >= 9)
+        return self.rating_numeric >= 9
 
     class Meta:
         constraints = [
@@ -812,31 +993,24 @@ class TrackInstance(models.Model):
         )
 
 
-class Playlist(models.Model):
-    """Model representing a music track, not specifically in any user's library."""
+class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
     name = models.CharField(max_length=200)
-    track = models.ManyToManyField(TrackInstance, help_text="Select a track for this playlist")
+    track = models.ManyToManyField(TrackInstance, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
     date_added = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, help_text="Select a tag for this playlist", blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        """Function returning a string of the playlist name."""
         return self.name
     
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('playlist-detail', args=[url_friendly_name, str(self.id)])
+        return reverse('playlist-detail', args=[str(self.id), url_friendly_name])
     
     def get_url_to_add_track(self):
-        return reverse('add-track-to-playlist-dj', args=[str(self.id)])
-    
-    def display_tags(self):
-        return ', '.join(str(tag) for tag in self.tag.all()[:3])
-    
-    display_tags.short_description = 'Tags'
+        return reverse('add-track-to-playlist-dj', args=[str(self.id)]) 
 
     class Meta:
         ordering = [
