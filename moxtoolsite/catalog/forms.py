@@ -166,7 +166,7 @@ class ArtistForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the artist name.",
         required=True,
-        max_length=Artist.objects.first()._meta.get_field('name').max_length,
+        max_length=200,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this artist to be made public on MoxToolSite (default is false).",
@@ -183,7 +183,7 @@ class GenreForm(forms.Form, ObjectFormMixin):
     name = forms.CharField(
         help_text="Enter the genre name.",
         required=True,
-        max_length=Genre.objects.first()._meta.get_field('name').max_length,
+        max_length=200,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this genre to be made public on MoxToolSite (default is false).",
@@ -205,12 +205,12 @@ class TrackForm(forms.Form, ObjectFormMixin):
     title = forms.CharField(
         help_text="Enter the track title without the mix name, which can be found on Beatport.",
         required=True,
-        max_length=Track.objects.first()._meta.get_field('title').max_length,
+        max_length=200,
     )
     genre_name = forms.CharField(
         help_text="Enter the genre name, which can be found on Beatport.",
         required=True,
-        max_length=Genre.objects.first()._meta.get_field('name').max_length,
+        max_length=200,
     )
     artist_names = forms.CharField(
         help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
