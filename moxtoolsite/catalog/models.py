@@ -315,10 +315,7 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
-                if queryset.count() >= 1:
-                    return queryset.distinct()
-                else:
-                    raise PermissionDenied("You do not have permission to view any "+shared_model+"s.")
+                return queryset.distinct()
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
@@ -331,7 +328,8 @@ class SharedModelPermissionManager(models.Manager):
                 if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
                     return self.get_queryset()
                 else:
-                    raise PermissionDenied("You do not have permission to directly modify "+shared_model+"s.")
+                    model = self.model
+                    return model.objects.none()
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
@@ -359,10 +357,7 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
-                    if queryset.count() >= 1:
-                        return queryset.distinct()
-                    else:
-                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+                    return queryset.distinct()
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
@@ -584,7 +579,8 @@ class UserRequestPermissionManager(models.Manager):
                 elif user.has_perm('catalog.moxtool_can_view_own_'+request_model):
                     return self.get_queryset().filter(user=user)
                 else:
-                    raise PermissionDenied("You do not have permission to view any tags.")
+                    model = self.model
+                    return model.objects.none()
             except:
                 raise ValidationError("The request for "+request_model+" is not a valid user request model.")
 
@@ -599,7 +595,8 @@ class UserRequestPermissionManager(models.Manager):
                 elif user.has_perm('catalog.moxtool_can_modify_own_'+request_model):
                     return self.get_queryset().filter(user=user)
                 else:
-                    raise PermissionDenied("You do not have permission to directly modify any tags.")
+                    model = self.model
+                    return model.objects.none()
             except:
                 raise ValidationError("The request for "+request_model+" is not a valid user model.")
         
@@ -796,7 +793,8 @@ class UserModelPermissionManager(models.Manager):
                 elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
                     return self.get_queryset().filter(user=user)
                 else:
-                    raise PermissionDenied("You do not have permission to view any tags.")
+                    model = self.model
+                    return model.objects.none()
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -811,7 +809,8 @@ class UserModelPermissionManager(models.Manager):
                 elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
                     return self.get_queryset().filter(user=user)
                 else:
-                    raise PermissionDenied("You do not have permission to directly modify any tags.")
+                    model = self.model
+                    return model.objects.none()
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -833,7 +832,8 @@ class UserModelPermissionManager(models.Manager):
                     if queryset.count() >= 1:
                         return queryset.distinct()
                     else:
-                        raise PermissionDenied("You do not have permission to request modifications to "+shared_model+"s.")
+                        model = self.model
+                        return model.objects.none()
             else:
                 raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
 
