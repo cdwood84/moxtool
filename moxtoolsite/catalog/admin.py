@@ -46,11 +46,6 @@ class ArtistRequestAdmin(admin.ModelAdmin):
     pass
 
 
-class PlaylistInline(admin.TabularInline):
-    model = Playlist
-    extra = 1
-
-
 @admin.register(TrackInstance)
 class TrackInstanceAdmin(admin.ModelAdmin):
     list_display = ['track', 'get_track_genre', 'get_track_display_artist', 'user', 'date_added', 'play_count', 'rating', 'display_tags']
@@ -59,4 +54,3 @@ class TrackInstanceAdmin(admin.ModelAdmin):
         (None,{'fields': ['track', 'id']}),
         ('User Info',{'fields': ['user', 'date_added', 'play_count', 'rating', 'tag', 'comments']})
     )
-    inlines = [PlaylistInline]
