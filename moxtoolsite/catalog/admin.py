@@ -19,13 +19,8 @@ class GenreAdmin(admin.ModelAdmin):
 
 @admin.register(Playlist)
 class PlaylistAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'date_added', 'display_tags']
+    list_display = ['name', 'user', 'date_added']
     list_filter = ['user', 'date_added', 'tag']
-
-    def display_tags(self, obj):
-        return obj.tag.display()
-    
-    display_tags.short_description = 'Tags'
 
 
 @admin.register(Tag)
