@@ -119,7 +119,7 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         all_artists = Artist.objects.all()
         self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
         self.client.force_login(self.users['dj'])
-        self.assertRaises(PermissionDenied, Artist.objects.get_queryset_can_direct_modify, (self.users['dj']))
+        self.assertEqual(set(Artist.objects.get_queryset_can_direct_modify(self.users['dj'])), set(Artist.objects.none()))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Artist.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artists))
 
@@ -280,7 +280,7 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         all_genres = Genre.objects.all()
         self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
         self.client.force_login(self.users['dj'])
-        self.assertRaises(PermissionDenied, Genre.objects.get_queryset_can_direct_modify, (self.users['dj']))
+        self.assertEqual(set(Genre.objects.get_queryset_can_direct_modify(self.users['dj'])), set(Genre.objects.none()))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Genre.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genres))
 
@@ -532,7 +532,7 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         all_tracks = Track.objects.all()
         self.assertRaises(PermissionDenied, Track.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
         self.client.force_login(self.users['dj'])
-        self.assertRaises(PermissionDenied, Track.objects.get_queryset_can_direct_modify, (self.users['dj']))
+        self.assertEqual(set(Track.objects.get_queryset_can_direct_modify(self.users['dj'])), set(Track.objects.none()))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Track.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_tracks))
 
