@@ -1,9 +1,10 @@
+from bs4 import BeautifulSoup
 from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Track, TrackInstance, TrackRequest
-import datetime
+import datetime, random, string, requests
 
 
 class AddTrackToLibraryForm(forms.Form):
@@ -287,3 +288,51 @@ class TrackForm(forms.Form, ObjectFormMixin):
                 del cleaned_data['remix_artist_names']
 
         return cleaned_data
+    
+
+class BulkUploadForm(forms.Form):
+    OBJECTS = [
+        ('artist', 'Artist'),
+        ('genre', 'Genre'),
+        ('track', 'Track'),
+    ]
+    object_name = forms.ChoiceField(
+        choices=OBJECTS,
+        help_text="Choose an object type to upload.",
+        required=True,
+    )
+    beatport_id_string = forms.CharField(
+        help_text="Enter one or more beatport IDs, separated by commas.",
+        required=True,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data['beatport_id_list'] = []
+        for id in cleaned_data.get('beatport_id_string').split(','):
+            print('trying: '+id.strip())
+            try:
+                cleaned_data['beatport_id_list'].append(int(id.strip()))
+                print(' success')
+            except:
+                print('Error converting '+id+' to integer')
+        return cleaned_data
+    
+    def save(self):
+        obj_name = self.cleaned_data.get('object_name')
+        try:
+            print(self.cleaned_data.get('beatport_id_list'))
+            for id in self.cleaned_data.get('beatport_id_list'):
+                print('scraping: '+str(id))
+                rand_alpha = ''.join(random.choice(string.ascii_letters) for _ in range(4))
+                target_url = 'https://www.beatport.com/' + obj_name + '/' + rand_alpha + '/' + str(id)
+                print(target_url)
+                response = requests.get(target_url)
+                response.raise_for_status()
+                html_content = response.text
+                soup = BeautifulSoup(html_content, 'html.parser')
+                print(soup)
+            return True
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return False

@@ -1134,7 +1134,7 @@ class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
     class Meta:
         ordering = [
             'setlist',
-            'time_played_seconds',
+            'start_time',
         ]
         permissions = (
             ('moxtool_can_create_own_setlistitem', 'SetListItem - Create Own - DJ'),
@@ -1150,8 +1150,8 @@ class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
 
 class Transition(models.Model, SharedModelMixin, TransitionMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this transition and owner library")
-    from_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
-    to_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
+    from_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True, related_name='from_track')
+    to_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True, related_name='to_track')
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.")
     date_modified = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)

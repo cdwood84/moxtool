@@ -10,7 +10,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
-from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm
+from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm, BulkUploadForm
 import importlib
 
 
@@ -124,6 +124,28 @@ def modify_object(request, obj_name, pk=None):
     
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+@login_required
+def bulk_upload(request):
+    if request.method == 'POST':
+        form = BulkUploadForm(request.POST)
+        if form.is_valid():
+            success = form.save()
+            if success is True:
+                pass
+            else:
+                pass
+        else:
+            print(form.errors)
+    else:
+        form = BulkUploadForm()
+
+    context = {
+        'form': form,
+    }
+    
+    return render(request, 'catalog/bulk_upload.html', context)
 
 
 # artist
