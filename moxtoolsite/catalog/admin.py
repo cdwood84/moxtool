@@ -4,13 +4,13 @@ from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackIns
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['name', 'public']
+    list_filter = ['public']
 
 
 @admin.register(ArtistRequest)
 class ArtistRequestAdmin(admin.ModelAdmin):
-    list_display = ['name', 'public']
-    list_filter = ['public']
+    pass
 
 
 @admin.register(Genre)
