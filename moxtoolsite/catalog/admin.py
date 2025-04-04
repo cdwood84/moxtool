@@ -9,12 +9,14 @@ class ArtistAdmin(admin.ModelAdmin):
 
 @admin.register(ArtistRequest)
 class ArtistRequestAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['name', 'public']
+    list_filter = ['public']
 
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['name', 'public']
+    list_filter = ['public']
 
 
 @admin.register(Playlist)
@@ -36,8 +38,8 @@ class TrackInstanceInline(admin.TabularInline):
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
-    list_display = ['title', 'display_artist', 'genre', 'beatport_track_id']
-    list_filter = ['genre', 'artist']
+    list_display = ['title', 'display_artist', 'genre', 'beatport_track_id', 'public']
+    list_filter = ['genre', 'artist', 'public']
     inlines = [TrackInstanceInline]
 
 
