@@ -472,9 +472,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         ('e','Extended Mix'),
         ('x','Remix'),
         ('r','Radio Mix'),
+        ('i','Instrumental Mix'),
     ]
     mix = models.CharField(
-        max_length=12,
+        max_length=16,
         choices=MIX_LIST,
         blank=True,
         default=None,
@@ -707,9 +708,10 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
         ('e','Extended Mix'),
         ('x','Remix'),
         ('r','Radio Mix'),
+        ('i','Instrumental Mix'),
     ]
     mix = models.CharField(
-        max_length=12,
+        max_length=16,
         choices=MIX_LIST,
         blank=True,
         default=None,

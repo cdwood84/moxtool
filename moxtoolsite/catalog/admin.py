@@ -4,7 +4,8 @@ from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackIns
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['name', 'public']
+    list_filter = ['public']
 
 
 @admin.register(ArtistRequest)
@@ -14,18 +15,14 @@ class ArtistRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['name', 'public']
+    list_filter = ['public']
 
 
 @admin.register(Playlist)
 class PlaylistAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'date_added', 'display_tags']
+    list_display = ['name', 'user', 'date_added']
     list_filter = ['user', 'date_added', 'tag']
-
-    def display_tags(self, obj):
-        return obj.tag.display()
-    
-    display_tags.short_description = 'Tags'
 
 
 @admin.register(Tag)
@@ -41,8 +38,8 @@ class TrackInstanceInline(admin.TabularInline):
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
-    list_display = ['title', 'display_artist', 'genre', 'beatport_track_id']
-    list_filter = ['genre', 'artist']
+    list_display = ['title', 'display_artist', 'genre', 'beatport_track_id', 'public']
+    list_filter = ['genre', 'artist', 'public']
     inlines = [TrackInstanceInline]
 
 
