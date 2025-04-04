@@ -4,7 +4,7 @@ from django.conf import settings
 # from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError, FieldDoesNotExist
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, F, Q
 from django.db.models.functions import Lower
 from django.urls import reverse
 import re
@@ -140,6 +140,56 @@ class PlaylistMixin:
         return 'name'
 
 
+class SetListMixin:
+    @property
+    def useful_field_list(self):
+        return {
+            'from_track': {
+                'type': 'model',
+                'equal': True,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'name'
+
+
+class SetListItemMixin:
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_played': {
+                'type': 'date',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'setlist'
+
+
 class TagMixin:
 
     @property
@@ -218,7 +268,47 @@ class TrackInstanceMixin:
     @property
     def create_by_field(self):
         return 'track'
-    
+
+
+class TransitionMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'from_track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'to_track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'rating': {
+                'type': 'string',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_modified': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'from_track'
+
 
 class SharedModelMixin:
 
@@ -911,7 +1001,7 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
-    TRACK_RATING = [
+    RATING_CHOICES = [
         ('0', 'unplayable'),
         ('1', 'atrocious'),
         ('2', 'terrible'),
@@ -927,7 +1017,7 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
 
     rating = models.CharField(
         max_length=2,
-        choices=TRACK_RATING,
+        choices=RATING_CHOICES,
         blank=True,
         default=None,
         help_text='Track rating',
@@ -993,6 +1083,132 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
             ('moxtool_can_modify_public_trackinstance', 'Track Instance - Modify Public - DJ'),
             ('moxtool_can_modify_any_trackinstance', 'Track Instance - Modify Any - MOX'),
         )
+
+
+class SetList(models.Model, SharedModelMixin, SetListMixin):   
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist and owner library")
+    name = models.CharField(max_length=200) 
+    date_played = models.DateField(null=True, blank=True)
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
+    public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('setlist-detail', args=[str(self.id), url_friendly_name])
+
+    class Meta:
+        ordering = [
+            'date_played',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_setlist', 'SetList - Create Own - DJ'),
+            ('moxtool_can_create_any_setlist', 'SetList - Create Any - MOX'),
+            ('moxtool_can_view_own_setlist', 'SetList - View Own - DJ'),
+            ('moxtool_can_view_public_setlist', 'SetList - View Public - DJ'),
+            ('moxtool_can_view_any_setlist', 'SetList - View Any - MOX'),
+            ('moxtool_can_modify_own_setlist', 'SetList - Modify Own - DJ'),
+            ('moxtool_can_modify_public_setlist', 'SetList - Modify Public - DJ'),
+            ('moxtool_can_modify_any_setlist', 'SetList - Modify Any - MOX'),
+        )
+
+
+class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist item")
+    setlist = models.ForeignKey('SetList', on_delete=models.RESTRICT, null=True)
+    trackinstance = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
+    start_time = models.DateTimeField()
+    objects = UserModelPermissionManager()
+
+    def __str__(self):
+        return str(self.track) + ' at ' + str(self.start_time)
+
+    def get_absolute_url(self):
+        return reverse('setlistitem-detail', args=[str(self.id)])
+
+    class Meta:
+        ordering = [
+            'setlist',
+            'time_played_seconds',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_setlistitem', 'SetListItem - Create Own - DJ'),
+            ('moxtool_can_create_any_setlistitem', 'SetListItem - Create Any - MOX'),
+            ('moxtool_can_view_own_setlistitem', 'SetListItem - View Own - DJ'),
+            ('moxtool_can_view_public_setlistitem', 'SetListItem - View Public - DJ'),
+            ('moxtool_can_view_any_setlistitem', 'SetListItem - View Any - MOX'),
+            ('moxtool_can_modify_own_setlistitem', 'SetListItem - Modify Own - DJ'),
+            ('moxtool_can_modify_public_setlistitem', 'SetListItem - Modify Public - DJ'),
+            ('moxtool_can_modify_any_setlistitem', 'SetListItem - Modify Any - MOX'),
+        )
+
+
+class Transition(models.Model, SharedModelMixin, TransitionMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this transition and owner library")
+    from_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
+    to_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.")
+    date_modified = models.DateField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
+
+    RATING_CHOICES = [
+        ('0', 'unplayable'),
+        ('1', 'atrocious'),
+        ('2', 'terrible'),
+        ('3', 'bad'),
+        ('4', 'meh'),
+        ('5', 'okay'),
+        ('6', 'fine'),
+        ('7', 'good'),
+        ('8', 'great'),
+        ('9', 'excellent'),
+        ('10', 'perfect'),
+    ]
+
+    rating = models.CharField(
+        max_length=2,
+        choices=RATING_CHOICES,
+        blank=True,
+        default=None,
+        help_text='Transition rating',
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=~Q(from_track=F('to_track')),
+                name='fields_not_equal'
+            ),
+            UniqueConstraint(
+                fields=['from_track', 'to_track', 'user'], 
+                name='unique_title_subtitle_user'
+            ),
+        ]
+        ordering = [
+            'date_modified',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_transition', 'Transition - Create Own - DJ'),
+            ('moxtool_can_create_any_transition', 'Transition - Create Any - MOX'),
+            ('moxtool_can_view_own_transition', 'Transition - View Own - DJ'),
+            ('moxtool_can_view_public_transition', 'Transition - View Public - DJ'),
+            ('moxtool_can_view_any_transition', 'Transition - View Any - MOX'),
+            ('moxtool_can_modify_own_transition', 'Transition - Modify Own - DJ'),
+            ('moxtool_can_modify_public_transition', 'Transition - Modify Public - DJ'),
+            ('moxtool_can_modify_any_transition', 'Transition - Modify Any - MOX'),
+        )
+
+    def clean(self):
+        if self.from_track == self.to_track:
+            raise ValidationError("From track and to track cannot be equal.")
+        super().clean()
 
 
 class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
