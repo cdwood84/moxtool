@@ -4,7 +4,7 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Track, TrackInstance, TrackRequest
-import datetime, random, string, requests
+import datetime, random, string, requests, time
 
 
 class AddTrackToLibraryForm(forms.Form):
@@ -317,17 +317,42 @@ class BulkUploadForm(forms.Form):
             except:
                 print('Error converting '+id+' to integer')
         return cleaned_data
-    
+
     def save(self):
         obj_name = self.cleaned_data.get('object_name')
+        proxies = [
+            '167.253.48.214:8085',
+            '154.217.197.249:6544',
+            '47.251.122.81:8888',
+            '188.166.197.129:3128',
+            '15.235.0.138:8888',
+        ]
+        user_agents = [ 
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', 
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36', 
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36', 
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148', 
+            'Mozilla/5.0 (Linux; Android 11; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Mobile Safari/537.36' 
+        ]
         try:
-            print(self.cleaned_data.get('beatport_id_list'))
+            p = user_agent = random.choice(proxies)
+            proxy = {'http': p, 'https': p}
+            print('testing proxy ' + p)
+            test_response = requests.get('http://httpbin.org/ip', proxies=proxy) 
+            print(test_response.json()['origin'])
+            sleep = False
             for id in self.cleaned_data.get('beatport_id_list'):
                 print('scraping: '+str(id))
-                rand_alpha = ''.join(random.choice(string.ascii_letters) for _ in range(4))
+                if sleep == False:
+                    sleep = True
+                else:
+                    time.sleep(random.randint(11, 89))
+                user_agent = random.choice(user_agents) 
+                headers = {'User-Agent': user_agent} 
+                rand_alpha = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(3, 10)))
                 target_url = 'https://www.beatport.com/' + obj_name + '/' + rand_alpha + '/' + str(id)
                 print(target_url)
-                response = requests.get(target_url)
+                response = requests.get(target_url, proxies=proxy, headers=headers)
                 response.raise_for_status()
                 html_content = response.text
                 soup = BeautifulSoup(html_content, 'html.parser')
