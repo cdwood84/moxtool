@@ -354,7 +354,29 @@ class BulkUploadForm(forms.Form):
                 response.raise_for_status()
                 html_content = response.text
                 soup = BeautifulSoup(html_content, 'html.parser')
-                # print(soup)
+                title_line = soup.find('body').find('h1', {'class': lambda x: x and x.startswith('Typography-style__HeadingH1')})
+                track_data = {
+                    'title': str(title_line).split('>')[1].split('<')[0],
+                    'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0],
+                    'artists': [],
+                    'remix_artists': [],
+                }
+                artists = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('Artists-styles__Items')})
+                for section in artists:
+                    for artist in section.findAll('a', href=True):
+                        if 'remix' in str(section).lower():
+                            track_data['remix_artists'].append(artist['href'])
+                        else:
+                            track_data['artists'].append(artist['href'])
+                metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
+                for data in metadata:
+                    field = str(data).split('<div>')[1].split('<')[0].replace(':','')
+                    if data.find('a'):
+                        track_data[field] = data.find('a', href=True)['href']
+                    else:
+                        track_data[field] = str(data).split('<span>')[1].split('<')[0]
+                print(track_data)
+
             return True
         except Exception as e:
             print(f"An error occurred: {e}")
