@@ -544,6 +544,29 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
 
+    def save(self, *args, **kwargs):
+        super(Track, self).save(*args, **kwargs)
+
+        try:
+            
+            # scrape data using beautiful soup
+            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 11)))
+            url = 'http://www.beatport.com/artist/' + text + '/' + self.beatport_artist_id
+            soup = self.getSoup(url)
+
+            # extract data into usable fields
+            title_line = soup.find('body').find('h1')
+            beatport_data = {
+                'name': title_line.text,
+            }
+            print(beatport_data)
+
+            # use extractied data to update model fields
+            self.set_field('name', beatport_data['name'])
+
+        except Exception as e:
+            print('Error: ' + str(e))
+
     def __str__(self):
         return self.name
 
@@ -593,6 +616,29 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
     )
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
+
+    def save(self, *args, **kwargs):
+        super(Track, self).save(*args, **kwargs)
+
+        try:
+            
+            # scrape data using beautiful soup
+            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 11)))
+            url = 'http://www.beatport.com/genre/' + text + '/' + self.beatport_genre_id
+            soup = self.getSoup(url)
+
+            # extract data into usable fields
+            title_line = soup.find('body').find('h1')
+            beatport_data = {
+                'name': title_line.text,
+            }
+            print(beatport_data)
+
+            # use extractied data to update model fields
+            self.set_field('name', beatport_data['name'])
+
+        except Exception as e:
+            print('Error: ' + str(e))
 
     def __str__(self):
         return self.name
@@ -644,14 +690,44 @@ class Label(models.Model, SharedModelMixin, LabelMixin, SoupMixin):
     objects = SharedModelPermissionManager()
 
     def save(self, *args, **kwargs):
-        super(Label, self).save(*args, **kwargs)
+        super(Track, self).save(*args, **kwargs)
+
         try:
-            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(9, 13)))
+            
+            # scrape data using beautiful soup
+            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 11)))
             url = 'http://www.beatport.com/label/' + text + '/' + self.beatport_label_id
-            print(url)
-            # soup = self.getSoup(url)
+            soup = self.getSoup(url)
+
+            # extract data into usable fields
+            title_line = soup.find('body').find('h1')
+            beatport_data = {
+                'name': title_line.text,
+            }
+            print(beatport_data)
+
+            # use extractied data to update model fields
+            self.set_field('name', beatport_data['name'])
+
         except Exception as e:
             print('Error: ' + str(e))
+    
+    def __str__(self):
+        value = self.title
+        artists = self.display_artist()
+        remixers = self.display_remix_artist()
+        mix = self.get_mix_display()
+        if len(remixers) >= 1:
+            value += ' (' + remixers + ' Remix)'
+        elif mix is not None:
+            value += ' (' + mix + ')'
+        if len(artists) >= 1:
+            value += ' by ' + artists
+        return value
+    
+    def get_absolute_url(self):
+        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
     class Meta:
         constraints = [
