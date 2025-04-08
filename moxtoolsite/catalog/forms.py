@@ -323,6 +323,7 @@ class BulkUploadForm(forms.Form):
         print('trying '+obj_name+' upload using '+str(os.environ.get('MY_PROXY')))
         try:
             for id in self.cleaned_data.get('beatport_id_list'):
+                print('starting '+str(id)+' as a '+obj_name)
                 if obj_name == 'artist':
                     obj, new_obj = Artist.objects.get_or_create(beatport_artist_id=id)
                 elif obj_name == 'genre':
@@ -331,6 +332,8 @@ class BulkUploadForm(forms.Form):
                     obj, new_obj = Label.objects.get_or_create(beatport_label_id=id)
                 elif obj_name == 'track':
                     obj, new_obj = Track.objects.get_or_create(beatport_track_id=id)
+                    print(new_obj)
+                    print(user)
                     if user:
                         ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
                 else:

@@ -130,8 +130,11 @@ def modify_object(request, obj_name, pk=None):
 def bulk_upload(request):
     if request.method == 'POST':
         form = BulkUploadForm(request.POST)
+        print('progress 1')
         if form.is_valid():
+            print('progress 2')
             success = form.save(request.user)
+            print('progress 3 - '+str(success))
             if success is True:
                 HttpResponseRedirect('/')
             else:
