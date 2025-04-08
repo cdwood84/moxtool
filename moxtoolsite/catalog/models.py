@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import UniqueConstraint, F, Q
 from django.db.models.functions import Lower
 from django.urls import reverse
-import random, re, requests, string, time, uuid
+import os, random, re, requests, string, time, uuid
 
 
 # mixins
@@ -19,8 +19,7 @@ class SoupMixin:
     @property
     def proxies():
         return [
-            # use .env after changing user/pass
-            'gopqajkm:fkct2um6dx2b@173.211.0.148:6641',
+            os.environ.get('MY_PROXY'),
         ]
 
     @property
