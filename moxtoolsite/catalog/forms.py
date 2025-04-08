@@ -3,7 +3,7 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Track, TrackInstance, TrackRequest
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Track, TrackInstance, TrackRequest
 import datetime, random, string, requests, time
 
 
@@ -293,6 +293,7 @@ class BulkUploadForm(forms.Form):
     OBJECTS = [
         ('artist', 'Artist'),
         ('genre', 'Genre'),
+        ('label', 'Label'),
         ('track', 'Track'),
     ]
     object_name = forms.ChoiceField(
@@ -308,16 +309,6 @@ class BulkUploadForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         cleaned_data['beatport_id_list'] = []
-        cleaned_data['proxies'] = [
-            'gopqajkm:fkct2um6dx2b@173.211.0.148:6641',
-        ]
-        cleaned_data['user_agents'] = [ 
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
-            'Mozilla/5.0 (Linux; Android 11; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Mobile Safari/537.36',
-        ]
         for id in cleaned_data.get('beatport_id_string').split(','):
             print('trying: '+id.strip())
             try:
@@ -331,92 +322,19 @@ class BulkUploadForm(forms.Form):
         obj_name = self.cleaned_data.get('object_name')
         try:
             for id in self.cleaned_data.get('beatport_id_list'):
-                print('scraping: '+str(id))
-                rand_alpha = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(3, 10)))
-                target_url = 'http://www.beatport.com/' + obj_name + '/' + rand_alpha + '/' + str(id)
-                print(target_url)
                 if obj_name == 'artist':
-                    obj, new_obj = self.process_artist(id, target_url)
+                    obj, new_obj = Artist.objects.get_or_create(beatport_artist_id=id)
                 elif obj_name == 'genre':
-                    obj, new_obj = self.process_genre(id, target_url)
+                    obj, new_obj = Genre.objects.get_or_create(beatport_genre_id=id)
+                elif obj_name == 'label':
+                    obj, new_obj = Label.objects.get_or_create(beatport_label_id=id)
                 elif obj_name == 'track':
-                    obj, new_obj = self.process_track(id, target_url)
+                    obj, new_obj = Track.objects.get_or_create(beatport_track_id=id)
                 else:
                     raise ValidationError('Invalid object type processed')
+                if new_obj is True:
+                    print('New '+obj_name+' created: '+str(obj))
             return True
         except Exception as e:
             print(f"An error occurred: {e}")
             return False
-
-    def process_artist(self, url):
-        return None, False
-
-    def process_genre(self, url):
-        return None, False
-
-    def process_track(self, url):
-
-        # check on existing track
-        id = int(url.split('/')[-1])
-        obj, created = Track.objects.get_or_create(beatport_track_id=id)
-        if created is True:
-
-            # request url for scraping
-            time.sleep(random.randint(11, 37))
-            response = requests.get(
-                url, 
-                proxies = {'http': 'http://' + random.choice(self.cleaned_data['proxies'])}, 
-                headers = {'User-Agent': random.choice(self.cleaned_data['user_agents'])} , 
-                timeout = 5,
-            )
-            response.raise_for_status()
-            html_content = response.text
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-            # process scraped data into usable fields
-            title_line = soup.find('body').find('h1', {'class': lambda x: x and x.startswith('Typography-style__HeadingH1')})
-            track_data = {
-                'beatport_track_id': id,
-                'title': str(title_line).split('>')[1].split('<')[0],
-                'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0],
-                'artists': [],
-                'remix_artists': [],
-            }
-            artist_section = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('Artists-styles__Items')})
-            for section in artist_section:
-                for artist_line in section.findAll('a', href=True):
-                    if 'remix' in str(section).lower():
-                        track_data['remix_artists'].append(artist_line['href'])
-                    else:
-                        track_data['artists'].append(artist_line['href'])
-            metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
-            for data in metadata:
-                field = str(data).split('<div>')[1].split('<')[0].replace(':','').lower()
-                if data.find('a'):
-                    track_data[field] = data.find('a', href=True)['href']
-                else:
-                    track_data[field] = str(data).split('<span>')[1].split('<')[0]
-            print(track_data)
-
-            # use extractied info to create a track
-            obj.set_field('title', track_data['title'])
-            obj.set_field('mix', track_data['mix'])
-            obj.set_field('length', track_data['length'])
-            obj.set_field('released', track_data['released'])
-            obj.set_field('bpm', int(track_data['bpm']))
-            obj.set_field('key', track_data['key'])
-            genre, new_genre = self.process('http://www.beatport.com' + track_data['genre'])
-            obj.set_field('genre', genre)
-            # obj.set_field('label', self.process('http://www.beatport.com' + track_data['label']))
-            artists = Artist.objects.none()
-            for a in track_data['artists']:
-                artist, new_artist = self.process(self.process('http://www.beatport.com' + a))
-                artists = artists | artist
-            obj.set_field('artist', artists)
-            remix_artists = Artist.objects.none()
-            for r in track_data['remix_artists']:
-                remix_artist, new_remix_artist = self.process(self.process('http://www.beatport.com' + r))
-                remix_artists = remix_artists | remix_artist
-            obj.set_field('remix_artist', remix_artists)
-
-        return obj, created

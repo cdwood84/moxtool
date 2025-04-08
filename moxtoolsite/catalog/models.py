@@ -19,6 +19,7 @@ class SoupMixin:
     @property
     def proxies():
         return [
+            # use .env after changing user/pass
             'gopqajkm:fkct2um6dx2b@173.211.0.148:6641',
         ]
 
@@ -587,7 +588,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             UniqueConstraint(
                 'beatport_artist_id',
                 name='beatport_artist_id_if_set_unique',
-                condition=models.Q(beatport_track_id__isnull=False),
+                condition=models.Q(beatport_artist_id__isnull=False),
                 violation_error_message="This artist ID from Beatport is already attached to another artist.",
             ),
         ]
@@ -663,7 +664,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             UniqueConstraint(
                 'beatport_genre_id',
                 name='beatport_genre_id_if_set_unique',
-                condition=models.Q(beatport_track_id__isnull=False),
+                condition=models.Q(beatport_genre_id__isnull=False),
                 violation_error_message="This genre ID from Beatport is already attached to another genre.",
             ),
         ]
@@ -713,28 +714,18 @@ class Label(models.Model, SharedModelMixin, LabelMixin, SoupMixin):
             print('Error: ' + str(e))
     
     def __str__(self):
-        value = self.title
-        artists = self.display_artist()
-        remixers = self.display_remix_artist()
-        mix = self.get_mix_display()
-        if len(remixers) >= 1:
-            value += ' (' + remixers + ' Remix)'
-        elif mix is not None:
-            value += ' (' + mix + ')'
-        if len(artists) >= 1:
-            value += ' by ' + artists
-        return value
+        return self.name
     
     def get_absolute_url(self):
-        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
-        return reverse('track-detail', args=[str(self.id), url_friendly_title])
+        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('label-detail', args=[str(self.id), url_friendly_title])
     
     class Meta:
         constraints = [
             UniqueConstraint(
                 'beatport_label_id',
                 name='beatport_label_id_if_set_unique',
-                condition=models.Q(beatport_track_id__isnull=False),
+                condition=models.Q(beatport_label_id__isnull=False),
                 violation_error_message="This label ID from Beatport is already attached to another label.",
             ),
         ]
@@ -1043,25 +1034,16 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
 
 class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
-    title = models.CharField(max_length=200)
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True, related_name="request_genre")
+    title = models.CharField(max_length=200, null=True)
+    mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
-    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist", blank=True)
-    MIX_LIST = [
-        ('o','Original Mix'),
-        ('e','Extended Mix'),
-        ('x','Remix'),
-        ('r','Radio Mix'),
-        ('i','Instrumental Mix'),
-    ]
-    mix = models.CharField(
-        max_length=16,
-        choices=MIX_LIST,
-        blank=True,
-        default=None,
-        null=True,
-        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
-    )
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist")
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
+    length = models.CharField(max_length=5, null=True)
+    released = models.DateField(null=True)
+    bpm = models.IntegerField(null=True)
+    key = models.CharField(max_length=8, null=True)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1380,7 +1362,7 @@ class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        return str(self.track) + ' at ' + str(self.start_time)
+        return str(self.trackinstance) + ' at ' + str(self.start_time)
 
     def get_absolute_url(self):
         return reverse('setlistitem-detail', args=[str(self.id)])
