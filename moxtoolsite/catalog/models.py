@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from datetime import date
 from django.apps import apps
 from django.conf import settings
@@ -7,11 +8,41 @@ from django.db import models
 from django.db.models import UniqueConstraint, F, Q
 from django.db.models.functions import Lower
 from django.urls import reverse
-import re
-import uuid
+import random, re, requests, string, time, uuid
 
 
 # mixins
+
+
+class SoupMixin:
+
+    @property
+    def proxies():
+        return [
+            'gopqajkm:fkct2um6dx2b@173.211.0.148:6641',
+        ]
+
+    @property
+    def user_agents():
+        return [ 
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+            'Mozilla/5.0 (Linux; Android 11; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Mobile Safari/537.36',
+        ]
+
+    def getSoup(self, url):
+        time.sleep(random.randint(11, 37))
+        response = requests.get(
+            url, 
+            proxies = {'http': 'http://' + random.choice(self.proxies)}, 
+            headers = {'User-Agent': random.choice(self.user_agents)} , 
+            timeout = 5,
+        )
+        response.raise_for_status()
+        html_content = response.text
+        return BeautifulSoup(html_content, 'html.parser')
 
 
 class ArtistMixin:
@@ -19,6 +50,10 @@ class ArtistMixin:
     @property
     def useful_field_list(self):
         return {
+            'beatport_artist_id': {
+                'type': 'integer',
+                'equal': True,
+            },
             'name': {
                 'type': 'string',
                 'equal': True,
@@ -31,7 +66,7 @@ class ArtistMixin:
     
     @property
     def create_by_field(self):
-        return 'name'
+        return 'beatport_artist_id'
 
 
 class GenreMixin:
@@ -39,6 +74,10 @@ class GenreMixin:
     @property
     def useful_field_list(self):
         return {
+            'beatport_genre_id': {
+                'type': 'integer',
+                'equal': True,
+            },
             'name': {
                 'type': 'string',
                 'equal': True,
@@ -51,7 +90,31 @@ class GenreMixin:
     
     @property
     def create_by_field(self):
-        return 'name'
+        return 'beatport_genre_id'
+
+
+class LabelMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'beatport_label_id': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'beatport_label_id'
 
 
 class TrackMixin:
@@ -67,7 +130,15 @@ class TrackMixin:
                 'type': 'string',
                 'equal': True,
             },
+            'mix': {
+                'type': 'string',
+                'equal': True,
+            },
             'genre': {
+                'type': 'model',
+                'equal': True,
+            },
+            'label': {
                 'type': 'model',
                 'equal': True,
             },
@@ -79,8 +150,20 @@ class TrackMixin:
                 'type': 'queryset',
                 'equal': True,
             },
-            'mix': {
-                'type': 'string',
+            'released': {
+                'type': 'date',
+                'equal': True,
+            },
+            'bpm': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'key': {
+                'type': 'date',
+                'equal': True,
+            },
+            'length': {
+                'type': 'date',
                 'equal': True,
             },
             'public': {
@@ -317,10 +400,10 @@ class SharedModelMixin:
             if 'queryset' in str(value_input.__class__).lower():
                 field = getattr(self, field_name)
                 field.set(value_input)
-                self.save()
+                self.save(update_fields=['field_name'])
             else:
                 setattr(self, field_name, value_input)
-                self.save()
+                self.save(update_fields=['field_name'])
         except FieldDoesNotExist:
             print(f"Field '{field_name}' does not exist on the model.")
         except ValueError:
@@ -456,7 +539,8 @@ class SharedModelPermissionManager(models.Manager):
     
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):
-    name = models.CharField(max_length=200)
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata.')
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
 
@@ -478,9 +562,10 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
     class Meta:
         constraints = [
             UniqueConstraint(
-                Lower('name'),
-                name='artist_name_case_insensitive_unique',
-                violation_error_message="Artist already exists (case insensiitive match)"
+                'beatport_artist_id',
+                name='beatport_artist_id_if_set_unique',
+                condition=models.Q(beatport_track_id__isnull=False),
+                violation_error_message="This artist ID from Beatport is already attached to another artist.",
             ),
         ]
         ordering = [
@@ -500,6 +585,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
 
 
 class Genre(models.Model, SharedModelMixin, GenreMixin):
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata.')
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -529,9 +615,10 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
     class Meta:
         constraints = [
             UniqueConstraint(
-                Lower('name'),
-                name='genre_name_case_insensitive_unique',
-                violation_error_message="Genre already exists (case insensiitive match)"
+                'beatport_genre_id',
+                name='beatport_genre_id_if_set_unique',
+                condition=models.Q(beatport_track_id__isnull=False),
+                violation_error_message="This genre ID from Beatport is already attached to another genre.",
             ),
         ]
         ordering = [
@@ -550,29 +637,120 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
         )
    
 
-class Track(models.Model, SharedModelMixin, TrackMixin):
-    title = models.CharField(max_length=200)
-    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+class Label(models.Model, SharedModelMixin, LabelMixin, SoupMixin):
+    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata.')
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
-    MIX_LIST = [
-        ('o','Original Mix'),
-        ('e','Extended Mix'),
-        ('x','Remix'),
-        ('r','Radio Mix'),
-        ('i','Instrumental Mix'),
-    ]
-    mix = models.CharField(
-        max_length=16,
-        choices=MIX_LIST,
-        blank=True,
-        default=None,
-        null=True,
-        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
-    )
-    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist", blank=True)
+
+    def save(self, *args, **kwargs):
+        super(Label, self).save(*args, **kwargs)
+        try:
+            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(9, 13)))
+            url = 'http://www.beatport.com/label/' + text + '/' + self.beatport_label_id
+            print(url)
+            # soup = self.getSoup(url)
+        except Exception as e:
+            print('Error: ' + str(e))
+    
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                'beatport_label_id',
+                name='beatport_label_id_if_set_unique',
+                condition=models.Q(beatport_track_id__isnull=False),
+                violation_error_message="This label ID from Beatport is already attached to another label.",
+            ),
+        ]
+        ordering = [
+            'name',
+        ]
+        permissions = (
+            ('moxtool_can_create_public_label', 'Label - Create Public - DJ'),
+            ('moxtool_can_create_own_label', 'Label - Create Own - DJ'),
+            ('moxtool_can_create_any_label', 'Label - Create Any - MOX'),
+            ('moxtool_can_view_public_label', 'Label - View Public - DJ'),
+            ('moxtool_can_view_own_label', 'Label - View Own - DJ'),
+            ('moxtool_can_view_any_label', 'Label - View Any - MOX'),
+            ('moxtool_can_modify_public_label', 'Label - Modify Public - DJ'),
+            ('moxtool_can_modify_own_label', 'Label - Modify Own - DJ'),
+            ('moxtool_can_modify_any_label', 'Label - Modify Any - MOX'),
+        )
+
+
+class Track(models.Model, SharedModelMixin, TrackMixin, SoupMixin):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    title = models.CharField(max_length=200, null=True)
+    mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist")
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
+    length = models.CharField(max_length=5, null=True)
+    released = models.DateField(null=True)
+    bpm = models.IntegerField(null=True)
+    key = models.CharField(max_length=8, null=True)
+    public = models.BooleanField(default=False)
+    objects = SharedModelPermissionManager()
+
+    def save(self, *args, **kwargs):
+        super(Track, self).save(*args, **kwargs)
+
+        try:
+            
+            # scrape data using beautiful soup
+            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 11)))
+            url = 'http://www.beatport.com/track/' + text + '/' + self.beatport_track_id
+            soup = self.getSoup(url)
+
+            # extract data into usable fields
+            title_line = soup.find('body').find('h1', {'class': lambda x: x and x.startswith('Typography-style__HeadingH1')})
+            beatport_data = {
+                'title': str(title_line).split('>')[1].split('<')[0],
+                'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0],
+                'artists': [],
+                'remix_artists': [],
+            }
+            artist_section = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('Artists-styles__Items')})
+            for section in artist_section:
+                for artist_line in section.findAll('a', href=True):
+                    if 'remix' in str(section).lower():
+                        beatport_data['remix_artists'].append(artist_line['href'])
+                    else:
+                        beatport_data['artists'].append(artist_line['href'])
+            metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
+            for data in metadata:
+                field = str(data).split('<div>')[1].split('<')[0].replace(':','').lower()
+                if data.find('a'):
+                    beatport_data[field] = int(data.find('a', href=True)['href'].split('/')[-1])
+                else:
+                    beatport_data[field] = str(data).split('<span>')[1].split('<')[0]
+            print(beatport_data)
+
+            # use extractied data to update model fields
+            self.set_field('title', beatport_data['title'])
+            self.set_field('mix', beatport_data['mix'])
+            self.set_field('length', beatport_data['length'])
+            self.set_field('released', beatport_data['released'])
+            self.set_field('bpm', int(beatport_data['bpm']))
+            self.set_field('key', beatport_data['key'])
+            genre, new_genre = Genre.objects.get_or_create(beatport_genre_id=beatport_data['genre'])
+            self.set_field('genre', genre)
+            label, new_label = Label.objects.get_or_create(beatport_label_id=beatport_data['label'])
+            self.set_field('label', label)
+            artists = Artist.objects.none()
+            for a in beatport_data['artists']:
+                artist, new_artist = Artist.objects.get_or_create(beatport_artist_id=a)
+                artists = artists | artist
+            self.set_field('artist', artists)
+            remix_artists = Artist.objects.none()
+            for r in beatport_data['remix_artists']:
+                remix_artist, new_remix_artist = Artist.objects.get_or_create(beatport_artist_id=r)
+                remix_artists = remix_artists | remix_artist
+            self.set_field('remix_artist', remix_artists)
+
+        except Exception as e:
+            print('Error: ' + str(e))
     
     def __str__(self):
         value = self.title
