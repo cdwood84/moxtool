@@ -3,7 +3,7 @@ from .models import Artist, Genre, Label, Track
 import os, random, requests, string, time
 
 
-def soup(url, iteration_count=0):
+def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(3+extra_time, 8+extra_time))
     proxies = os.environ.get('MY_PROXY_LIST').split(',')
@@ -42,7 +42,7 @@ def scrape_artist(id, text=None):
             text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(5, 9)))
         url = 'http://www.beatport.com/artist/' + text + '/' + str(id)
         try:
-            soup = soup(url, iteration_count)
+            soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
         if soup:
@@ -85,7 +85,7 @@ def scrape_genre(id, text=None):
             text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(9, 15)))
         url = 'http://www.beatport.com/genre/' + text + '/' + str(id)
         try:
-            soup = soup(url, iteration_count)
+            soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
         if soup:
@@ -128,7 +128,7 @@ def scrape_label(id, text=None):
             text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(10, 17)))
         url = 'http://www.beatport.com/label/' + text + '/' + str(id)
         try:
-            soup = soup(url, iteration_count)
+            soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
         if soup:
@@ -153,7 +153,7 @@ def scrape_label(id, text=None):
 def scrape_track(id, text=None):
     if id is None:
         return None, False
-    track, created = Track.objects.get_or_create(beatport_label_id=id)
+    track, created = Track.objects.get_or_create(beatport_track_id=id)
     iteration_count = 0
     while iteration_count < 3:
     
@@ -171,7 +171,7 @@ def scrape_track(id, text=None):
             text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(10, 17)))
         url = 'http://www.beatport.com/track/' + text + '/' + str(id)
         try:
-            soup = soup(url, iteration_count)
+            soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
         if soup:

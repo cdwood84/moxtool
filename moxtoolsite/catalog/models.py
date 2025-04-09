@@ -1,17 +1,13 @@
-from bs4 import BeautifulSoup
-from datetime import date
 from django.apps import apps
 from django.conf import settings
 # from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError, FieldDoesNotExist
 from django.db import models
 from django.db.models import UniqueConstraint, F, Q
-from django.db.models.functions import Lower
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.urls import reverse
-from .utils import add_m2m, scrape_track
-import os, random, re, requests, string, time, uuid
+import random, re, string, uuid
 
 
 # mixins
@@ -444,8 +440,9 @@ class SharedModelMixin:
                     external_id_set = True
             # required edge case for remiox artist to be None
             elif field == 'remix_artist':
-                if value.count() < 1 and 'remix' in self.mix.lower():
-                    any_metadata_none = True
+                if self.mix:
+                    if value.count() < 1 and 'remix' in self.mix.lower():
+                        any_metadata_none = True
             elif field != 'public':
                 if data['type'] == 'queryset':
                     if value.count() < 1:
@@ -558,7 +555,7 @@ class SharedModelPermissionManager(models.Manager):
     
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):
-    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata.')
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata.', null=True)
     name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
@@ -586,8 +583,12 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             UniqueConstraint(
                 'beatport_artist_id',
                 name='beatport_artist_id_if_set_unique',
-                condition=models.Q(beatport_artist_id__isnull=False),
+                condition=Q(beatport_artist_id__isnull=False),
                 violation_error_message="This artist ID from Beatport is already attached to another artist.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_artist_id__isnull=False) | Q(name__isnull=False),
+                name='artist_name_or_beatport_id_is_not_null'
             ),
         ]
         ordering = [
@@ -607,7 +608,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
 
 
 class Genre(models.Model, SharedModelMixin, GenreMixin):
-    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata.')
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata.', null=True)
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -645,6 +646,10 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
                 condition=models.Q(beatport_genre_id__isnull=False),
                 violation_error_message="This genre ID from Beatport is already attached to another genre.",
             ),
+            models.CheckConstraint(
+                check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
+                name='genre_name_or_beatport_id_is_not_null'
+            ),
         ]
         ordering = [
             'name',
@@ -663,7 +668,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
    
 
 class Label(models.Model, SharedModelMixin, LabelMixin):
-    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata.')
+    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata.', null=True)
     name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
@@ -686,6 +691,10 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
                 condition=models.Q(beatport_label_id__isnull=False),
                 violation_error_message="This label ID from Beatport is already attached to another label.",
             ),
+            models.CheckConstraint(
+                check=Q(beatport_label_id__isnull=False) | Q(name__isnull=False),
+                name='label_name_or_beatport_id_is_not_null'
+            ),
         ]
         ordering = [
             'name',
@@ -704,7 +713,7 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
 
 
 class Track(models.Model, SharedModelMixin, TrackMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.', null=True)
     title = models.CharField(max_length=200, null=True)
     mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
@@ -724,10 +733,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             artists = self.display_artist()
             remixers = self.display_remix_artist()
             mix = self.mix
-            if len(remixers) >= 1:
-                value += ' (' + remixers + ' Remix)'
-            elif mix is not None:
+            if mix is not None:
                 value += ' (' + mix + ')'
+            elif len(remixers) >= 1:
+                value += ' (' + remixers + ' Remix)'
             if len(artists) >= 1:
                 value += ' by ' + artists
             return value
@@ -784,6 +793,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
                 name='beatport_track_id_if_set_unique',
                 condition=models.Q(beatport_track_id__isnull=False),
                 violation_error_message="This track ID from Beatport is already attached to another track.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
+                name='track_title_or_beatport_id_is_not_null'
             ),
         ]
         ordering = [
@@ -1382,93 +1395,3 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
             ('moxtool_can_modify_public_playlist', 'Playlist - Modify Public - DJ'),
             ('moxtool_can_modify_any_playlist', 'Playlist - Modify Any - MOX'),
         )
-
-
-# functions
-
-
-@receiver(pre_save, sender=Artist)
-def fetch_beatport_genre_data(sender, instance, **kwargs):
-    print('artist: '+str(instance))
-    if not instance.pk:
-        try:
-            # generate a URL to scrape data
-            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 15)))
-            url = 'http://www.beatport.com/artist/' + text + '/' + str(instance.beatport_artist_id)
-            soup = scrape(url)
-
-            # extract model fields from data
-            title_line = soup.find('body').find('h1')
-            beatport_data = {
-                'name': title_line.text,
-            }
-            print(beatport_data)
-            
-            # use extractied data to update model fields
-            instance.name = beatport_data['name']
-
-        except Exception as e:
-            print('Error: '+str(e))
-
-
-@receiver(pre_save, sender=Genre)
-def fetch_beatport_genre_data(sender, instance, **kwargs):
-    print('genre: '+str(instance))
-    if not instance.pk:
-        try:
-            # generate a URL to scrape data
-            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(5, 13)))
-            url = 'http://www.beatport.com/genre/' + text + '/' + str(instance.beatport_genre_id)
-            soup = getSoup(url)
-
-            # extract model fields from data
-            title_line = soup.find('body').find('h1')
-            beatport_data = {
-                'name': title_line.text,
-            }
-            print(beatport_data)
-            
-            # use extractied data to update model fields
-            instance.name = beatport_data['name']
-
-        except Exception as e:
-            print('Error: '+str(e))
-
-
-@receiver(pre_save, sender=Label)
-def fetch_beatport_label_data(sender, instance, **kwargs):
-    print('label: '+str(instance))
-    if not instance.pk:
-        try:
-            # generate a URL to scrape data
-            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(9, 17)))
-            url = 'http://www.beatport.com/label/' + text + '/' + str(instance.beatport_label_id)
-            soup = getSoup(url)
-
-            # extract model fields from data
-            title_line = soup.find('body').find('h1')
-            beatport_data = {
-                'name': title_line.text,
-            }
-            print(beatport_data)
-            
-            # use extractied data to update model fields
-            instance.name = beatport_data['name']
-
-        except Exception as e:
-            print('Error: '+str(e))
-
-
-@receiver(pre_save, sender=Track)
-def fetch_beatport_track_data(sender, instance, **kwargs):
-    if not instance.pk:
-        try:
-            instance = scrape_track(instance)
-        except Exception as e:
-            print('Error: '+str(e))
-
-
-@receiver(post_save, sender=Track)
-def save_m2m_field(sender, instance, created, **kwargs):
-    if created:
-        instance = add_m2m(instance)

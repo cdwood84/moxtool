@@ -321,22 +321,20 @@ class BulkUploadForm(forms.Form):
 
     def save(self, user=None):
         obj_name = self.cleaned_data.get('object_name')
-        try:
-            for id in self.cleaned_data.get('beatport_id_list'):
-                print('starting '+str(id)+' as a '+obj_name)
-                if obj_name == 'artist':
-                    obj, success = scrape_artist(id)
-                elif obj_name == 'genre':
-                    obj, success = scrape_genre(id)
-                elif obj_name == 'label':
-                    obj, success = scrape_label(id)
-                elif obj_name == 'track':
-                    obj, success = scrape_track(id)
-                    if user and success == True:
-                        ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
-                else:
-                    raise ValidationError('Invalid object type processed')
-            return True
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return False
+        for id in self.cleaned_data.get('beatport_id_list'):
+            print('starting '+str(id)+' as a '+obj_name)
+            if obj_name == 'artist':
+                obj, success = scrape_artist(id)
+            elif obj_name == 'genre':
+                obj, success = scrape_genre(id)
+            elif obj_name == 'label':
+                obj, success = scrape_label(id)
+            elif obj_name == 'track':
+                obj, success = scrape_track(id)
+                if user and success == True:
+                    ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
+                    if new_ti:
+                        print('Added '+str(ti)+' for '+str(user))
+            else:
+                raise ValidationError('Invalid object type processed')
+        return True
