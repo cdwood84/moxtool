@@ -481,7 +481,7 @@ class RequestMixin:
             if self.get_field(self.string_by_field):
                 message = 'New ' + model + ' request: ' + self.get_field(self.string_by_field)
             else:
-                message = 'New ' + model + ' request: ' + self.get_field(self.create_by_field)
+                message = 'New ' + model + ' request: ' + str(self.get_field(self.create_by_field))
             try:
                 id_kwarg = {}
                 id_kwarg[self.create_by_field] = self.get_field(self.create_by_field)
@@ -985,7 +985,10 @@ class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
     objects = UserRequestPermissionManager()
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
@@ -1011,7 +1014,7 @@ class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
 
 class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
     beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1019,7 +1022,10 @@ class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
     objects = UserRequestPermissionManager()
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
@@ -1065,10 +1071,19 @@ class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
     objects = UserRequestPermissionManager()
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
-        return reverse('track-request-detail', args=[str(self.id), url_friendly_name])
+        if self.title:
+            url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        else:
+            url_friendly_title = 'tbd'
+        return reverse('track-request-detail', args=[str(self.id), url_friendly_title])
     
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
+                name='request_track_title_or_beatport_id_is_not_null'
+            ),
+        ]
         ordering = [
             'date_requested',
             'title',
