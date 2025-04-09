@@ -135,7 +135,7 @@ class CatalogTestMixin:
             genre=Genre.objects.get(id=1),
             label=Label.objects.get(id=1),
             mix='x',
-            public=False,
+            public=True,
         )
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))

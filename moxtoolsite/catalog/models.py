@@ -130,11 +130,11 @@ class TrackMixin:
                 'equal': True,
             },
             'key': {
-                'type': 'date',
+                'type': 'string',
                 'equal': True,
             },
             'length': {
-                'type': 'date',
+                'type': 'string',
                 'equal': True,
             },
             'public': {
@@ -148,12 +148,12 @@ class TrackMixin:
         return 'beatport_track_id'
     
     def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
+        return ', '.join(str(artist) for artist in self.artist.all())
 
     display_artist.short_description = 'Artist'
     
     def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
+        return ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
 
     display_remix_artist.short_description = 'Remix Artist'
 
@@ -572,7 +572,10 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             return str(self.beatport_artist_id)
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('artist-detail', args=[str(self.id), url_friendly_name])
     
     def get_genre_list(self):
@@ -642,7 +645,10 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             return str(self.beatport_genre_id)
     
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
     
     def get_viewable_tracks_in_genre(self, user):
@@ -712,8 +718,11 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
             return str(self.beatport_label_id)
     
     def get_absolute_url(self):
-        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        return reverse('label-detail', args=[str(self.id), url_friendly_title])
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
+        return reverse('label-detail', args=[str(self.id), url_friendly_name])
     
     def metadata_status(self):
         external_id_none = False
@@ -758,9 +767,9 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
 
 
 class Track(models.Model, SharedModelMixin, TrackMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.', null=True)
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
     title = models.CharField(max_length=200, null=True)
-    mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
+    mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
@@ -789,7 +798,10 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
             return str(self.beatport_track_id)
     
     def get_absolute_url(self):
-        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        if self.title:
+            url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        else:
+            url_friendly_title = 'tbd'
         return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
     def get_viewable_artists_on_track(self, user):
@@ -803,7 +815,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         return viewable_artists.distinct()
     
     def display_viewable_artists(self, user):
-        return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
+        return ', '.join(str(artist) for artist in self.get_viewable_artists_on_track(user))
 
     display_viewable_artists.short_description = 'Artist'
     
@@ -818,13 +830,14 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         return viewable_remix_artists.distinct()
     
     def display_viewable_remix_artists(self, user):
-        return ', '.join(remix_artist.name for remix_artist in self.get_viewable_remix_artists_on_track(user))
+        return ', '.join(str(remix_artist) for remix_artist in self.get_viewable_remix_artists_on_track(user))
 
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
-            return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
+        track = Track.objects.get_queryset_can_view(user).filter(id=self.id).first()
+        if track:
+            return track.genre
         else:
             return None
     
@@ -836,7 +849,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         any_metadata_none = False
 
         # evaluate potentially unset fields
-        if self.beatport_label_id is None:
+        if self.beatport_track_id is None:
             external_id_none = True
         if self.title is None:
             any_metadata_none = True
