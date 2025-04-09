@@ -238,7 +238,7 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         expected_object_name1 = genre1.name
         self.assertEqual(str(genre1), expected_object_name1)
         genre2 = Genre.objects.filter(name__isnull=True).first()
-        expected_object_name2 = str(genre2.beatport_artist_id)
+        expected_object_name2 = str(genre2.beatport_genre_id)
         self.assertEqual(str(genre2), expected_object_name2)
 
     def test_get_absolute_url(self):
@@ -336,7 +336,8 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.client.force_login(self.users['dj'])
         genres_dj = Genre.objects.filter(public=True)
         for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
-            genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
+            if trackinstance.track.genre:
+                genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
         self.assertEqual(set(Genre.objects.get_queryset_can_view(self.users['dj'])), set(genres_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Genre.objects.get_queryset_can_view(self.users['admin'])), set(all_genres))
@@ -355,7 +356,8 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.client.force_login(self.users['dj'])
         genres_dj = Genre.objects.filter(public=True)
         for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
-            genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
+            if trackinstance.track.genre:
+                genres_dj = genres_dj | Genre.objects.filter(id=trackinstance.track.genre.id)
         self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['dj'])), set(genres_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Genre.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_genres))
@@ -398,7 +400,7 @@ class LabelModelTest(TestCase, CatalogTestMixin):
     # fields
 
     def test_beatport_label_id(self):
-        label = Label.objects.filter(beatport_artist_id__isnull=False).first()
+        label = Label.objects.filter(beatport_label_id__isnull=False).first()
         field_label = label._meta.get_field('beatport_label_id').verbose_name
         self.assertEqual(field_label, 'Beatport Label ID')
         help_text = label._meta.get_field('beatport_label_id').help_text
@@ -440,16 +442,24 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         expected_object_name1 = label1.name
         self.assertEqual(str(label1), expected_object_name1)
         label2 = Label.objects.filter(name__isnull=True).first()
-        expected_object_name2 = label2.beatport_label_id
+        expected_object_name2 = str(label2.beatport_label_id)
         self.assertEqual(str(label2), expected_object_name2)
 
     def test_get_absolute_url(self):
-        label = Label.objects.get(name='EnterTheMox')
-        self.assertEqual(label.get_absolute_url(), '/catalog/label/1/enterthemox')
+        label = Label.objects.get(name='Cautionary Tapes')
+        self.assertEqual(label.get_absolute_url(), '/catalog/label/1/cautionary_tapes')
 
-    def test_get_genre_list(self):
-        label = Label.objects.get(name='EnterTheMox')
-        self.assertEqual(label.get_genre_list(), 'House')
+    def test_metadata_status(self):
+        label1 = Label.objects.get(name='Cautionary Tapes')
+        scrape1, remove1, add1 = label1.metadata_status()
+        self.assertFalse(scrape1)
+        self.assertTrue(remove1)
+        self.assertFalse(add1)
+        label2 = Label.objects.get(beatport_label_id=586)
+        scrape2, remove2, add2 = label2.metadata_status()
+        self.assertTrue(scrape2)
+        self.assertFalse(remove2)
+        self.assertFalse(add2)
 
     # Shared model functions
 
@@ -469,7 +479,7 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(label.get_modify_url(), '/catalog/label/modify/1')
 
     def test_add_fields_to_initial(self):
-        label = Label.objects.get(name='EnterTheMox')
+        label = Label.objects.get(name='Cautionary Tapes')
         expected_initial = {
             'beatport_label_id': None,
             'name': label.name,
@@ -497,8 +507,8 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         self.client.force_login(self.users['dj'])
         labels_dj = Label.objects.filter(public=True)
         for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
-            labels_dj = labels_dj | trackinstance.track.label.all()
-            labels_dj = labels_dj | trackinstance.track.remix_label.all()
+            if trackinstance.track.label:
+                labels_dj = labels_dj | Label.objects.filter(id=trackinstance.track.label.id)
         self.assertEqual(set(Label.objects.get_queryset_can_view(self.users['dj'])), set(labels_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Label.objects.get_queryset_can_view(self.users['admin'])), set(all_labels))
@@ -517,8 +527,8 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         self.client.force_login(self.users['dj'])
         labels_dj = Label.objects.filter(public=True)
         for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
-            labels_dj = labels_dj | trackinstance.track.label.all()
-            labels_dj = labels_dj | trackinstance.track.remix_label.all()
+            if trackinstance.track.label:
+                labels_dj = labels_dj | Label.objects.filter(id=trackinstance.track.label.id)
         self.assertEqual(set(Label.objects.get_queryset_can_request_modify(self.users['dj'])), set(labels_dj))
         self.client.force_login(self.users['admin'])
         self.assertEqual(set(Label.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_labels))
@@ -526,17 +536,31 @@ class LabelModelTest(TestCase, CatalogTestMixin):
     def test_display(self):
         self.assertRaises(PermissionDenied, Label.objects.display, self.users['anonymous'])
         dj_labels = Label.objects.get_queryset_can_view(self.users['dj'])
-        dj_label_list = ', '.join(label.name for label in dj_labels)
+        dj_label_list = ', '.join(str(label) for label in dj_labels)
         self.assertEqual(Label.objects.display(self.users['dj']), dj_label_list)
         admin_labels = Label.objects.all()
-        admin_label_list = ', '.join(label.name for label in admin_labels)
+        admin_label_list = ', '.join(str(label) for label in admin_labels)
         self.assertEqual(Label.objects.display(self.users['admin']), admin_label_list)
 
     # test constraints
 
-    # def test_beatport_label_id_if_set_unique(self):
+    def test_beatport_label_id_if_set_unique(self):
+        data = {}
+        duplicates = False
+        for label1 in Label.objects.filter(beatport_label_id__isnull=False):
+            if str(label1.beatport_label_id) not in data:
+                data[str(label1.beatport_label_id)] = 1
+            else:
+                data[str(label1.beatport_label_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        label2 = Label.objects.filter(beatport_label_id__isnull=False).first()
+        self.assertRaises(IntegrityError, Label.objects.create, beatport_label_id=label2.beatport_label_id)
 
-    # def test_label_name_or_beatport_id_is_not_null(self):
+    def test_label_name_or_beatport_id_is_not_null(self):
+        no_labels = Label.objects.filter(beatport_label_id__isnull=True, name__isnull=True)
+        self.assertEqual(no_labels.count(), 0)
+        self.assertRaises(IntegrityError, Label.objects.create, public=True)
 
 
 class TrackModelTest(TestCase, CatalogTestMixin):

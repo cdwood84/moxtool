@@ -498,7 +498,11 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | trackinstance.track.artist.all()
                                 queryset = queryset | trackinstance.track.remix_artist.all()
                             elif shared_model == 'genre':
-                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                                if trackinstance.track.genre:
+                                    queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            elif shared_model == 'label':
+                                if trackinstance.track.label:
+                                    queryset = queryset | Label.objects.filter(id=trackinstance.track.label.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
                 return queryset.distinct()
@@ -540,7 +544,11 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | trackinstance.track.artist.all()
                                 queryset = queryset | trackinstance.track.remix_artist.all()
                             elif shared_model == 'genre':
-                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                                if trackinstance.track.genre:
+                                    queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            elif shared_model == 'label':
+                                if trackinstance.track.label:
+                                    queryset = queryset | Label.objects.filter(id=trackinstance.track.label.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
                     return queryset.distinct()
@@ -692,7 +700,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
    
 
 class Label(models.Model, SharedModelMixin, LabelMixin):
-    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata.', null=True)
+    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata', null=True)
     name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()

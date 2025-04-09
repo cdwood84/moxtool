@@ -9,7 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest
 from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm, BulkUploadForm
 import importlib
 
@@ -221,6 +221,29 @@ class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return GenreRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+    
+
+# label
+
+
+class LabelListView(LoginRequiredMixin, generic.ListView):
+    model = Label
+    context_object_name = 'label_list'
+    template_name = 'catalog/label_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Label.objects.get_queryset_can_view(self.request.user)
+
+
+class LabelDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Label
+    context_object_name = 'label'
+    template_name = "catalog/label_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Label.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
 # track

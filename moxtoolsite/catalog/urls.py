@@ -24,6 +24,11 @@ urlpatterns = [
     # path('artist/create', views.modify_artist, name='create-artist'),
     # path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
 
+    # label
+    path('labels/', views.LabelListView.as_view(), name='labels'),
+    path('label/<int:pk>/<str:name>', views.LabelDetailView.as_view(), name='label-detail'),
+    # path('labelrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),\
+    
     # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
