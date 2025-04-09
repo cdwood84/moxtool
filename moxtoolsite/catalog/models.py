@@ -10,6 +10,7 @@ from django.db.models.functions import Lower
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.urls import reverse
+from .utils import add_m2m, scrape_track
 import os, random, re, requests, string, time, uuid
 
 
@@ -374,10 +375,10 @@ class SharedModelMixin:
             if 'queryset' in str(value_input.__class__).lower():
                 field = getattr(self, field_name)
                 field.set(value_input)
-                self.save(update_fields=['field_name'])
+                self.save(update_fields=[field_name])
             else:
                 setattr(self, field_name, value_input)
-                self.save(update_fields=['field_name'])
+                self.save(update_fields=[field_name])
         except FieldDoesNotExist:
             print(f"Field '{field_name}' does not exist on the model.")
         except ValueError:
@@ -1342,28 +1343,6 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
 # functions
 
 
-def getSoup(url):
-    print(' ** sleeping **')
-    time.sleep(random.randint(9, 17))
-    proxies = os.environ.get('MY_PROXY_LIST').split(',')
-    proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
-    print('trying proxy: '+proxy)
-    user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
-    user_agent = random.choice(user_agents)
-    print('trying user_agent: '+user_agent)
-    print(' ** requesting HTML **')
-    response = requests.get(
-        url, 
-        proxies = {'http': proxy}, 
-        headers = {'User-Agent': user_agent} , 
-        timeout = 12,
-    )
-    response.raise_for_status()
-    html_content = response.text
-    print(' ** returning soup **')
-    return BeautifulSoup(html_content, 'html.parser')
-
-
 @receiver(pre_save, sender=Artist)
 def fetch_beatport_genre_data(sender, instance, **kwargs):
     print('artist: '+str(instance))
@@ -1372,7 +1351,7 @@ def fetch_beatport_genre_data(sender, instance, **kwargs):
             # generate a URL to scrape data
             text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 15)))
             url = 'http://www.beatport.com/artist/' + text + '/' + str(instance.beatport_artist_id)
-            soup = getSoup(url)
+            soup = scrape(url)
 
             # extract model fields from data
             title_line = soup.find('body').find('h1')
@@ -1438,77 +1417,14 @@ def fetch_beatport_label_data(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=Track)
 def fetch_beatport_track_data(sender, instance, **kwargs):
-    print('track: '+str(instance))
     if not instance.pk:
         try:
-            # generate a URL to scrape data
-            text = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(6, 11)))
-            url = 'http://www.beatport.com/track/' + text + '/' + str(instance.beatport_track_id)
-            soup = getSoup(url)
-
-            # extract model fields from data
-            title_line = soup.find('body').find('h1', {'class': lambda x: x and x.startswith('Typography-style__HeadingH1')})
-            beatport_data = {
-                'title': str(title_line).split('>')[1].split('<')[0],
-                'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0],
-                'artists': [],
-                'remix_artists': [],
-            }
-            artist_section = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('Artists-styles__Items')})
-            for section in artist_section:
-                for artist_line in section.findAll('a', href=True):
-                    if 'remix' in str(section).lower():
-                        beatport_data['remix_artists'].append(int(artist_line['href'].split('/')[-1]))
-                    else:
-                        beatport_data['artists'].append(int(artist_line['href'].split('/')[-1]))
-            metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
-            for data in metadata:
-                field = str(data).split('<div>')[1].split('<')[0].replace(':','').lower()
-                if data.find('a'):
-                    beatport_data[field] = int(data.find('a', href=True)['href'].split('/')[-1])
-                else:
-                    beatport_data[field] = str(data).split('<span>')[1].split('<')[0]
-            print(beatport_data)
-            
-            # use extractied data to update model fields
-            instance.title = beatport_data['title']
-            instance.mix = beatport_data['mix']
-            instance.length = beatport_data['length']
-            instance.bpm = beatport_data['bpm']
-            instance.key = beatport_data['key']
-            instance.released = beatport_data['released']
-            genre, new_genre = Genre.objects.get_or_create(beatport_genre_id=beatport_data['genre'])
-            if new_genre is True:
-                print('A new genre was created: '+str(genre))
-            instance.genre = genre
-            label, new_label = Label.objects.get_or_create(beatport_label_id=beatport_data['label'])
-            if new_label is True:
-                print('A new label was created: '+str(label))
-            instance.label = label
-            artist_list = []
-            for a in beatport_data['artists']:
-                artist, new_artist = Artist.objects.get_or_create(beatport_artist_id=a)
-                if new_artist is True:
-                    print('A new artist was created: '+str(artist)) 
-                artist_list.append(artist.id)
-            instance._temp_artists = Artist.objects.filter(id__in=artist_list)
-            remix_artist_list = []
-            for r in beatport_data['remix_artists']:
-                remix_artist, new_remix_artist = Artist.objects.get_or_create(beatport_artist_id=r)
-                if new_remix_artist is True:
-                    print('A new artist was created: '+str(remix_artist))
-                remix_artist_list.append(remix_artist.id)
-            instance._temp_remix_artists = Artist.objects.filter(id__in=remix_artist_list)
-
+            instance = scrape_track(instance)
         except Exception as e:
             print('Error: '+str(e))
 
 
 @receiver(post_save, sender=Track)
 def save_m2m_field(sender, instance, created, **kwargs):
-    if created and hasattr(instance, '_temp_artists'):
-        instance.artist.add(*instance._temp_artists)
-        del instance._temp_artists
-    if created and hasattr(instance, '_temp_remix_artists'):
-        instance.artist.add(*instance._temp_remix_artists)
-        del instance._temp_remix_artists
+    if created:
+        instance = add_m2m(instance)
