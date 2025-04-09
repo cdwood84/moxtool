@@ -3,6 +3,9 @@ from .models import Artist, Genre, Label, Track
 import os, random, requests, string, time
 
 
+# scraping utils
+
+
 def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(3+extra_time, 8+extra_time))
