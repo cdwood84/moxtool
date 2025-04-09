@@ -929,22 +929,22 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     # fields
 
     def test_beatport_artist_id(self):
-        artist = Artist.objects.filter(beatport_artist_id__isnull=False).first()
-        field_label = artist._meta.get_field('beatport_artist_id').verbose_name
+        artistrequest = ArtistRequest.objects.filter(beatport_artist_id__isnull=False).first()
+        field_label = artistrequest._meta.get_field('beatport_artist_id').verbose_name
         self.assertEqual(field_label, 'Beatport Artist ID')
-        help_text = artist._meta.get_field('beatport_artist_id').help_text
+        help_text = artistrequest._meta.get_field('beatport_artist_id').help_text
         self.assertEqual(help_text, 'Artist ID from Beatport, found in the artist URL, which can be used to populate metadata')
 
     def test_name(self):
-        artist = Artist.objects.get(id=1)
-        field_label = artist._meta.get_field('name').verbose_name
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('name').verbose_name
         self.assertEqual(field_label, 'name')
-        max_length = artist._meta.get_field('name').max_length
+        max_length = artistrequest._meta.get_field('name').max_length
         self.assertEqual(max_length, 200)
 
     def test_public(self):
-        artist = Artist.objects.get(id=1)
-        field_label = artist._meta.get_field('public').verbose_name
+        artistrequest = ArtistRequest.objects.get(id=1)
+        field_label = artistrequest._meta.get_field('public').verbose_name
         self.assertEqual(field_label, 'public')
 
     def test_artist(self):
@@ -1117,14 +1117,25 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
-    def test_name_label(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        field_label = genrerequest._meta.get_field('name').verbose_name
-        self.assertEqual(field_label, 'name')
+    def test_beatport_genre_id(self):
+        genrerquest = GenreRequest.objects.filter(beatport_genre_id__isnull=False).first()
+        field_label = genrerquest._meta.get_field('beatport_genre_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Genre ID')
+        help_text = genrerquest._meta.get_field('beatport_genre_id').help_text
+        self.assertEqual(help_text, 'Genre ID from Beatport, found in the genre URL, which can be used to populate metadata')
 
-    def test_public_label(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        field_label = genrerequest._meta.get_field('public').verbose_name
+    def test_name(self):
+        genrerquest = GenreRequest.objects.get(id=1)
+        field_label = genrerquest._meta.get_field('name').verbose_name
+        self.assertEqual(field_label, 'name')
+        max_length = genrerquest._meta.get_field('name').max_length
+        self.assertEqual(max_length, 200)
+        help_text = genrerquest._meta.get_field('name').help_text
+        self.assertEqual(help_text, 'Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)')
+
+    def test_public(self):
+        genrerquest = GenreRequest.objects.get(id=1)
+        field_label = genrerquest._meta.get_field('public').verbose_name
         self.assertEqual(field_label, 'public')
 
     def test_genre_label(self):
@@ -1132,20 +1143,15 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
         field_label = genrerequest._meta.get_field('genre').verbose_name
         self.assertEqual(field_label, 'genre')
 
-    def test_user_label(self):
+    def test_user(self):
         genrerequest = GenreRequest.objects.get(id=1)
         field_label = genrerequest._meta.get_field('user').verbose_name
         self.assertEqual(field_label, 'user')
 
-    def test_date_requested_label(self):
+    def test_date_requested(self):
         genrerequest = GenreRequest.objects.get(id=1)
         field_label = genrerequest._meta.get_field('date_requested').verbose_name
         self.assertEqual(field_label, 'date requested')
-
-    def test_name_max_length(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        max_length = genrerequest._meta.get_field('name').max_length
-        self.assertEqual(max_length, 200)
 
     # mixin fields
 
@@ -1160,34 +1166,63 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
     def test_create_by_property(self):
         genrerequest = GenreRequest.objects.get(id=1)
         create_by = genrerequest.create_by_field
-        self.assertEqual(create_by, 'name')
+        self.assertEqual(create_by, 'beatport_genre_id')
+
+    def test_string_by_property(self):
+        genrerequest = GenreRequest.objects.get(id=1)
+        string_by = genrerequest.string_by_field
+        self.assertEqual(string_by, 'name')
 
     # GenreRequest specific functions
-
-    def test_object_string_is_request(self):
-        for genrerequest in GenreRequest.objects.all():
-            if genrerequest.genre:
-                expected_object_string = 'Modify genre request: ' + genrerequest.genre.name
-                if genrerequest.name != genrerequest.genre.name:
-                    expected_object_string = expected_object_string + ', change name to ' + genrerequest.name
-                if genrerequest.public != genrerequest.genre.public:
-                    expected_object_string = expected_object_string + ', change public to ' + str(genrerequest.public)
-                if ',' not in expected_object_string:
-                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
-            else:
-                expected_object_string = 'New genre request: ' + genrerequest.name
-                try:
-                    genre = Genre.objects.get(name=genrerequest.name)
-                except:
-                    genre = None
-                if genre:
-                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
-            self.assertEqual(str(genrerequest), expected_object_string)
 
     def test_get_absolute_url(self):
         for genrerequest in GenreRequest.objects.all():
             expected_url = '/catalog/genrerequest/' + str(genrerequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', genrerequest.name.lower())
             self.assertEqual(genrerequest.get_absolute_url(), expected_url)
+
+    # Request model functions
+
+    def test_model_name(self):
+        genrerequest = GenreRequest.objects.get(id=1)
+        model_name = genrerequest.model_name
+        self.assertEqual(model_name, 'genre')
+
+    def test_field_substr(self):
+        genrerequest1 = GenreRequest.objects.get(id=1)
+        expected_text1 = ', change name to ' + genrerequest1.name
+        self.assertEqual(genrerequest1.field_substr('', 'name'), expected_text1)
+        self.assertEqual(genrerequest1.field_substr('', 'public'), '')
+        genrerequest2 = GenreRequest.objects.get(id=2)
+        expected_text2 = ', change name to ' + genrerequest2.name
+        expected_text3 = ', change public to ' + str(genrerequest2.public)
+        self.assertEqual(genrerequest2.field_substr('', 'name'), expected_text2)
+        self.assertEqual(genrerequest2.field_substr('', 'public'), expected_text3)
+
+    def test_object_string(self):
+        for genrerequest in GenreRequest.objects.all():
+            if genrerequest.artist:
+                expected_object_string = 'Modify artist request: ' + str(genrerequest.artist)
+                for field in genrerequest.useful_field_list:
+                    expected_object_string = genrerequest.field_substr(expected_object_string, field)
+                if ',' not in expected_object_string:
+                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+            else:
+                if genrerequest.name:
+                    expected_object_string = 'New artist request: ' + genrerequest.name
+                else:
+                    expected_object_string = 'New artist request: ' + genrerequest.beatport_artist_id
+                try:
+                    artist = Artist.objects.get(beatport_artist_id=genrerequest.beatport_artist_id)
+                except:
+                    artist = None
+                if artist is None:
+                    try:
+                        artist = Artist.objects.get(name=genrerequest.name)
+                    except:
+                        artist = None
+                if artist:
+                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+            self.assertEqual(str(genrerequest), expected_object_string)
 
     # Shared model functions
 
@@ -1254,6 +1289,16 @@ class GenreRequestModelTest(TestCase, CatalogTestMixin):
         admin_genrerequests = GenreRequest.objects.all()
         admin_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in admin_genrerequests)
         self.assertEqual(GenreRequest.objects.display(self.users['admin']), admin_genrerequest_list)
+
+    # test constraints
+
+    def test_request_genre_name_or_beatport_id_is_not_null(self):
+        no_genre_requests = GenreRequest.objects.filter(beatport_genre_id__isnull=True, name__isnull=True)
+        self.assertEqual(no_genre_requests.count(), 0)
+        self.assertRaises(IntegrityError, GenreRequest.objects.create, public=True)
+
+
+# class LabelRequestModelTest(TestCase, CatalogTestMixin):
 
 
 class TrackRequestModelTest(TestCase, CatalogTestMixin):

@@ -1023,6 +1023,12 @@ class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
         return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
+                name='request_genre_name_or_beatport_id_is_not_null'
+            ),
+        ]
         ordering = [
             'date_requested',
             'name',
@@ -1035,6 +1041,9 @@ class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
             ('moxtool_can_modify_own_genrerequest', 'GenreRequest - Modify Own - DJ'),
             ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
         )
+
+
+# class LabelRequest(RequestMixin, models.Model, SharedModelMixin, LabelMixin):
 
 
 class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
