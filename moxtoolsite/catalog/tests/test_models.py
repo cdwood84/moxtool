@@ -1312,65 +1312,96 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
-    def test_beatport_track_id_label(self):
+    def test_beatport_track_id(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('beatport_track_id').verbose_name
         self.assertEqual(field_label, 'Beatport Track ID')
+        help_text = trackrequest._meta.get_field('beatport_track_id').help_text
+        self.assertEqual(help_text, 'Track ID from Beatport, found in the track URL, which can be used to populate metadata')
 
-    def test_title_label(self):
+    def test_title(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('title').verbose_name
         self.assertEqual(field_label, 'title')
+        max_length = trackrequest._meta.get_field('title').max_length
+        self.assertEqual(max_length, 200)
 
-    def test_genre_label(self):
+    def test_mix(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('mix').verbose_name
+        self.assertEqual(field_label, 'mix')
+        max_length = trackrequest._meta.get_field('mix').max_length
+        self.assertEqual(max_length, 200)
+        help_text = trackrequest._meta.get_field('mix').help_text
+        self.assertEqual(help_text, 'The mix version of the track (e.g. Original Mix, Remix, etc.)')
+
+    def test_artist(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('artist').verbose_name
+        self.assertEqual(field_label, 'artist')
+        help_text = trackrequest._meta.get_field('artist').help_text
+        self.assertEqual(help_text, 'Select an artist for this track')
+
+    def test_remix_artist(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('remix_artist').verbose_name
+        self.assertEqual(field_label, 'remix artist')
+        help_text = trackrequest._meta.get_field('remix_artist').help_text
+        self.assertEqual(help_text, 'Select a remix artist for this track')
+
+    def test_genre(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('genre').verbose_name
         self.assertEqual(field_label, 'genre')
 
-    def test_artist_label(self):
+    def test_label(self):
         trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('artist').verbose_name
-        self.assertEqual(field_label, 'artist')
+        field_label = trackrequest._meta.get_field('label').verbose_name
+        self.assertEqual(field_label, 'label')
 
-    def test_remix_artist_label(self):
+    def test_length(self):
         trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('remix_artist').verbose_name
-        self.assertEqual(field_label, 'remix artist')
+        field_label = trackrequest._meta.get_field('length').verbose_name
+        self.assertEqual(field_label, 'length')
+        max_length = trackrequest._meta.get_field('length').max_length
+        self.assertEqual(max_length, 5)
 
-    def test_mix_label(self):
+    def test_released(self):
         trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('mix').verbose_name
-        self.assertEqual(field_label, 'mix')
+        field_label = trackrequest._meta.get_field('released').verbose_name
+        self.assertEqual(field_label, 'released')
 
-    def test_public_label(self):
+    def test_bpm(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('bpm').verbose_name
+        self.assertEqual(field_label, 'bpm')
+
+    def test_key(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        field_label = trackrequest._meta.get_field('key').verbose_name
+        self.assertEqual(field_label, 'key')
+        max_length = trackrequest._meta.get_field('key').max_length
+        self.assertEqual(max_length, 8)
+
+    def test_public(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('public').verbose_name
         self.assertEqual(field_label, 'public')
 
-    def test_track_label(self):
+    def test_track(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('track').verbose_name
         self.assertEqual(field_label, 'track')
 
-    def test_user_label(self):
+    def test_user(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('user').verbose_name
         self.assertEqual(field_label, 'user')
 
-    def test_date_requested_label(self):
+    def test_date_requested(self):
         trackrequest = TrackRequest.objects.get(id=1)
         field_label = trackrequest._meta.get_field('date_requested').verbose_name
         self.assertEqual(field_label, 'date requested')
-
-    def test_title_max_length(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        max_length = trackrequest._meta.get_field('title').max_length
-        self.assertEqual(max_length, 200)
-
-    def test_mix_max_length(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        max_length = trackrequest._meta.get_field('mix').max_length
-        self.assertEqual(max_length, 12)
 
     # mixin fields
 
@@ -1381,14 +1412,24 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         self.assertTrue(useful_field_list['beatport_track_id']['equal'])
         self.assertEqual(useful_field_list['title']['type'], 'string')
         self.assertTrue(useful_field_list['title']['equal'])
-        self.assertEqual(useful_field_list['genre']['type'], 'model')
-        self.assertTrue(useful_field_list['genre']['equal'])
+        self.assertEqual(useful_field_list['mix']['type'], 'string')
+        self.assertTrue(useful_field_list['mix']['equal'])
         self.assertEqual(useful_field_list['artist']['type'], 'queryset')
         self.assertTrue(useful_field_list['artist']['equal'])
         self.assertEqual(useful_field_list['remix_artist']['type'], 'queryset')
         self.assertTrue(useful_field_list['remix_artist']['equal'])
-        self.assertEqual(useful_field_list['mix']['type'], 'string')
-        self.assertTrue(useful_field_list['mix']['equal'])
+        self.assertEqual(useful_field_list['genre']['type'], 'model')
+        self.assertTrue(useful_field_list['genre']['equal'])
+        self.assertEqual(useful_field_list['label']['type'], 'model')
+        self.assertTrue(useful_field_list['label']['equal'])
+        self.assertEqual(useful_field_list['length']['type'], 'string')
+        self.assertTrue(useful_field_list['length']['equal'])
+        self.assertEqual(useful_field_list['released']['type'], 'date')
+        self.assertTrue(useful_field_list['released']['equal'])
+        self.assertEqual(useful_field_list['bpm']['type'], 'integer')
+        self.assertTrue(useful_field_list['bpm']['equal'])
+        self.assertEqual(useful_field_list['key']['type'], 'string')
+        self.assertTrue(useful_field_list['key']['equal'])
         self.assertEqual(useful_field_list['public']['type'], 'boolean')
         self.assertFalse(useful_field_list['public']['equal'])
 
@@ -1397,14 +1438,19 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         create_by = trackrequest.create_by_field
         self.assertEqual(create_by, 'beatport_track_id')
 
+    def test_string_by_property(self):
+        trackrequest = TrackRequest.objects.get(id=1)
+        string_by = trackrequest.string_by_field
+        self.assertEqual(string_by, 'title')
+
     def test_display_artist(self):
         for trackrequest in TrackRequest.objects.all():
-            expected_artists = ', '.join(artist.name for artist in trackrequest.artist.all())
+            expected_artists = ', '.join(str(artist) for artist in trackrequest.artist.all())
             self.assertEqual(trackrequest.display_artist(), expected_artists)
 
     def test_display_remix_artist(self):
         for trackrequest in TrackRequest.objects.all():
-            expected_remix_artists = ', '.join(artist.name for artist in trackrequest.remix_artist.all())
+            expected_remix_artists = ', '.join(str(artist) for artist in trackrequest.remix_artist.all())
             self.assertEqual(trackrequest.display_remix_artist(), expected_remix_artists)
 
     def test_field_substr(self):
@@ -1420,17 +1466,26 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
     def test_object_string(self):
         for trackrequest in TrackRequest.objects.all():
             if trackrequest.track:
-                expected_object_string = 'Modify track request: ' + trackrequest.track.title
+                expected_object_string = 'Modify track request: ' + str(trackrequest.track)
                 for field in trackrequest.useful_field_list:
                     expected_object_string = trackrequest.field_substr(expected_object_string, field)
                 if ',' not in expected_object_string:
                     expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
             else:
-                expected_object_string = 'New track request: ' + trackrequest.title
+                if trackrequest.title:
+                    expected_object_string = 'New track request: ' + trackrequest.title
+                else:
+
+                    expected_object_string = 'New track request: ' + str(trackrequest.beatport_track_id)
                 try:
                     track = Track.objects.get(beatport_track_id=trackrequest.beatport_track_id)
                 except:
                     track = None
+                if track is None:
+                    try:
+                        track = Track.objects.get(title=trackrequest.title)
+                    except:
+                        track = None
                 if track:
                     expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
             self.assertEqual(str(trackrequest), expected_object_string)
@@ -1464,16 +1519,21 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
             expected_initial = {
                 'beatport_track_id': trackrequest.beatport_track_id,
                 'title': trackrequest.title,
-                'genre_name': trackrequest.genre.name,
                 'mix': trackrequest.mix,
+                'bpm': trackrequest.bpm,
+                'key': trackrequest.key,
+                'length': trackrequest.length,
+                'released': trackrequest.released,
                 'public': trackrequest.public,
             }
-            artists = trackrequest.display_artist()
-            if len(artists) > 0:
-                expected_initial['artist_names'] = artists
-            remix_artists = trackrequest.display_remix_artist()
-            if len(remix_artists) > 0:
-                expected_initial['remix_artist_names'] = remix_artists
+            if trackrequest.genre:
+                expected_initial['genre_beatport_genre_id'] = trackrequest.genre.beatport_genre_id
+            if trackrequest.label:
+                expected_initial['label_beatport_label_id'] = trackrequest.label.beatport_label_id
+            if trackrequest.artist.count() > 0:
+                expected_initial['artist_beatport_artist_ids'] = ', '.join(str(artist.beatport_artist_id) for artist in trackrequest.artist.all())
+            if trackrequest.remix_artist.count() > 0:
+                expected_initial['remix_artist_beatport_artist_ids'] = ', '.join(str(remix_artist.beatport_artist_id) for remix_artist in trackrequest.remix_artist.all())
             self.assertEqual(trackrequest.add_fields_to_initial({}), expected_initial)
 
     def test_is_equivalent(self):
@@ -1516,6 +1576,13 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         admin_trackrequests = TrackRequest.objects.all()
         admin_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in admin_trackrequests)
         self.assertEqual(TrackRequest.objects.display(self.users['admin']), admin_trackrequest_list)
+
+    # test constraints
+
+    def test_request_track_title_or_beatport_id_is_not_null(self):
+        no_track_requests = TrackRequest.objects.filter(beatport_track_id__isnull=True, title__isnull=True)
+        self.assertEqual(no_track_requests.count(), 0)
+        self.assertRaises(IntegrityError, TrackRequest.objects.create, public=True)
 
 
 # user models

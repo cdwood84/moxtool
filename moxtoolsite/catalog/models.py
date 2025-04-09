@@ -417,11 +417,12 @@ class SharedModelMixin:
         for field, data in self.useful_field_list.items():
             if data['type'] == 'model':
                 obj = self.get_field(field)
-                initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
+                if obj:
+                    initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
             elif data['type'] == 'queryset':
                 obj_set = self.get_field(field)
                 if obj_set.count() >= 1:
-                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
+                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj.get_field(obj.create_by_field)) for obj in obj_set.all())
             else:
                 initial[field] = self.get_field(field)
         return initial
@@ -1053,9 +1054,9 @@ class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
 
 
 class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.', null=True)
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
     title = models.CharField(max_length=200, null=True)
-    mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
+    mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist")
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
