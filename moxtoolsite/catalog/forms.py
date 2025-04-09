@@ -4,6 +4,7 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Track, TrackInstance, TrackRequest
+from .utils import scrape_artist, scrape_genre, scrape_label, scrape_track
 import datetime, os, random, string, requests, time
 
 
@@ -320,28 +321,21 @@ class BulkUploadForm(forms.Form):
 
     def save(self, user=None):
         obj_name = self.cleaned_data.get('object_name')
-        print('trying '+obj_name+' upload using '+str(os.environ.get('MY_PROXY')))
         try:
             for id in self.cleaned_data.get('beatport_id_list'):
                 print('starting '+str(id)+' as a '+obj_name)
                 if obj_name == 'artist':
-                    obj, new_obj = Artist.objects.get_or_create(beatport_artist_id=id)
+                    obj, success = scrape_artist(id)
                 elif obj_name == 'genre':
-                    obj, new_obj = Genre.objects.get_or_create(beatport_genre_id=id)
+                    obj, success = scrape_genre(id)
                 elif obj_name == 'label':
-                    obj, new_obj = Label.objects.get_or_create(beatport_label_id=id)
+                    obj, success = scrape_label(id)
                 elif obj_name == 'track':
-                    obj, new_obj = Track.objects.get_or_create(beatport_track_id=id)
-                    print(new_obj)
-                    print(user)
-                    if user:
+                    obj, success = scrape_track(id)
+                    if user and success == True:
                         ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
                 else:
                     raise ValidationError('Invalid object type processed')
-                if obj and new_obj is True:
-                    print('New '+obj_name+' created: '+str(obj))
-                if ti and new_ti is True:
-                    print('New track instance created: '+str(obj)+' for '+str(user))
             return True
         except Exception as e:
             print(f"An error occurred: {e}")

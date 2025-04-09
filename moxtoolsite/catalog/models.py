@@ -434,6 +434,50 @@ class SharedModelMixin:
         else:
             return False
 
+    def metadata_status(self):
+        external_id_set = False
+        any_metadata_none = False
+        for field, data in self.useful_field_list.items():
+            value = self.get_field(field)
+            if field.startswith('beatport'):
+                if value is not None:
+                    external_id_set = True
+            # required edge case for remiox artist to be None
+            elif field == 'remix_artist':
+                if value.count() < 1 and 'remix' in self.mix.lower():
+                    any_metadata_none = True
+            elif field != 'public':
+                if data['type'] == 'queryset':
+                    if value.count() < 1:
+                        any_metadata_none = True
+                else:
+                    if value is None:
+                        any_metadata_none = True
+        if external_id_set == True:
+            if any_metadata_none == True:
+                scrape = True
+                add = False
+                if self.public == True:
+                    remove = True
+                else:
+                    remove = False
+            else:
+                scrape = False
+                remove = False
+                if self.public == True:
+                    add = False
+                else:
+                    add = True
+        else:
+            scrape = False
+            add = False
+            if self.public == True:
+                remove = True
+            else:
+                remove = False
+        return scrape, remove, add
+
+
 
 # shared models with permissions manager
 
