@@ -38,6 +38,10 @@ class ArtistMixin:
     @property
     def create_by_field(self):
         return 'beatport_artist_id'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
 
 
 class GenreMixin:
@@ -62,6 +66,10 @@ class GenreMixin:
     @property
     def create_by_field(self):
         return 'beatport_genre_id'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
 
 
 class LabelMixin:
@@ -86,6 +94,10 @@ class LabelMixin:
     @property
     def create_by_field(self):
         return 'beatport_label_id'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
 
 
 class TrackMixin:
@@ -146,6 +158,10 @@ class TrackMixin:
     @property
     def create_by_field(self):
         return 'beatport_track_id'
+    
+    @property
+    def string_by_field(self):
+        return 'title'
     
     def display_artist(self):
         return ', '.join(str(artist) for artist in self.artist.all())
@@ -436,7 +452,6 @@ class RequestMixin:
     @property
     def model_name(self):
         value = self.__class__.__name__.lower().replace('request', '')
-        print(value)
         return value
 
     def field_substr(self, message, field_name):
@@ -455,18 +470,33 @@ class RequestMixin:
 
     def __str__(self):
         model = self.model_name
-        if self.get_field(self.model):
-            message = 'Modify ' + model + ' request: ' + str(self.get_field(self.model))
+        ex_obj = self.get_field(model)
+        if ex_obj:
+            message = 'Modify ' + model + ' request: ' + str(ex_obj)
             for field in self.useful_field_list:
                 message = self.field_substr(message, field)
             if ',' not in message:
                 message += ' (NO CHANGES FOUND)'
         else:
-            message = 'New ' + model + ' request: ' + str(self.get_field(self.model))
+            if self.get_field(self.string_by_field):
+                message = 'New ' + model + ' request: ' + self.get_field(self.string_by_field)
+            else:
+                message = 'New ' + model + ' request: ' + self.get_field(self.create_by_field)
             try:
-                obj = Artist.objects.get(name=self.name)
-            except:
+                id_kwarg = {}
+                id_kwarg[self.create_by_field] = self.get_field(self.create_by_field)
+                obj = apps.get_model('catalog', model.title()).objects.get(**id_kwarg)
+            except Exception as e:
+                print('Error: ' + str(e))
                 obj = None
+            if obj is None:
+                try:
+                    string_kwarg = {}
+                    string_kwarg[self.string_by_field] = self.get_field(self.string_by_field)
+                    obj = apps.get_model('catalog', model.title()).objects.get(**string_kwarg)
+                except Exception as e:
+                    print('Error: ' + str(e))
+                    obj = None
             if obj:
                 message += ' (ALREADY EXISTS)'
         return message
@@ -945,7 +975,7 @@ class UserRequestPermissionManager(models.Manager):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
     
 
-class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin, RequestMixin):
+class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
     beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata', null=True)
     name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
@@ -979,7 +1009,7 @@ class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin, RequestMixin):
         )
 
 
-class GenreRequest(models.Model, SharedModelMixin, GenreMixin, RequestMixin):
+class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
     beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
@@ -1007,7 +1037,7 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin, RequestMixin):
         )
 
 
-class TrackRequest(models.Model, SharedModelMixin, TrackMixin, RequestMixin):
+class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
     beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.', null=True)
     title = models.CharField(max_length=200, null=True)
     mix = models.CharField(max_length=200, help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)

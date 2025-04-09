@@ -56,6 +56,11 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         create_by = artist.create_by_field
         self.assertEqual(create_by, 'beatport_artist_id')
 
+    def test_string_by_property(self):
+        artist = Artist.objects.get(id=1)
+        string_by = artist.string_by_field
+        self.assertEqual(string_by, 'name')
+
     # Artist specific functions
 
     def test_object_string(self):
@@ -231,6 +236,11 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         create_by = genre.create_by_field
         self.assertEqual(create_by, 'beatport_genre_id')
 
+    def test_string_by_property(self):
+        genre = Genre.objects.get(id=1)
+        string_by = genre.string_by_field
+        self.assertEqual(string_by, 'name')
+
     # Genre specific functions
 
     def test_object_string(self):
@@ -265,8 +275,8 @@ class GenreModelTest(TestCase, CatalogTestMixin):
                 artists_admin = artists_admin | track.artist.all()
                 artists_admin = artists_admin | track.remix_artist.all()
                 if track.public is True:
-                    artists_dj = artists_dj | track.artist.filter(public=True)
-                    artists_dj = artists_dj | track.remix_artist.filter(public=True)
+                    artists_dj = artists_dj | track.artist.all()
+                    artists_dj = artists_dj | track.remix_artist.all()
             for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
                 if trackinstance.track.genre == genre:
                     artists_dj = artists_dj | trackinstance.track.artist.all()
@@ -434,6 +444,11 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         label = Label.objects.get(id=1)
         create_by = label.create_by_field
         self.assertEqual(create_by, 'beatport_label_id')
+
+    def test_string_by_property(self):
+        label = Label.objects.get(id=1)
+        string_by = label.string_by_field
+        self.assertEqual(string_by, 'name')
 
     # Label specific functions
 
@@ -681,6 +696,11 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         create_by = track.create_by_field
         self.assertEqual(create_by, 'beatport_track_id')
 
+    def test_string_by_property(self):
+        track = Track.objects.get(id=1)
+        string_by = track.string_by_field
+        self.assertEqual(string_by, 'title')
+
     def test_display_artist(self):
         for track in Track.objects.all():
             expected_artists = ', '.join(str(artist) for artist in track.artist.all())
@@ -908,41 +928,47 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
-    def test_name_label(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('name').verbose_name
-        self.assertEqual(field_label, 'name')
+    def test_beatport_artist_id(self):
+        artist = Artist.objects.filter(beatport_artist_id__isnull=False).first()
+        field_label = artist._meta.get_field('beatport_artist_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Artist ID')
+        help_text = artist._meta.get_field('beatport_artist_id').help_text
+        self.assertEqual(help_text, 'Artist ID from Beatport, found in the artist URL, which can be used to populate metadata')
 
-    def test_public_label(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('public').verbose_name
+    def test_name(self):
+        artist = Artist.objects.get(id=1)
+        field_label = artist._meta.get_field('name').verbose_name
+        self.assertEqual(field_label, 'name')
+        max_length = artist._meta.get_field('name').max_length
+        self.assertEqual(max_length, 200)
+
+    def test_public(self):
+        artist = Artist.objects.get(id=1)
+        field_label = artist._meta.get_field('public').verbose_name
         self.assertEqual(field_label, 'public')
 
-    def test_artist_label(self):
+    def test_artist(self):
         artistrequest = ArtistRequest.objects.get(id=1)
         field_label = artistrequest._meta.get_field('artist').verbose_name
         self.assertEqual(field_label, 'artist')
 
-    def test_user_label(self):
+    def test_user(self):
         artistrequest = ArtistRequest.objects.get(id=1)
         field_label = artistrequest._meta.get_field('user').verbose_name
         self.assertEqual(field_label, 'user')
 
-    def test_date_requested_label(self):
+    def test_date_requested(self):
         artistrequest = ArtistRequest.objects.get(id=1)
         field_label = artistrequest._meta.get_field('date_requested').verbose_name
         self.assertEqual(field_label, 'date requested')
-
-    def test_name_max_length(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        max_length = artistrequest._meta.get_field('name').max_length
-        self.assertEqual(max_length, 200)
 
     # mixin fields
 
     def test_useful_field_list_property(self):
         artistrequest = ArtistRequest.objects.get(id=1)
         useful_field_list = artistrequest.useful_field_list
+        self.assertEqual(useful_field_list['beatport_artist_id']['type'], 'integer')
+        self.assertTrue(useful_field_list['beatport_artist_id']['equal'])
         self.assertEqual(useful_field_list['name']['type'], 'string')
         self.assertTrue(useful_field_list['name']['equal'])
         self.assertEqual(useful_field_list['public']['type'], 'boolean')
@@ -951,34 +977,63 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     def test_create_by_property(self):
         artistrequest = ArtistRequest.objects.get(id=1)
         create_by = artistrequest.create_by_field
-        self.assertEqual(create_by, 'name')
+        self.assertEqual(create_by, 'beatport_artist_id')
+
+    def test_string_by_property(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        string_by = artistrequest.string_by_field
+        self.assertEqual(string_by, 'name')
 
     # ArtistRequest specific functions
-
-    def test_object_string_is_request(self):
-        for artistrequest in ArtistRequest.objects.all():
-            if artistrequest.artist:
-                expected_object_string = 'Modify artist request: ' + artistrequest.artist.name
-                if artistrequest.name != artistrequest.artist.name:
-                    expected_object_string = expected_object_string + ', change name to ' + artistrequest.name
-                if artistrequest.public != artistrequest.artist.public:
-                    expected_object_string = expected_object_string + ', change public to ' + str(artistrequest.public)
-                if ',' not in expected_object_string:
-                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
-            else:
-                expected_object_string = 'New artist request: ' + artistrequest.name
-                try:
-                    artist = Artist.objects.get(name=artistrequest.name)
-                except:
-                    artist = None
-                if artist:
-                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
-            self.assertEqual(str(artistrequest), expected_object_string)
 
     def test_get_absolute_url(self):
         for artistrequest in ArtistRequest.objects.all():
             expected_url = '/catalog/artistrequest/' + str(artistrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', artistrequest.name.lower())
             self.assertEqual(artistrequest.get_absolute_url(), expected_url)
+
+    # Request model functions
+
+    def test_model_name(self):
+        artistrequest = ArtistRequest.objects.get(id=1)
+        model_name = artistrequest.model_name
+        self.assertEqual(model_name, 'artist')
+
+    def test_field_substr(self):
+        artistrequest1 = ArtistRequest.objects.get(id=1)
+        expected_text1 = ', change name to ' + artistrequest1.name
+        self.assertEqual(artistrequest1.field_substr('', 'name'), expected_text1)
+        self.assertEqual(artistrequest1.field_substr('', 'public'), '')
+        artistrequest2 = ArtistRequest.objects.get(id=2)
+        expected_text2 = ', change name to ' + artistrequest2.name
+        expected_text3 = ', change public to ' + str(artistrequest2.public)
+        self.assertEqual(artistrequest2.field_substr('', 'name'), expected_text2)
+        self.assertEqual(artistrequest2.field_substr('', 'public'), expected_text3)
+
+    def test_object_string(self):
+        for artistrequest in ArtistRequest.objects.all():
+            if artistrequest.artist:
+                expected_object_string = 'Modify artist request: ' + str(artistrequest.artist)
+                for field in artistrequest.useful_field_list:
+                    expected_object_string = artistrequest.field_substr(expected_object_string, field)
+                if ',' not in expected_object_string:
+                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+            else:
+                if artistrequest.name:
+                    expected_object_string = 'New artist request: ' + artistrequest.name
+                else:
+                    expected_object_string = 'New artist request: ' + artistrequest.beatport_artist_id
+                try:
+                    artist = Artist.objects.get(beatport_artist_id=artistrequest.beatport_artist_id)
+                except:
+                    artist = None
+                if artist is None:
+                    try:
+                        artist = Artist.objects.get(name=artistrequest.name)
+                    except:
+                        artist = None
+                if artist:
+                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+            self.assertEqual(str(artistrequest), expected_object_string)
 
     # Shared model functions
 
@@ -1000,6 +1055,7 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     def test_add_fields_to_initial(self):
         for artistrequest in ArtistRequest.objects.all():
             expected_initial = {
+                'beatport_artist_id': artistrequest.beatport_artist_id,
                 'name': artistrequest.name,
                 'public': artistrequest.public,
             }
@@ -1045,6 +1101,13 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
         admin_artistrequests = ArtistRequest.objects.all()
         admin_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in admin_artistrequests)
         self.assertEqual(ArtistRequest.objects.display(self.users['admin']), admin_artistrequest_list)
+
+    # test constraints
+
+    def test_request_artist_name_or_beatport_id_is_not_null(self):
+        no_artist_requests = ArtistRequest.objects.filter(beatport_artist_id__isnull=True, name__isnull=True)
+        self.assertEqual(no_artist_requests.count(), 0)
+        self.assertRaises(IntegrityError, ArtistRequest.objects.create, public=True)
 
 
 class GenreRequestModelTest(TestCase, CatalogTestMixin):
@@ -1295,8 +1358,6 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
             expected_remix_artists = ', '.join(artist.name for artist in trackrequest.remix_artist.all())
             self.assertEqual(trackrequest.display_remix_artist(), expected_remix_artists)
 
-    # TrackRequest specific functions
-
     def test_field_substr(self):
         trackrequest1 = TrackRequest.objects.get(id=1)
         expected_text1 = ', change title to ' + trackrequest1.title
@@ -1307,7 +1368,7 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(trackrequest2.field_substr('', 'title'), '')
         self.assertEqual(trackrequest2.field_substr('', 'public'), expected_text2)
 
-    def test_object_string_is_request(self):
+    def test_object_string(self):
         for trackrequest in TrackRequest.objects.all():
             if trackrequest.track:
                 expected_object_string = 'Modify track request: ' + trackrequest.track.title
@@ -1324,6 +1385,8 @@ class TrackRequestModelTest(TestCase, CatalogTestMixin):
                 if track:
                     expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
             self.assertEqual(str(trackrequest), expected_object_string)
+
+    # TrackRequest specific functions
 
     def test_get_absolute_url(self):
         for trackrequest in TrackRequest.objects.all():
