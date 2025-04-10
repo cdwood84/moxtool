@@ -929,7 +929,7 @@ class ArtistRequestModelTest(TestCase, CatalogTestMixin):
     # fields
 
     def test_beatport_artist_id(self):
-        artistrequest = ArtistRequest.objects.filter(beatport_artist_id__isnull=False).first()
+        artistrequest = ArtistRequest.objects.first()
         field_label = artistrequest._meta.get_field('beatport_artist_id').verbose_name
         self.assertEqual(field_label, 'Beatport Artist ID')
         help_text = artistrequest._meta.get_field('beatport_artist_id').help_text
@@ -1779,7 +1779,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
 #wip
 # class SetListItemModelTest(TestCase, CatalogTestMixin):
 
-#wip
+
 class TagModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1989,7 +1989,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         tag2 = Tag.objects.first()
         self.assertRaises(IntegrityError, Tag.objects.create, user=tag2.user, value=tag2.value, type=tag2.type)
 
-#wip
+
 class TrackInstanceModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -2076,25 +2076,37 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
         create_by = trackinstance.create_by_field
         self.assertEqual(create_by, 'track')
 
+    def test_string_by_property(self):
+        trackinstance = TrackInstance.objects.first()
+        string_by = trackinstance.string_by_field
+        self.assertEqual(string_by, 'track')
+
     # TrackInstance specific functions
 
     def test_object_string_is_request(self):
         for trackinstance in TrackInstance.objects.all():
-            self.assertEqual(str(trackinstance), trackinstance.track.title)
+            if trackinstance.track.title:
+                self.assertEqual(str(trackinstance), trackinstance.track.title)
+            else:
+                self.assertEqual(str(trackinstance), str(trackinstance.track.beatport_track_id))
 
     def test_get_absolute_url(self):
         for trackinstance in TrackInstance.objects.all():
-            expected_url = '/catalog/track/' + str(trackinstance.track.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', trackinstance.track.title.lower())
+            if trackinstance.track.title:
+                text = re.sub(r'[^a-zA-Z0-9]', '_', trackinstance.track.title.lower())
+            else:
+                text = 'tbd'
+            expected_url = '/catalog/track/' + str(trackinstance.track.id) + '/' + text
             self.assertEqual(trackinstance.get_absolute_url(), expected_url)
 
     def test_get_track_display_artist(self):
         for trackinstance in TrackInstance.objects.all():
-            expected_artists = ', '.join(artist.name for artist in trackinstance.track.artist.all())
+            expected_artists = ', '.join(str(artist) for artist in trackinstance.track.artist.all())
             self.assertEqual(trackinstance.get_track_display_artist(), expected_artists)
 
     def test_get_track_display_remix_artist(self):
         for trackinstance in TrackInstance.objects.all():
-            expected_remix_artists = ', '.join(remix_artist.name for remix_artist in trackinstance.track.remix_artist.all())
+            expected_remix_artists = ', '.join(str(remix_artist) for remix_artist in trackinstance.track.remix_artist.all())
             self.assertEqual(trackinstance.get_track_display_remix_artist(), expected_remix_artists)
 
     def test_get_track_genre(self):
@@ -2151,7 +2163,7 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
             'public': trackinstance.public,
         }
         if trackinstance.tag.count() > 0:
-            expected_initial['tag_values'] = trackinstance.tag.display(self.users['admin'])
+            expected_initial['tag_values'] = ', '.join(tag.value for tag in trackinstance.tag.all())
         self.assertEqual(trackinstance.add_fields_to_initial({}), expected_initial)
 
     def test_is_equivalent(self):
@@ -2203,6 +2215,23 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
         admin_trackinstances = TrackInstance.objects.all()
         admin_trackinstance_list = ', '.join(str(trackinstance) for trackinstance in admin_trackinstances)
         self.assertEqual(TrackInstance.objects.display(self.users['admin']), admin_trackinstance_list)
+
+    # test constraints
+
+    def test_trackinstance_unique_on_track_and_user(self):
+        data = {}
+        duplicates = False
+        for ti in TrackInstance.objects.all():
+            if str(ti.user) not in data:
+                data[str(ti.user)] = {}
+            if str(ti.track.id) not in data[str(ti.user)]:
+                data[str(ti.user)][str(ti.track.id)] = 1
+            else:
+                data[str(ti.user)][str(ti.track.id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        trackinstance = TrackInstance.objects.first()
+        self.assertRaises(IntegrityError, TrackInstance.objects.create, user=trackinstance.user, track=trackinstance.track)
 
 #wip
 # class TransitionModelTest(TestCase, CatalogTestMixin):

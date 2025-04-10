@@ -346,6 +346,10 @@ class TrackInstanceMixin:
     @property
     def create_by_field(self):
         return 'track'
+    
+    @property
+    def string_by_field(self):
+        return 'track'
 
 
 class TransitionMixin:
@@ -1057,7 +1061,7 @@ class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
             ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
         )
 
-
+#wip
 # class LabelRequest(RequestMixin, models.Model, SharedModelMixin, LabelMixin):
 
 
@@ -1258,7 +1262,10 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     )
 
     def __str__(self):
-        return self.track.title
+        if self.track.title:
+            return self.track.title
+        else:
+            return str(self.track.beatport_track_id)
     
     def get_absolute_url(self):
         return self.track.get_absolute_url()
