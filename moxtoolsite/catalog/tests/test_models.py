@@ -2243,34 +2243,42 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
 class TestModelFunctions(TestCase):
 
     def test_metadata_action_statuses(self):
+        # valid id, valid data, not public
         scrape, remove, add = metadata_action_statuses(False, False, False)
         self.assertFalse(scrape)
         self.assertFalse(remove)
         self.assertTrue(add)
+        # missing id, valid data, not public
         scrape, remove, add = metadata_action_statuses(True, False, False)
         self.assertFalse(scrape)
         self.assertFalse(remove)
         self.assertFalse(add)
+        # valid id, missing data, not public
         scrape, remove, add = metadata_action_statuses(False, True, False)
         self.assertTrue(scrape)
         self.assertFalse(remove)
         self.assertFalse(add)
+        # missing id, missing data, not public
         scrape, remove, add = metadata_action_statuses(True, True, False)
         self.assertFalse(scrape)
         self.assertFalse(remove)
         self.assertFalse(add)
+        # valid id, valid data, public
         scrape, remove, add = metadata_action_statuses(False, False, True)
         self.assertFalse(scrape)
         self.assertFalse(remove)
         self.assertFalse(add)
+        # missing id, valid data, public
         scrape, remove, add = metadata_action_statuses(True, False, True)
         self.assertFalse(scrape)
         self.assertTrue(remove)
         self.assertFalse(add)
+        # valid id, missing data, public
         scrape, remove, add = metadata_action_statuses(False, True, True)
         self.assertTrue(scrape)
         self.assertTrue(remove)
         self.assertFalse(add)
+        # missing id, missing data, public
         scrape, remove, add = metadata_action_statuses(True, True, True)
         self.assertFalse(scrape)
         self.assertTrue(remove)
