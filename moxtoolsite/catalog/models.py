@@ -1,13 +1,10 @@
 from django.apps import apps
 from django.conf import settings
-# from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError, FieldDoesNotExist
 from django.db import models
 from django.db.models import UniqueConstraint, F, Q
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
 from django.urls import reverse
-import random, re, string, uuid
+import re, uuid
 
 
 # mixins

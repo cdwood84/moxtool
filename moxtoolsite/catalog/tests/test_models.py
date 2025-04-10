@@ -1,4 +1,4 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest, metadata_action_statuses
 from catalog.tests.mixins import CatalogTestMixin
 # from datetime import date
 # from django.apps import apps
@@ -2235,3 +2235,43 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
 
 #wip
 # class TransitionModelTest(TestCase, CatalogTestMixin):
+
+
+# model functions
+
+
+class TestModelFunctions(TestCase):
+
+    def test_metadata_action_statuses(self):
+        scrape, remove, add = metadata_action_statuses(False, False, False)
+        self.assertFalse(scrape)
+        self.assertFalse(remove)
+        self.assertTrue(add)
+        scrape, remove, add = metadata_action_statuses(True, False, False)
+        self.assertFalse(scrape)
+        self.assertFalse(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(False, True, False)
+        self.assertTrue(scrape)
+        self.assertFalse(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(True, True, False)
+        self.assertFalse(scrape)
+        self.assertFalse(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(False, False, True)
+        self.assertFalse(scrape)
+        self.assertFalse(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(True, False, True)
+        self.assertFalse(scrape)
+        self.assertTrue(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(False, True, True)
+        self.assertTrue(scrape)
+        self.assertTrue(remove)
+        self.assertFalse(add)
+        scrape, remove, add = metadata_action_statuses(True, True, True)
+        self.assertFalse(scrape)
+        self.assertTrue(remove)
+        self.assertFalse(add)
