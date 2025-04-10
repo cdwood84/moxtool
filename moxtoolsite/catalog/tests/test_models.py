@@ -834,7 +834,7 @@ class TrackModelTest(TestCase, CatalogTestMixin):
             'title': track.title,
             'genre_beatport_genre_id': track.genre.beatport_genre_id,
             'label_beatport_label_id': None,
-            'artist_beatport_artist_ids': track.display_artist(),
+            'artist_beatport_artist_ids': str(track.artist.first().beatport_artist_id),
             'mix': track.mix,
             'released': None,
             'length': None,
@@ -1654,6 +1654,11 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         create_by = playlist.create_by_field
         self.assertEqual(create_by, 'name')
 
+    def test_string_by_property(self):
+        playlist = Playlist.objects.get(id=1)
+        string_by = playlist.string_by_field
+        self.assertEqual(string_by, 'name')
+
     # Playlist specific functions
 
     def test_object_string_is_request(self):
@@ -1696,7 +1701,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             'public': playlist.public,
         }
         if playlist.track.count() > 0:
-            expected_initial['track_tracks'] = playlist.track.display(self.users['admin'])
+            expected_initial['track_beatport_track_ids'] = ', '.join(str(track.beatport_track_id) for track in playlist.track.all())
         if playlist.tag.count() > 0:
             expected_initial['tag_names'] = playlist.tag.display(self.users['admin'])
         self.assertEqual(playlist.add_fields_to_initial({}), expected_initial)
@@ -1751,7 +1756,30 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         admin_playlist_list = ', '.join(playlist.name for playlist in admin_playlists)
         self.assertEqual(Playlist.objects.display(self.users['admin']), admin_playlist_list)
 
+    # test constraints
 
+    def test_playlist_unique_on_name_and_user(self):
+        data = {}
+        duplicates = False
+        for playlist1 in Playlist.objects.all():
+            if str(playlist1.user) not in data:
+                data[str(playlist1.user)] = {}
+            if str(playlist1.name) not in data[str(playlist1.user)]:
+                data[str(playlist1.user)][playlist1.name] = 1
+            else:
+                data[str(playlist1.user)][playlist1.name] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        playlist2 = Playlist.objects.first()
+        self.assertRaises(IntegrityError, Playlist.objects.create, user=playlist2.user, name=playlist2.name)
+
+#wip
+# class SetListModelTest(TestCase, CatalogTestMixin):
+
+#wip
+# class SetListItemModelTest(TestCase, CatalogTestMixin):
+
+#wip
 class TagModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1933,7 +1961,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         admin_tag_list = ', '.join(str(tag) for tag in admin_tags)
         self.assertEqual(Tag.objects.display(self.users['admin']), admin_tag_list)
 
-
+#wip
 class TrackInstanceModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -2147,3 +2175,6 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
         admin_trackinstances = TrackInstance.objects.all()
         admin_trackinstance_list = ', '.join(str(trackinstance) for trackinstance in admin_trackinstances)
         self.assertEqual(TrackInstance.objects.display(self.users['admin']), admin_trackinstance_list)
+
+#wip
+# class TransitionModelTest(TestCase, CatalogTestMixin):

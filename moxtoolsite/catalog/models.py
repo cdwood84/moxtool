@@ -208,6 +208,10 @@ class PlaylistMixin:
     @property
     def create_by_field(self):
         return 'name'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
 
 
 class SetListMixin:
@@ -1300,7 +1304,7 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
         constraints = [
             UniqueConstraint(
                 fields=['track', 'user'],
-                name='user_track_unique',
+                name='trackinstance_unique_on_track_and_user',
                 violation_error_message="User already has this track in their library"
             ),
         ]
@@ -1337,6 +1341,12 @@ class SetList(models.Model, SharedModelMixin, SetListMixin):
         return reverse('setlist-detail', args=[str(self.id), url_friendly_name])
 
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'user'], 
+                name='setlist_unique_on_name_and_user',
+            ),
+        ]
         ordering = [
             'date_played',
         ]
@@ -1355,17 +1365,23 @@ class SetList(models.Model, SharedModelMixin, SetListMixin):
 class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist item")
     setlist = models.ForeignKey('SetList', on_delete=models.RESTRICT, null=True)
-    trackinstance = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True)
+    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     start_time = models.DateTimeField()
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        return str(self.trackinstance) + ' at ' + str(self.start_time)
+        return str(self.trackinstance.track) + ' at ' + str(self.start_time)
 
     def get_absolute_url(self):
         return reverse('setlistitem-detail', args=[str(self.id)])
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['setlist', 'start_time'], 
+                name='setlistitem_unique_on_setlist_and_start_time',
+            ),
+        ]
         ordering = [
             'setlist',
             'start_time',
@@ -1384,8 +1400,8 @@ class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
 
 class Transition(models.Model, SharedModelMixin, TransitionMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this transition and owner library")
-    from_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True, related_name='from_track')
-    to_track = models.ForeignKey('TrackInstance', on_delete=models.RESTRICT, null=True, related_name='to_track')
+    from_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='from_track')
+    to_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='to_track')
     comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.")
     date_modified = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1418,11 +1434,11 @@ class Transition(models.Model, SharedModelMixin, TransitionMixin):
         constraints = [
             models.CheckConstraint(
                 check=~Q(from_track=F('to_track')),
-                name='fields_not_equal'
+                name='track_cannot_transition_itself'
             ),
             UniqueConstraint(
                 fields=['from_track', 'to_track', 'user'], 
-                name='unique_title_subtitle_user'
+                name='unique_user_track_transition'
             ),
         ]
         ordering = [
@@ -1447,7 +1463,7 @@ class Transition(models.Model, SharedModelMixin, TransitionMixin):
 
 class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
     name = models.CharField(max_length=200)
-    track = models.ManyToManyField(TrackInstance, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
+    track = models.ManyToManyField(Track, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
     date_added = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
@@ -1465,6 +1481,11 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
         return reverse('add-track-to-playlist-dj', args=[str(self.id)]) 
 
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'user'],
+                name='playlist_unique_on_name_and_user'),
+        ]
         ordering = [
             'date_added',
         ]

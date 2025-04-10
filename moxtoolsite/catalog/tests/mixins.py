@@ -242,13 +242,21 @@ class CatalogTestMixin:
             user=users['dj'],
             public=False,
         )
-        Playlist.objects.get(id=1).track.set(TrackInstance.objects.filter(user=users['dj']))
+        dj_playlist_trackinstances = TrackInstance.objects.filter(user=users['dj'])
+        dj_playlist_track_list = []
+        for ti in dj_playlist_trackinstances:
+            dj_playlist_track_list.append(ti.track.id)
+        Playlist.objects.get(id=1).track.set(Track.objects.filter(id__in=dj_playlist_track_list))
         Playlist.objects.create(
             name='Secret Bunker',
             date_added=date(2024, 12, 25),
             user=users['admin'],
             public=False,
         )
-        Playlist.objects.get(id=2).track.set(TrackInstance.objects.filter(user=users['admin']))
+        admin_playlist_trackinstances = TrackInstance.objects.filter(user=users['admin'])
+        admin_playlist_track_list = []
+        for ti in admin_playlist_trackinstances:
+            admin_playlist_track_list.append(ti.track.id)
+        Playlist.objects.get(id=2).track.set(Track.objects.filter(id__in=admin_playlist_track_list))
         Playlist.objects.get(id=2).tag.set(Tag.objects.filter(id=2))
         return users, groups
