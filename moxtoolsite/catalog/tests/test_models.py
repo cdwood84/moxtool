@@ -1787,26 +1787,30 @@ class TagModelTest(TestCase, CatalogTestMixin):
 
     # fields
 
+    def test_value_field(self):
+        tag = Tag.objects.get(id=1)
+        field_label = tag._meta.get_field('value').verbose_name
+        self.assertEqual(field_label, 'value')
+        help_text = tag._meta.get_field('value').help_text
+        self.assertEqual(help_text, 'Value of tag (e.g. Nasty House, Piano Tracks)')
+        max_length = tag._meta.get_field('value').max_length
+        self.assertEqual(max_length, 100)
+
     def test_type_field(self):
         tag = Tag.objects.get(id=1)
         field_label = tag._meta.get_field('type').verbose_name
         self.assertEqual(field_label, 'type')
         help_text = tag._meta.get_field('type').help_text
-        self.assertEqual(help_text, 'Type of tag (e.g. vibe, chords, etc.)')
+        self.assertEqual(help_text, 'Optional type of tag (e.g. vibe, chords, etc.)')
         max_length = tag._meta.get_field('type').max_length
-        self.assertEqual(max_length, 6)
-
-    def test_value_field(self):
-        tag = Tag.objects.get(id=1)
-        field_label = tag._meta.get_field('value').verbose_name
-        self.assertEqual(field_label, 'value')
-        max_length = tag._meta.get_field('value').max_length
         self.assertEqual(max_length, 100)
 
     def test_detail_field(self):
         tag = Tag.objects.get(id=1)
         field_label = tag._meta.get_field('detail').verbose_name
         self.assertEqual(field_label, 'detail')
+        help_text = tag._meta.get_field('detail').help_text
+        self.assertEqual(help_text, 'Optional detail for tag')
         max_length = tag._meta.get_field('detail').max_length
         self.assertEqual(max_length, 1000)
 
@@ -1830,10 +1834,10 @@ class TagModelTest(TestCase, CatalogTestMixin):
     def test_useful_field_list_property(self):
         tag = Tag.objects.get(id=1)
         useful_field_list = tag.useful_field_list
-        self.assertEqual(useful_field_list['type']['type'], 'string')
-        self.assertTrue(useful_field_list['type']['equal'])
         self.assertEqual(useful_field_list['value']['type'], 'string')
         self.assertTrue(useful_field_list['value']['equal'])
+        self.assertEqual(useful_field_list['type']['type'], 'string')
+        self.assertTrue(useful_field_list['type']['equal'])
         self.assertEqual(useful_field_list['detail']['type'], 'string')
         self.assertTrue(useful_field_list['detail']['equal'])
         self.assertEqual(useful_field_list['user']['type'], 'user')
@@ -1847,6 +1851,11 @@ class TagModelTest(TestCase, CatalogTestMixin):
         tag = Tag.objects.get(id=1)
         create_by = tag.create_by_field
         self.assertEqual(create_by, 'value')
+
+    def test_string_by_property(self):
+        tag = Tag.objects.get(id=1)
+        string_by = tag.string_by_field
+        self.assertEqual(string_by, 'value')
 
     # Tag specific functions
 
@@ -1960,6 +1969,25 @@ class TagModelTest(TestCase, CatalogTestMixin):
         admin_tags = Tag.objects.all()
         admin_tag_list = ', '.join(str(tag) for tag in admin_tags)
         self.assertEqual(Tag.objects.display(self.users['admin']), admin_tag_list)
+
+    # test constraints
+
+    def test_tag_unique_on_value_type_and_user(self):
+        data = {}
+        duplicates = False
+        for tag1 in Tag.objects.all():
+            if str(tag1.user) not in data:
+                data[str(tag1.user)] = {}
+            if str(tag1.type) not in data:
+                data[str(tag1.user)][str(tag1.type)] = {}
+            if tag1.value not in data[str(tag1.user)][str(tag1.type)]:
+                data[str(tag1.user)][str(tag1.type)][tag1.value] = 1
+            else:
+                data[str(tag1.user)][str(tag1.type)][tag1.value] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        tag2 = Tag.objects.first()
+        self.assertRaises(IntegrityError, Tag.objects.create, user=tag2.user, value=tag2.value, type=tag2.type)
 
 #wip
 class TrackInstanceModelTest(TestCase, CatalogTestMixin):

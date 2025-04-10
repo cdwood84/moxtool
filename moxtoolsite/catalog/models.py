@@ -299,6 +299,10 @@ class TagMixin:
     def create_by_field(self):
         return 'value'
     
+    @property
+    def string_by_field(self):
+        return 'value'
+    
 
 class TrackInstanceMixin:
 
@@ -1172,24 +1176,9 @@ class UserModelPermissionManager(models.Manager):
 
 
 class Tag(models.Model, SharedModelMixin, TagMixin):
-    TYPE_LIST = [
-        ('v','vibe'),
-        ('c','color'),
-        ('h','chords'),
-        ('s','sounds'),
-        ('g','groove'),
-    ]
-    type = models.CharField(
-        max_length=6,
-        choices=TYPE_LIST,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Type of tag (e.g. vibe, chords, etc.)',
-    )
-
-    value = models.CharField(max_length=100, default=None)
-    detail = models.CharField(max_length=1000, null=True)
+    value = models.CharField(max_length=100, help_text='Value of tag (e.g. Nasty House, Piano Tracks)')
+    type = models.CharField(max_length=100, default='', help_text='Optional type of tag (e.g. vibe, chords, etc.)')
+    detail = models.CharField(max_length=1000, null=True, help_text='Optional detail for tag')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     date_added = models.DateField(null=True, blank=True)
     public = models.BooleanField(default=False)
@@ -1212,6 +1201,13 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
         return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['value', 'type', 'user'],
+                name='tag_unique_on_value_type_and_user',
+                # nulls_distinct=False,
+            ),
+        ]
         ordering = [
             'type',
             'date_added',
