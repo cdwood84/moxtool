@@ -10,13 +10,6 @@ urlpatterns = [
     path('<str:obj_name>/modify/<int:pk>', views.modify_object, name='modify-object'),
     path('<str:obj_name>/modify/<uuid:pk>', views.modify_object, name='modify-object'),
 
-    # genre
-    path('genres/', views.GenreListView.as_view(), name='genres'),
-    path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
-    path('genrerequest/<int:pk>/<str:name>', views.GenreRequestDetailView.as_view(), name='genre-request-detail'),
-    # path('genre/create', views.modify_genre, name='create-genre'),
-    # path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
-
     # artist
     path('artists/', views.ArtistListView.as_view(), name='artists'),
     path('artist/<int:pk>/<str:name>', views.ArtistDetailView.as_view(), name='artist-detail'),
@@ -24,10 +17,26 @@ urlpatterns = [
     # path('artist/create', views.modify_artist, name='create-artist'),
     # path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
 
+    # genre
+    path('genres/', views.GenreListView.as_view(), name='genres'),
+    path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
+    path('genrerequest/<int:pk>/<str:name>', views.GenreRequestDetailView.as_view(), name='genre-request-detail'),
+    # path('genre/create', views.modify_genre, name='create-genre'),
+    # path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
+
     # label
     path('labels/', views.LabelListView.as_view(), name='labels'),
     path('label/<int:pk>/<str:name>', views.LabelDetailView.as_view(), name='label-detail'),
     # path('labelrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),\
+
+    # playlist
+    path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
+    path('playlist/<int:pk>/<str:name>', views.PlaylistDetailView.as_view(), name='playlist-detail'),
+    path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
+    
+    # setlist
+    path('setlists/', views.SetListListView.as_view(), name='setlists'),
+    path('setlist/<uuid:pk>/<str:name>', views.SetListDetailView.as_view(), name='setlist-detail'),
     
     # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
@@ -36,11 +45,6 @@ urlpatterns = [
     # path('track/create', views.modify_track, name='create-track'),
     # path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
     # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
-
-    # playlist
-    path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
-    path('playlist/<int:pk>/<str:name>', views.PlaylistDetailView.as_view(), name='playlist-detail'),
-    path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
 
     # tag
     path('tags/', views.TagListView.as_view(), name='tags'),

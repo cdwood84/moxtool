@@ -1,5 +1,5 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest
-from datetime import date
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from datetime import date, time
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -10,10 +10,10 @@ class CatalogTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'label', 'playlist', 'tag', 'track', 'trackinstance', 'trackrequest'],
+            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'label', 'playlist', 'setlist', 'setlistitem', 'tag', 'track', 'trackinstance', 'trackrequest', 'transition'],
             'domain': ['any', 'public', 'own'],
         }
-        user_models = ['playlist', 'tag', 'trackinstance']
+        user_models = ['playlist', 'setlist', 'setlistitem', 'tag', 'trackinstance', 'transition']
         groups = {}
         users = {}
         perms = {}
@@ -259,4 +259,50 @@ class CatalogTestMixin:
             admin_playlist_track_list.append(ti.track.id)
         Playlist.objects.get(id=2).track.set(Track.objects.filter(id__in=admin_playlist_track_list))
         Playlist.objects.get(id=2).tag.set(Tag.objects.filter(id=2))
+        SetList.objects.create(
+            name='Enter The Mix #5',
+            date_played=date(2025, 4, 6),
+            comments='mix of progressive house and techno on a rainy day',
+            user=users['dj'],
+            public=True,
+        )
+        SetList.objects.get(name='Enter The Mix #5').tag.set(Tag.objects.filter(user=users['dj']))
+        t = 0
+        for trackinstance in TrackInstance.objects.filter(user=users['dj']):
+            item = SetListItem.objects.create(
+                setlist=SetList.objects.get(name='Enter The Mix #5'),
+                track=trackinstance.track,
+                start_time=time(0, t, 0, 0),
+            )
+            if t > 0:
+                Transition.objects.create(
+                    from_track=last_item.track,
+                    to_track=item.track,
+                    user=users['dj'],
+                    date_modified=date.today(),
+                )
+            t+=5
+            last_item = item
+        SetList.objects.create(
+            name='Secret Future Mix',
+            date_played=date(2025, 4, 13),
+            user=users['admin'],
+            public=False,
+        )
+        t = 0
+        for trackinstance in TrackInstance.objects.filter(user=users['admin']):
+            item = SetListItem.objects.create(
+                setlist=SetList.objects.get(name='Secret Future Mix'),
+                track=trackinstance.track,
+                start_time=time(0, t, 0, 0),
+            )
+            if t > 0:
+                Transition.objects.create(
+                    from_track=last_item.track,
+                    to_track=item.track,
+                    user=users['admin'],
+                    date_modified=date.today(),
+                )
+            t+=6
+            last_item = item
         return users, groups

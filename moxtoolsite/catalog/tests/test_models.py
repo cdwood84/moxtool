@@ -1,9 +1,5 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest, metadata_action_statuses
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition, metadata_action_statuses
 from catalog.tests.mixins import CatalogTestMixin
-# from datetime import date
-# from django.apps import apps
-# from django.contrib.auth.models import AnonymousUser, Group, Permission, User
-# from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.test import TestCase
@@ -1774,7 +1770,187 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         self.assertRaises(IntegrityError, Playlist.objects.create, user=playlist2.user, name=playlist2.name)
 
 #wip
-# class SetListModelTest(TestCase, CatalogTestMixin):
+class SetListModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_name_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('name').verbose_name
+        self.assertEqual(field_label, 'name')
+        max_length = setlist._meta.get_field('name').max_length
+        self.assertEqual(max_length, 200)
+
+    def test_date_played_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('date_played').verbose_name
+        self.assertEqual(field_label, 'date played')
+
+    def test_comments_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('comments').verbose_name
+        self.assertEqual(field_label, 'comments')
+        help_text = setlist._meta.get_field('comments').help_text
+        self.assertEqual(help_text, 'Enter any notes you want to remember about this setlist.')
+        max_length = setlist._meta.get_field('comments').max_length
+        self.assertEqual(max_length, 1000)
+
+    def test_user_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_tag_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('tag').verbose_name
+        self.assertEqual(field_label, 'tags')
+        help_text = setlist._meta.get_field('tag').help_text
+        self.assertEqual(help_text, 'Select one or more tags for this setlist.')
+
+    def test_public_field(self):
+        setlist = SetList.objects.first()
+        field_label = setlist._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        setlist = SetList.objects.first()
+        useful_field_list = setlist.useful_field_list
+        self.assertEqual(useful_field_list['name']['type'], 'string')
+        self.assertTrue(useful_field_list['name']['equal'])
+        self.assertEqual(useful_field_list['date_played']['type'], 'date')
+        self.assertTrue(useful_field_list['date_played']['equal'])
+        self.assertEqual(useful_field_list['comments']['type'], 'string')
+        self.assertTrue(useful_field_list['comments']['equal'])
+        self.assertEqual(useful_field_list['tag']['type'], 'queryset')
+        self.assertTrue(useful_field_list['tag']['equal'])
+        self.assertEqual(useful_field_list['user']['type'], 'user')
+        self.assertTrue(useful_field_list['user']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        setlist = SetList.objects.first()
+        create_by = setlist.create_by_field
+        self.assertEqual(create_by, 'name')
+
+    def test_string_by_property(self):
+        setlist = SetList.objects.first()
+        string_by = setlist.string_by_field
+        self.assertEqual(string_by, 'name')
+
+    # SetList specific functions
+
+    def test_object_string(self):
+        for setlist in SetList.objects.all():
+            self.assertEqual(str(setlist), setlist.name)
+
+    def test_get_absolute_url(self):
+        for setlist in SetList.objects.all():
+            expected_url = '/catalog/setlist/' + str(setlist.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', setlist.name.lower())
+            self.assertEqual(setlist.get_absolute_url(), expected_url)
+
+    # Shared model functions
+
+    def test_set_field(self):
+        setlist = SetList.objects.first()
+        self.assertEqual(setlist.public, True)
+        setlist.set_field('public', False)
+        self.assertEqual(setlist.public, False)
+
+    def test_get_field(self):
+        setlist = SetList.objects.first()
+        field_value = setlist.get_field('name')
+        self.assertEqual(field_value, setlist.name)
+
+    def test_get_modify_url(self):
+        setlist = SetList.objects.first()
+        self.assertEqual(setlist.get_modify_url(), '/catalog/setlist/modify/' + str(setlist.id))
+
+    def test_add_fields_to_initial(self):
+        setlist = SetList.objects.first()
+        expected_initial = {
+            'name': setlist.name,
+            'date_played': setlist.date_played,
+            'comments': setlist.comments,
+            'user': setlist.user,
+            'public': setlist.public,
+        }
+        if setlist.tag.count() > 0:
+            expected_initial['tag_values'] = ', '.join(tag.value for tag in setlist.tag.all())
+        self.assertEqual(setlist.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        setlist1 = SetList.objects.first()
+        setlist2 = SetList.objects.last()
+        self.assertFalse(setlist1.is_equivalent(setlist2))
+        self.assertTrue(setlist1.is_equivalent(setlist1))
+
+    def test_is_field_is_equivalent(self):
+        setlist1 = SetList.objects.first()
+        setlist2 = SetList.objects.last()
+        self.assertFalse(setlist1.field_is_equivalent(setlist2, 'name'))
+        self.assertTrue(setlist1.field_is_equivalent(setlist1, 'track'))
+
+    # test object manager
+
+    def test_get_queryset_can_view(self):
+        all_setlists = SetList.objects.all()
+        self.assertRaises(PermissionDenied, SetList.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        setlists_dj = SetList.objects.filter(public=True) | SetList.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_view(self.users['dj'])), set(setlists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_view(self.users['admin'])), set(all_setlists))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_setlists = SetList.objects.all()
+        self.assertRaises(PermissionDenied, SetList.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        setlists_dj = SetList.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_direct_modify(self.users['dj'])), set(setlists_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_setlists))
+
+    def test_get_queryset_can_request_modify(self):
+        all_setlists = SetList.objects.all()
+        self.assertRaises(PermissionDenied, SetList.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_setlists = SetList.objects.filter(public=True) | SetList.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_setlists))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetList.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_setlists))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, SetList.objects.display, self.users['anonymous'])
+        dj_setlists = SetList.objects.filter(public=True) | SetList.objects.filter(user=self.users['dj'])
+        dj_setlist_list = ', '.join(setlist.name for setlist in dj_setlists)
+        self.assertEqual(SetList.objects.display(self.users['dj']), dj_setlist_list)
+        admin_setlists = SetList.objects.all()
+        admin_setlist_list = ', '.join(setlist.name for setlist in admin_setlists)
+        self.assertEqual(SetList.objects.display(self.users['admin']), admin_setlist_list)
+
+    # test constraints
+
+    def test_setlist_unique_on_name_and_user(self):
+        data = {}
+        duplicates = False
+        for setlist1 in SetList.objects.all():
+            if str(setlist1.user) not in data:
+                data[str(setlist1.user)] = {}
+            if str(setlist1.name) not in data[str(setlist1.user)]:
+                data[str(setlist1.user)][setlist1.name] = 1
+            else:
+                data[str(setlist1.user)][setlist1.name] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        setlist2 = SetList.objects.first()
+        self.assertRaises(IntegrityError, SetList.objects.create, user=setlist2.user, name=setlist2.name)
+
 
 #wip
 # class SetListItemModelTest(TestCase, CatalogTestMixin):
@@ -1788,7 +1964,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
     # fields
 
     def test_value_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('value').verbose_name
         self.assertEqual(field_label, 'value')
         help_text = tag._meta.get_field('value').help_text
@@ -1797,7 +1973,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(max_length, 100)
 
     def test_type_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('type').verbose_name
         self.assertEqual(field_label, 'type')
         help_text = tag._meta.get_field('type').help_text
@@ -1806,7 +1982,7 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(max_length, 100)
 
     def test_detail_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('detail').verbose_name
         self.assertEqual(field_label, 'detail')
         help_text = tag._meta.get_field('detail').help_text
@@ -1815,24 +1991,24 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(max_length, 1000)
 
     def test_user_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('user').verbose_name
         self.assertEqual(field_label, 'user')
 
     def test_date_added_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('date_added').verbose_name
         self.assertEqual(field_label, 'date added')
 
     def test_public_field(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         field_label = tag._meta.get_field('public').verbose_name
         self.assertEqual(field_label, 'public')
 
     # mixin fields
 
     def test_useful_field_list_property(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         useful_field_list = tag.useful_field_list
         self.assertEqual(useful_field_list['value']['type'], 'string')
         self.assertTrue(useful_field_list['value']['equal'])
@@ -1848,12 +2024,12 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(useful_field_list['public']['equal'])
 
     def test_create_by_property(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         create_by = tag.create_by_field
         self.assertEqual(create_by, 'value')
 
     def test_string_by_property(self):
-        tag = Tag.objects.get(id=1)
+        tag = Tag.objects.first()
         string_by = tag.string_by_field
         self.assertEqual(string_by, 'value')
 

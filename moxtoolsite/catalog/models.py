@@ -215,14 +215,38 @@ class SetListMixin:
     @property
     def useful_field_list(self):
         return {
-            'from_track': {
-                'type': 'model',
+            'name': {
+                'type': 'string',
                 'equal': True,
+            },
+            'date_played': {
+                'type': 'date',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
             },
         }
 
     @property
     def create_by_field(self):
+        return 'name'
+
+    @property
+    def string_by_field(self):
         return 'name'
 
 
@@ -1327,9 +1351,9 @@ class SetList(models.Model, SharedModelMixin, SetListMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist and owner library")
     name = models.CharField(max_length=200) 
     date_played = models.DateField(null=True, blank=True)
-    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.")
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this setlist.", null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this setlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
@@ -1366,7 +1390,7 @@ class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist item")
     setlist = models.ForeignKey('SetList', on_delete=models.RESTRICT, null=True)
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
-    start_time = models.DateTimeField()
+    start_time = models.TimeField(null=True)
     objects = UserModelPermissionManager()
 
     def __str__(self):
@@ -1402,7 +1426,7 @@ class Transition(models.Model, SharedModelMixin, TransitionMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this transition and owner library")
     from_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='from_track')
     to_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='to_track')
-    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.")
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.", null=True)
     date_modified = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     public = models.BooleanField(default=False)
@@ -1425,7 +1449,7 @@ class Transition(models.Model, SharedModelMixin, TransitionMixin):
     rating = models.CharField(
         max_length=2,
         choices=RATING_CHOICES,
-        blank=True,
+        null=True,
         default=None,
         help_text='Transition rating',
     )

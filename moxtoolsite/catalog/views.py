@@ -246,6 +246,29 @@ class LabelDetailView(LoginRequiredMixin, generic.DetailView):
         return Label.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
+# setlist
+
+
+class SetListListView(LoginRequiredMixin, generic.ListView):
+    model = SetList
+    context_object_name = 'setlist_list'
+    template_name = 'catalog/setlist_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return SetList.objects.get_queryset_can_view(self.request.user)
+
+
+class SetListDetailView(LoginRequiredMixin, generic.DetailView):
+    model = SetList
+    context_object_name = 'setlist'
+    template_name = "catalog/setlist_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return SetList.objects.get_queryset_can_view(self.request.user).get(id=pk)
+
+
 # track
 
 
