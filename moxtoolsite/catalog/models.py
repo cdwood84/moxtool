@@ -408,6 +408,10 @@ class TransitionMixin:
     def create_by_field(self):
         return 'from_track'
 
+    @property
+    def string_by_field(self):
+        return 'to_track'
+
 
 class SharedModelMixin:
 
@@ -1466,6 +1470,9 @@ class Transition(models.Model, SharedModelMixin, TransitionMixin):
         default=None,
         help_text='Transition rating',
     )
+
+    def __str__(self):
+        return 'from ' + str(self.from_track) + ' to ' + str(self.to_track)
 
     class Meta:
         constraints = [

@@ -2603,8 +2603,206 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
         trackinstance = TrackInstance.objects.first()
         self.assertRaises(IntegrityError, TrackInstance.objects.create, user=trackinstance.user, track=trackinstance.track)
 
-#wip
-# class TransitionModelTest(TestCase, CatalogTestMixin):
+
+class TransitionModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_from_track_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('from_track').verbose_name
+        self.assertEqual(field_label, 'from track')
+
+    def test_to_track_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('to_track').verbose_name
+        self.assertEqual(field_label, 'to track')
+
+    def test_date_modified_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('date_modified').verbose_name
+        self.assertEqual(field_label, 'date modified')
+
+    def test_comments_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('comments').verbose_name
+        self.assertEqual(field_label, 'comments')
+        help_text = transition._meta.get_field('comments').help_text
+        self.assertEqual(help_text, 'Enter any notes you want to remember about this transition.')
+        max_length = transition._meta.get_field('comments').max_length
+        self.assertEqual(max_length, 1000)
+
+    def test_rating_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('rating').verbose_name
+        self.assertEqual(field_label, 'rating')
+        help_text = transition._meta.get_field('rating').help_text
+        self.assertEqual(help_text, 'Transition rating')
+        max_length = transition._meta.get_field('rating').max_length
+        self.assertEqual(max_length, 2)
+
+    def test_user_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('user').verbose_name
+        self.assertEqual(field_label, 'user')
+
+    def test_public_field(self):
+        transition = Transition.objects.first()
+        field_label = transition._meta.get_field('public').verbose_name
+        self.assertEqual(field_label, 'public')
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        transition = Transition.objects.first()
+        useful_field_list = transition.useful_field_list
+        self.assertEqual(useful_field_list['from_track']['type'], 'model')
+        self.assertTrue(useful_field_list['from_track']['equal'])
+        self.assertEqual(useful_field_list['to_track']['type'], 'model')
+        self.assertTrue(useful_field_list['to_track']['equal'])
+        self.assertEqual(useful_field_list['date_modified']['type'], 'date')
+        self.assertFalse(useful_field_list['date_modified']['equal'])
+        self.assertEqual(useful_field_list['comments']['type'], 'string')
+        self.assertTrue(useful_field_list['comments']['equal'])
+        self.assertEqual(useful_field_list['rating']['type'], 'string')
+        self.assertTrue(useful_field_list['rating']['equal'])
+        self.assertEqual(useful_field_list['user']['type'], 'user')
+        self.assertTrue(useful_field_list['user']['equal'])
+        self.assertEqual(useful_field_list['public']['type'], 'boolean')
+        self.assertFalse(useful_field_list['public']['equal'])
+
+    def test_create_by_property(self):
+        transition = Transition.objects.first()
+        create_by = transition.create_by_field
+        self.assertEqual(create_by, 'from_track')
+
+    def test_string_by_property(self):
+        transition = Transition.objects.first()
+        string_by = transition.string_by_field
+        self.assertEqual(string_by, 'to_track')
+
+    # Transition specific functions
+
+    def test_object_string(self):
+        for transition in Transition.objects.all():
+            expected_text = 'from ' + str(transition.from_track) + ' to ' + str(transition.to_track)
+            self.assertEqual(str(transition),expected_text)
+
+    # Shared model functions
+
+    def test_set_field(self):
+        transition = Transition.objects.first()
+        self.assertEqual(transition.public, False)
+        transition.set_field('public', True)
+        self.assertEqual(transition.public, True)
+
+    def test_get_field(self):
+        transition = Transition.objects.first()
+        field_value = transition.get_field('from_track')
+        self.assertEqual(field_value, transition.from_track)
+
+    def test_get_modify_url(self):
+        transition = Transition.objects.first()
+        self.assertEqual(transition.get_modify_url(), '/catalog/transition/modify/' + str(transition.id))
+
+    def test_add_fields_to_initial(self):
+        transition = Transition.objects.first()
+        expected_initial = {
+            'from_track_beatport_track_id': transition.from_track.beatport_track_id,
+            'to_track_beatport_track_id': transition.to_track.beatport_track_id,
+            'date_modified': transition.date_modified,
+            'comments': transition.comments,
+            'rating': transition.rating,
+            'user': transition.user,
+            'public': transition.public,
+        }
+        self.assertEqual(transition.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        transition1 = Transition.objects.filter(user=self.users['dj']).first()
+        transition2 = Transition.objects.filter(user=self.users['admin']).first()
+        self.assertFalse(transition1.is_equivalent(transition2))
+        self.assertTrue(transition1.is_equivalent(transition1))
+
+    def test_is_field_is_equivalent(self):
+        transition1 = Transition.objects.filter(user=self.users['dj']).first()
+        transition2 = Transition.objects.filter(user=self.users['admin']).first()
+        self.assertFalse(transition1.field_is_equivalent(transition2, 'user'))
+        self.assertTrue(transition1.field_is_equivalent(transition1, 'from_track'))
+
+    # test object manager
+
+    def test_get_public_set(self):
+        expected_set = Transition.objects.filter(public=True)
+        self.assertEqual(set(Transition.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = Transition.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Transition.objects.get_user_set(self.users['dj'])), set(expected_set))
+
+    def test_get_queryset_can_view(self):
+        all_transitions = Transition.objects.all()
+        self.assertRaises(PermissionDenied, Transition.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        transitions_dj = Transition.objects.filter(public=True) | Transition.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_view(self.users['dj'])), set(transitions_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_view(self.users['admin'])), set(all_transitions))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_transitions = Transition.objects.all()
+        self.assertRaises(PermissionDenied, Transition.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        transitions_dj = Transition.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_direct_modify(self.users['dj'])), set(transitions_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_transitions))
+
+    def test_get_queryset_can_request_modify(self):
+        all_transitions = Transition.objects.all()
+        self.assertRaises(PermissionDenied, Transition.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_transitions = Transition.objects.filter(public=True) | Transition.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_transitions))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(Transition.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_transitions))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, Transition.objects.display, self.users['anonymous'])
+        dj_transitions = Transition.objects.filter(public=True) | Transition.objects.filter(user=self.users['dj'])
+        dj_transition_list = ', '.join(str(transition) for transition in dj_transitions)
+        self.assertEqual(Transition.objects.display(self.users['dj']), dj_transition_list)
+        admin_transitions = Transition.objects.all()
+        admin_transition_list = ', '.join(str(transition) for transition in admin_transitions)
+        self.assertEqual(Transition.objects.display(self.users['admin']), admin_transition_list)
+
+    # test constraints
+
+    def test_track_cannot_transition_itself(self):
+        for transition in Transition.objects.all():
+            self.assertNotEqual(transition.from_track, transition.to_track)
+        track = Track.objects.get(id=1)
+        self.assertRaises(IntegrityError, Transition.objects.create, from_track=track, to_track=track)
+
+    def test_unique_user_track_transition(self):
+        data = {}
+        duplicates = False
+        for transition1 in Transition.objects.all():
+            if str(transition1.user) not in data:
+                data[str(transition1.user)] = {}
+            if str(transition1.from_track.id) not in data[str(transition1.user)]:
+                data[str(transition1.user)][transition1.from_track.id] = {}
+            if str(transition1.to_track.id) not in data[str(transition1.user)][transition1.from_track.id]:
+                data[str(transition1.user)][transition1.from_track.id][str(transition1.to_track.id)] = 1
+            else:
+                data[str(transition1.user)][transition1.from_track.id][str(transition1.to_track.id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        transition2 = Transition.objects.first()
+        self.assertRaises(IntegrityError, Transition.objects.create, user=transition2.user, from_track=transition2.from_track, to_track=transition2.to_track)
 
 
 # model functions

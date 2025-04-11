@@ -268,10 +268,10 @@ class CatalogTestMixin:
         )
         SetList.objects.get(name='Enter The Mix #5').tag.set(Tag.objects.filter(user=users['dj']))
         t = 0
-        for trackinstance in TrackInstance.objects.filter(user=users['dj']):
+        for ti_dj in TrackInstance.objects.filter(user=users['dj']):
             item = SetListItem.objects.create(
                 setlist=SetList.objects.get(name='Enter The Mix #5'),
-                track=trackinstance.track,
+                track=ti_dj.track,
                 start_time=time(0, t, 0, 0),
             )
             if t > 0:
@@ -290,10 +290,10 @@ class CatalogTestMixin:
             public=False,
         )
         t = 0
-        for trackinstance in TrackInstance.objects.filter(user=users['admin']):
+        for ti_admin in TrackInstance.objects.filter(user=users['admin']).reverse():
             item = SetListItem.objects.create(
                 setlist=SetList.objects.get(name='Secret Future Mix'),
-                track=trackinstance.track,
+                track=ti_admin.track,
                 start_time=time(0, t, 0, 0),
             )
             if t > 0:
