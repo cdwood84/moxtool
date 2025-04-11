@@ -1,17 +1,16 @@
-from datetime import date
 from django.apps import apps
 from django.conf import settings
-# from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError, FieldDoesNotExist
 from django.db import models
-from django.db.models import UniqueConstraint
-from django.db.models.functions import Lower
+from django.db.models import UniqueConstraint, F, Q
 from django.urls import reverse
-import re
-import uuid
+import re, uuid
 
 
 # mixins
+
+class SoupMixin:
+    pass
 
 
 class ArtistMixin:
@@ -19,6 +18,10 @@ class ArtistMixin:
     @property
     def useful_field_list(self):
         return {
+            'beatport_artist_id': {
+                'type': 'integer',
+                'equal': True,
+            },
             'name': {
                 'type': 'string',
                 'equal': True,
@@ -31,6 +34,10 @@ class ArtistMixin:
     
     @property
     def create_by_field(self):
+        return 'beatport_artist_id'
+    
+    @property
+    def string_by_field(self):
         return 'name'
 
 
@@ -39,6 +46,10 @@ class GenreMixin:
     @property
     def useful_field_list(self):
         return {
+            'beatport_genre_id': {
+                'type': 'integer',
+                'equal': True,
+            },
             'name': {
                 'type': 'string',
                 'equal': True,
@@ -51,6 +62,38 @@ class GenreMixin:
     
     @property
     def create_by_field(self):
+        return 'beatport_genre_id'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
+
+
+class LabelMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'beatport_label_id': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+    
+    @property
+    def create_by_field(self):
+        return 'beatport_label_id'
+    
+    @property
+    def string_by_field(self):
         return 'name'
 
 
@@ -67,7 +110,15 @@ class TrackMixin:
                 'type': 'string',
                 'equal': True,
             },
+            'mix': {
+                'type': 'string',
+                'equal': True,
+            },
             'genre': {
+                'type': 'model',
+                'equal': True,
+            },
+            'label': {
                 'type': 'model',
                 'equal': True,
             },
@@ -79,7 +130,19 @@ class TrackMixin:
                 'type': 'queryset',
                 'equal': True,
             },
-            'mix': {
+            'released': {
+                'type': 'date',
+                'equal': True,
+            },
+            'bpm': {
+                'type': 'integer',
+                'equal': True,
+            },
+            'key': {
+                'type': 'string',
+                'equal': True,
+            },
+            'length': {
                 'type': 'string',
                 'equal': True,
             },
@@ -93,13 +156,17 @@ class TrackMixin:
     def create_by_field(self):
         return 'beatport_track_id'
     
+    @property
+    def string_by_field(self):
+        return 'title'
+    
     def display_artist(self):
-        return ', '.join(artist.name for artist in self.artist.all())
+        return ', '.join(str(artist) for artist in self.artist.all())
 
     display_artist.short_description = 'Artist'
     
     def display_remix_artist(self):
-        return ', '.join(artist.name for artist in self.remix_artist.all())
+        return ', '.join(str(remix_artist) for remix_artist in self.remix_artist.all())
 
     display_remix_artist.short_description = 'Remix Artist'
 
@@ -138,6 +205,80 @@ class PlaylistMixin:
     @property
     def create_by_field(self):
         return 'name'
+    
+    @property
+    def string_by_field(self):
+        return 'name'
+
+
+class SetListMixin:
+    @property
+    def useful_field_list(self):
+        return {
+            'name': {
+                'type': 'string',
+                'equal': True,
+            },
+            'date_played': {
+                'type': 'date',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'tag': {
+                'type': 'queryset',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'name'
+
+    @property
+    def string_by_field(self):
+        return 'name'
+
+
+class SetListItemMixin:
+    @property
+    def useful_field_list(self):
+        return {
+            'setlist': {
+                'type': 'model',
+                'equal': True,
+            },
+            'track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'start_time': {
+                'type': 'time',
+                'equal': True,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'setlist'
+
+    @property
+    def string_by_field(self):
+        return 'track'
+    
+    @property
+    def public(self):
+        return self.setlist.public
 
 
 class TagMixin:
@@ -173,6 +314,10 @@ class TagMixin:
     
     @property
     def create_by_field(self):
+        return 'value'
+    
+    @property
+    def string_by_field(self):
         return 'value'
     
 
@@ -219,6 +364,54 @@ class TrackInstanceMixin:
     def create_by_field(self):
         return 'track'
     
+    @property
+    def string_by_field(self):
+        return 'track'
+
+
+class TransitionMixin:
+
+    @property
+    def useful_field_list(self):
+        return {
+            'from_track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'to_track': {
+                'type': 'model',
+                'equal': True,
+            },
+            'comments': {
+                'type': 'string',
+                'equal': True,
+            },
+            'rating': {
+                'type': 'string',
+                'equal': True,
+            },
+            'user': {
+                'type': 'user',
+                'equal': True,
+            },
+            'date_modified': {
+                'type': 'date',
+                'equal': False,
+            },
+            'public': {
+                'type': 'boolean',
+                'equal': False,
+            },
+        }
+
+    @property
+    def create_by_field(self):
+        return 'from_track'
+
+    @property
+    def string_by_field(self):
+        return 'to_track'
+
 
 class SharedModelMixin:
 
@@ -227,10 +420,10 @@ class SharedModelMixin:
             if 'queryset' in str(value_input.__class__).lower():
                 field = getattr(self, field_name)
                 field.set(value_input)
-                self.save()
+                self.save(update_fields=[field_name])
             else:
                 setattr(self, field_name, value_input)
-                self.save()
+                self.save(update_fields=[field_name])
         except FieldDoesNotExist:
             print(f"Field '{field_name}' does not exist on the model.")
         except ValueError:
@@ -257,11 +450,12 @@ class SharedModelMixin:
         for field, data in self.useful_field_list.items():
             if data['type'] == 'model':
                 obj = self.get_field(field)
-                initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
+                if obj:
+                    initial[field+'_'+obj.create_by_field] = obj.get_field(obj.create_by_field)
             elif data['type'] == 'queryset':
                 obj_set = self.get_field(field)
                 if obj_set.count() >= 1:
-                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj) for obj in obj_set.all())
+                    initial[field+'_'+obj_set.first().create_by_field+'s'] = ', '.join(str(obj.get_field(obj.create_by_field)) for obj in obj_set.all())
             else:
                 initial[field] = self.get_field(field)
         return initial
@@ -285,6 +479,62 @@ class SharedModelMixin:
             return True
         else:
             return False
+
+
+class RequestMixin:
+    
+    @property
+    def model_name(self):
+        value = self.__class__.__name__.lower().replace('request', '')
+        return value
+
+    def field_substr(self, message, field_name):
+        request_value = self.get_field(field_name)
+        existing_value = self.get_field(self.model_name).get_field(field_name)
+        if request_value:
+            if self.useful_field_list[field_name]['type'] == 'queryset':
+                if not(existing_value) or (set(request_value) != set(existing_value)):
+                    message += ', change ' + field_name + ' to ' + request_value.display()
+            else:
+                if not(existing_value) or (request_value != existing_value):
+                    message += ', change ' + field_name + ' to ' + str(request_value)
+        elif not(request_value) and existing_value:
+            message += ', remove ' + field_name
+        return message
+
+    def __str__(self):
+        model = self.model_name
+        ex_obj = self.get_field(model)
+        if ex_obj:
+            message = 'Modify ' + model + ' request: ' + str(ex_obj)
+            for field in self.useful_field_list:
+                message = self.field_substr(message, field)
+            if ',' not in message:
+                message += ' (NO CHANGES FOUND)'
+        else:
+            if self.get_field(self.string_by_field):
+                message = 'New ' + model + ' request: ' + self.get_field(self.string_by_field)
+            else:
+                message = 'New ' + model + ' request: ' + str(self.get_field(self.create_by_field))
+            try:
+                id_kwarg = {}
+                id_kwarg[self.create_by_field] = self.get_field(self.create_by_field)
+                obj = apps.get_model('catalog', model.title()).objects.get(**id_kwarg)
+            except Exception as e:
+                print('Error: ' + str(e))
+                obj = None
+            if obj is None:
+                try:
+                    string_kwarg = {}
+                    string_kwarg[self.string_by_field] = self.get_field(self.string_by_field)
+                    obj = apps.get_model('catalog', model.title()).objects.get(**string_kwarg)
+                except Exception as e:
+                    print('Error: ' + str(e))
+                    obj = None
+            if obj:
+                message += ' (ALREADY EXISTS)'
+        return message
+
 
 
 # shared models with permissions manager
@@ -312,7 +562,11 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | trackinstance.track.artist.all()
                                 queryset = queryset | trackinstance.track.remix_artist.all()
                             elif shared_model == 'genre':
-                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                                if trackinstance.track.genre:
+                                    queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            elif shared_model == 'label':
+                                if trackinstance.track.label:
+                                    queryset = queryset | Label.objects.filter(id=trackinstance.track.label.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
                 return queryset.distinct()
@@ -354,7 +608,11 @@ class SharedModelPermissionManager(models.Manager):
                                 queryset = queryset | trackinstance.track.artist.all()
                                 queryset = queryset | trackinstance.track.remix_artist.all()
                             elif shared_model == 'genre':
-                                queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                                if trackinstance.track.genre:
+                                    queryset = queryset | Genre.objects.filter(id=trackinstance.track.genre.id)
+                            elif shared_model == 'label':
+                                if trackinstance.track.label:
+                                    queryset = queryset | Label.objects.filter(id=trackinstance.track.label.id)
                             else:
                                 raise ValidationError("Data for "+shared_model+" is not currently available.")
                     return queryset.distinct()
@@ -366,15 +624,22 @@ class SharedModelPermissionManager(models.Manager):
     
 
 class Artist(models.Model, SharedModelMixin, ArtistMixin):
-    name = models.CharField(max_length=200)
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata', null=True)
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
 
     def __str__(self):
-        return self.name
+        if self.name:
+            return self.name
+        else:
+            return str(self.beatport_artist_id)
 
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('artist-detail', args=[str(self.id), url_friendly_name])
     
     def get_genre_list(self):
@@ -385,12 +650,30 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
                 artist_genre_list.append(artist_track.genre.name)
         return re.sub(r"[\[|\]|']", '', str(artist_genre_list))
     
+    def metadata_status(self):
+        external_id_none = False
+        any_metadata_none = False
+
+        # evaluate potentially unset fields
+        if self.beatport_artist_id is None:
+            external_id_none = True
+        if self.name is None:
+            any_metadata_none = True
+
+        # determine action statuses
+        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
     class Meta:
         constraints = [
             UniqueConstraint(
-                Lower('name'),
-                name='artist_name_case_insensitive_unique',
-                violation_error_message="Artist already exists (case insensiitive match)"
+                fields=['beatport_artist_id'],
+                name='beatport_artist_id_if_set_unique',
+                condition=Q(beatport_artist_id__isnull=False),
+                violation_error_message="This artist ID from Beatport is already attached to another artist.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_artist_id__isnull=False) | Q(name__isnull=False),
+                name='artist_name_or_beatport_id_is_not_null'
             ),
         ]
         ordering = [
@@ -410,19 +693,26 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
 
 
 class Genre(models.Model, SharedModelMixin, GenreMixin):
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
     name = models.CharField(
         max_length=200,
-        unique=True,
+        null=True,
         help_text="Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)"
     )
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
 
     def __str__(self):
-        return self.name
+        if self.name:
+            return self.name
+        else:
+            return str(self.beatport_genre_id)
     
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('genre-detail', args=[str(self.id), url_friendly_name])
     
     def get_viewable_tracks_in_genre(self, user):
@@ -436,12 +726,31 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             viewable_artists = viewable_artists | track.get_viewable_remix_artists_on_track(user)
         return viewable_artists.distinct()
     
+    def metadata_status(self):
+        external_id_none = False
+        any_metadata_none = False
+
+        # evaluate potentially unset fields
+        if self.beatport_genre_id is None:
+            external_id_none = True
+        if self.name is None:
+            any_metadata_none = True
+            print('NO NAME!')
+
+        # determine action statuses
+        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
     class Meta:
         constraints = [
             UniqueConstraint(
-                Lower('name'),
-                name='genre_name_case_insensitive_unique',
-                violation_error_message="Genre already exists (case insensiitive match)"
+                fields=['beatport_genre_id'],
+                name='beatport_genre_id_if_set_unique',
+                condition=Q(beatport_genre_id__isnull=False),
+                violation_error_message="This genre ID from Beatport is already attached to another genre.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
+                name='genre_name_or_beatport_id_is_not_null'
             ),
         ]
         ordering = [
@@ -460,45 +769,103 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
         )
    
 
-class Track(models.Model, SharedModelMixin, TrackMixin):
-    title = models.CharField(max_length=200)
-    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
+class Label(models.Model, SharedModelMixin, LabelMixin):
+    beatport_label_id = models.BigIntegerField('Beatport Label ID', help_text='Label ID from Beatport, found in the label URL, which can be used to populate metadata', null=True)
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     objects = SharedModelPermissionManager()
-    MIX_LIST = [
-        ('o','Original Mix'),
-        ('e','Extended Mix'),
-        ('x','Remix'),
-        ('r','Radio Mix'),
-        ('i','Instrumental Mix'),
-    ]
-    mix = models.CharField(
-        max_length=16,
-        choices=MIX_LIST,
-        blank=True,
-        default=None,
-        null=True,
-        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
-    )
-    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist", blank=True)
-    
+
     def __str__(self):
-        value = self.title
-        artists = self.display_artist()
-        remixers = self.display_remix_artist()
-        mix = self.get_mix_display()
-        if len(remixers) >= 1:
-            value += ' (' + remixers + ' Remix)'
-        elif mix is not None:
-            value += ' (' + mix + ')'
-        if len(artists) >= 1:
-            value += ' by ' + artists
-        return value
+        if self.name:
+            return self.name
+        else:
+            return str(self.beatport_label_id)
     
     def get_absolute_url(self):
-        url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
+        return reverse('label-detail', args=[str(self.id), url_friendly_name])
+    
+    def metadata_status(self):
+        external_id_none = False
+        any_metadata_none = False
+
+        # evaluate potentially unset fields
+        if self.beatport_label_id is None:
+            external_id_none = True
+        if self.name is None:
+            any_metadata_none = True
+
+        # determine action statuses
+        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_label_id'],
+                name='beatport_label_id_if_set_unique',
+                condition=Q(beatport_label_id__isnull=False),
+                violation_error_message="This label ID from Beatport is already attached to another label.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_label_id__isnull=False) | Q(name__isnull=False),
+                name='label_name_or_beatport_id_is_not_null'
+            ),
+        ]
+        ordering = [
+            'name',
+        ]
+        permissions = (
+            ('moxtool_can_create_public_label', 'Label - Create Public - DJ'),
+            ('moxtool_can_create_own_label', 'Label - Create Own - DJ'),
+            ('moxtool_can_create_any_label', 'Label - Create Any - MOX'),
+            ('moxtool_can_view_public_label', 'Label - View Public - DJ'),
+            ('moxtool_can_view_own_label', 'Label - View Own - DJ'),
+            ('moxtool_can_view_any_label', 'Label - View Any - MOX'),
+            ('moxtool_can_modify_public_label', 'Label - Modify Public - DJ'),
+            ('moxtool_can_modify_own_label', 'Label - Modify Own - DJ'),
+            ('moxtool_can_modify_any_label', 'Label - Modify Any - MOX'),
+        )
+
+
+class Track(models.Model, SharedModelMixin, TrackMixin):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
+    title = models.CharField(max_length=200, null=True)
+    mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
+    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track")
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="remix_artist")
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
+    length = models.CharField(max_length=5, null=True)
+    released = models.DateField(null=True)
+    bpm = models.IntegerField(null=True)
+    key = models.CharField(max_length=8, null=True)
+    public = models.BooleanField(default=False)
+    objects = SharedModelPermissionManager()
+    
+    def __str__(self):
+        if self.title:
+            value = self.title
+            artists = self.display_artist()
+            remixers = self.display_remix_artist()
+            mix = self.mix
+            if mix is not None:
+                value += ' (' + mix + ')'
+            elif len(remixers) >= 1:
+                value += ' (' + remixers + ' Remix)'
+            if len(artists) >= 1:
+                value += ' by ' + artists
+            return value
+        else:
+            return str(self.beatport_track_id)
+    
+    def get_absolute_url(self):
+        if self.title:
+            url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        else:
+            url_friendly_title = 'tbd'
         return reverse('track-detail', args=[str(self.id), url_friendly_title])
     
     def get_viewable_artists_on_track(self, user):
@@ -512,7 +879,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         return viewable_artists.distinct()
     
     def display_viewable_artists(self, user):
-        return ', '.join(artist.name for artist in self.get_viewable_artists_on_track(user))
+        return ', '.join(str(artist) for artist in self.get_viewable_artists_on_track(user))
 
     display_viewable_artists.short_description = 'Artist'
     
@@ -527,26 +894,63 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
         return viewable_remix_artists.distinct()
     
     def display_viewable_remix_artists(self, user):
-        return ', '.join(remix_artist.name for remix_artist in self.get_viewable_remix_artists_on_track(user))
+        return ', '.join(str(remix_artist) for remix_artist in self.get_viewable_remix_artists_on_track(user))
 
     display_viewable_remix_artists.short_description = 'Remix Artist'
     
     def get_viewable_genre_on_track(self, user):
-        if Track.objects.get_queryset_can_view(user).filter(id=self.id).count() > 0:
-            return Genre.objects.get_queryset_can_view(user).get(id=self.genre.id)
+        track = Track.objects.get_queryset_can_view(user).filter(id=self.id).first()
+        if track:
+            return track.genre
         else:
             return None
     
     def get_viewable_instances_of_track(self, user):
         return TrackInstance.objects.get_queryset_can_view(user).filter(track=self)
     
+    def metadata_status(self):
+        external_id_none = False
+        any_metadata_none = False
+
+        # evaluate potentially unset fields
+        if self.beatport_track_id is None:
+            external_id_none = True
+        if self.title is None:
+            any_metadata_none = True
+        if self.mix is None:
+            any_metadata_none = True
+        if self.length is None:
+            any_metadata_none = True
+        if self.bpm is None:
+            any_metadata_none = True
+        if self.key is None:
+            any_metadata_none = True
+        if self.released is None:
+            any_metadata_none = True
+        if self.genre is None:
+            any_metadata_none = True
+        if self.label is None:
+            any_metadata_none = True
+        if self.artist.count() < 1:
+            any_metadata_none = True
+        if self.mix:
+            if 'remix' in self.mix.lower() and self.remix_artist.count() < 1:
+                any_metadata_none = True
+
+        # determine action statuses
+        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+
     class Meta:
         constraints = [
             UniqueConstraint(
-                'beatport_track_id',
+                fields=['beatport_track_id'],
                 name='beatport_track_id_if_set_unique',
-                condition=models.Q(beatport_track_id__isnull=False),
+                condition=Q(beatport_track_id__isnull=False),
                 violation_error_message="This track ID from Beatport is already attached to another track.",
+            ),
+            models.CheckConstraint(
+                check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
+                name='track_title_or_beatport_id_is_not_null'
             ),
         ]
         ordering = [
@@ -605,38 +1009,29 @@ class UserRequestPermissionManager(models.Manager):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
     
 
-class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
-    name = models.CharField(max_length=200)
+class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata', null=True)
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
-    def __str__(self):
-        if self.artist:
-            message = 'Modify artist request: ' + self.artist.name
-            if self.name != self.artist.name:
-                message = message + ', change name to ' + self.name
-            if self.public != self.artist.public:
-                message = message + ', change public to ' + str(self.public)
-            if ',' not in message:
-                message = message + ' (NO CHANGES FOUND)'
-        else:
-            message = 'New artist request: ' + self.name
-            try:
-                artist = Artist.objects.get(name=self.name)
-            except:
-                artist = None
-            if artist:
-                message = message + ' (ALREADY EXISTS)'
-        return message
-
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(beatport_artist_id__isnull=False) | Q(name__isnull=False),
+                name='request_artist_name_or_beatport_id_is_not_null'
+            ),
+        ]
         ordering = [
             'date_requested',
             'name',
@@ -651,38 +1046,29 @@ class ArtistRequest(models.Model, SharedModelMixin, ArtistMixin):
         )
 
 
-class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
-    name = models.CharField(max_length=200)
+class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
+    name = models.CharField(max_length=200, null=True)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
-    def __str__(self):
-        if self.genre:
-            message = 'Modify genre request: ' + self.genre.name
-            if self.name != self.genre.name:
-                message = message + ', change name to ' + self.name
-            if self.public != self.genre.public:
-                message = message + ', change public to ' + str(self.public)
-            if ',' not in message:
-                message = message + ' (NO CHANGES FOUND)'
-        else:
-            message = 'New genre request: ' + self.name
-            try:
-                genre = Genre.objects.get(name=self.name)
-            except:
-                genre = None
-            if genre:
-                message = message + ' (ALREADY EXISTS)'
-        return message
-
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        if self.name:
+            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        else:
+            url_friendly_name = 'tbd'
         return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
+                name='request_genre_name_or_beatport_id_is_not_null'
+            ),
+        ]
         ordering = [
             'date_requested',
             'name',
@@ -696,71 +1082,42 @@ class GenreRequest(models.Model, SharedModelMixin, GenreMixin):
             ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
         )
 
+#wip
+# class LabelRequest(RequestMixin, models.Model, SharedModelMixin, LabelMixin):
 
-class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata.')
-    title = models.CharField(max_length=200)
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True, related_name="request_genre")
+
+class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
+    title = models.CharField(max_length=200, null=True)
+    mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
-    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist", blank=True)
-    MIX_LIST = [
-        ('o','Original Mix'),
-        ('e','Extended Mix'),
-        ('x','Remix'),
-        ('r','Radio Mix'),
-        ('i','Instrumental Mix'),
-    ]
-    mix = models.CharField(
-        max_length=16,
-        choices=MIX_LIST,
-        blank=True,
-        default=None,
-        null=True,
-        help_text='the mix version of the track (e.g. Original Mix, Remix, etc.)',
-    )
+    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist")
+    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+    label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
+    length = models.CharField(max_length=5, null=True)
+    released = models.DateField(null=True)
+    bpm = models.IntegerField(null=True)
+    key = models.CharField(max_length=8, null=True)
     public = models.BooleanField(default=False)
     date_requested = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
     objects = UserRequestPermissionManager()
 
-    def field_substr(self, message, field_name):
-        request_value = self.get_field(field_name)
-        existing_value = self.track.get_field(field_name)
-        if request_value:
-            if self.useful_field_list[field_name]['type'] == 'queryset':
-                if not(existing_value) or (set(request_value) != set(existing_value)):
-                    set_text = ', '.join(str(obj) for obj in request_value)
-                    message += ', change ' + field_name + ' to ' + set_text
-            else:
-                if not(existing_value) or (request_value != existing_value):
-                    message += ', change ' + field_name + ' to ' + str(request_value)
-        elif not(request_value) and existing_value:
-            message += ', remove ' + field_name
-        return message
-
-    def __str__(self):
-        if self.track:
-            message = 'Modify track request: ' + self.track.title
-            for field in self.useful_field_list:
-                message = self.field_substr(message, field)
-            if ',' not in message:
-                message = message + ' (NO CHANGES FOUND)'
-        else:
-            message = 'New track request: ' + self.title
-            try:
-                track = Track.objects.get(beatport_track_id=self.beatport_track_id)
-            except:
-                track = None
-            if track:
-                message = message + ' (ALREADY EXISTS)'
-        return message
-
     def get_absolute_url(self):
-        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
-        return reverse('track-request-detail', args=[str(self.id), url_friendly_name])
+        if self.title:
+            url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+        else:
+            url_friendly_title = 'tbd'
+        return reverse('track-request-detail', args=[str(self.id), url_friendly_title])
     
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
+                name='request_track_title_or_beatport_id_is_not_null'
+            ),
+        ]
         ordering = [
             'date_requested',
             'title',
@@ -779,7 +1136,29 @@ class TrackRequest(models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserModelPermissionManager(models.Manager):
-    
+
+    def get_public_set(self):
+        user_model = self.model.__name__.lower()
+        if user_model == 'setlistitem':
+            queryset = self.none()
+            for setlistitem in self.get_queryset():
+                if setlistitem.setlist.public is True:
+                    queryset = queryset | SetListItem.objects.filter(id=setlistitem.id)
+        else:
+            queryset = self.get_queryset().filter(public=True)
+        return queryset
+
+    def get_user_set(self, user):
+        user_model = self.model.__name__.lower()
+        if user_model == 'setlistitem':
+            queryset = self.none()
+            for setlistitem in self.get_queryset():
+                if setlistitem.setlist.user == user:
+                    queryset = queryset | SetListItem.objects.filter(id=setlistitem.id)
+        else:
+            queryset = self.get_queryset().filter(user=user)
+        return queryset
+
     def get_queryset_can_view(self, user):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
@@ -788,15 +1167,16 @@ class UserModelPermissionManager(models.Manager):
             if user_model:
                 if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
                     return self.get_queryset()
-                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) and user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                    return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
-                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
-                    return self.get_queryset().filter(public=True)
-                elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                    return self.get_queryset().filter(user=user)
                 else:
-                    model = self.model
-                    return model.objects.none()
+                    queryset = self.model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_view_public_'+user_model):
+                        queryset = queryset | self.get_public_set()
+                    if user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                        queryset = queryset | self.get_user_set(user)
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
+                    else:
+                        return queryset
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -809,10 +1189,9 @@ class UserModelPermissionManager(models.Manager):
                 if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
                     return self.get_queryset()
                 elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
-                    return self.get_queryset().filter(user=user)
+                    return self.get_user_set(user)
                 else:
-                    model = self.model
-                    return model.objects.none()
+                    return self.model.objects.none()
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -820,48 +1199,31 @@ class UserModelPermissionManager(models.Manager):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
-            model = self.model
-            shared_model = self.model.__name__.lower()
-            if shared_model:
-                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
                     return self.get_queryset()
                 else:
-                    queryset = model.objects.none()
-                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
-                        queryset = queryset | self.get_queryset().filter(public=True)
-                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
-                        queryset = queryset | self.get_queryset().filter(user=user)
+                    queryset = self.model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
+                        queryset = queryset | self.get_public_set()
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
+                        queryset = queryset | self.get_user_set(user)
                     if queryset.count() >= 1:
                         return queryset.distinct()
                     else:
-                        model = self.model
-                        return model.objects.none()
+                        return queryset
             else:
-                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+                raise ValidationError("The request for "+user_model+" is not a valid shared model.")
 
     def display(self, user):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
 
 
 class Tag(models.Model, SharedModelMixin, TagMixin):
-    TYPE_LIST = [
-        ('v','vibe'),
-        ('c','color'),
-        ('h','chords'),
-        ('s','sounds'),
-        ('g','groove'),
-    ]
-    type = models.CharField(
-        max_length=6,
-        choices=TYPE_LIST,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Type of tag (e.g. vibe, chords, etc.)',
-    )
-
-    value = models.CharField(max_length=100, default=None)
-    detail = models.CharField(max_length=1000, null=True)
+    value = models.CharField(max_length=100, help_text='Value of tag (e.g. Nasty House, Piano Tracks)')
+    type = models.CharField(max_length=100, default='', help_text='Optional type of tag (e.g. vibe, chords, etc.)')
+    detail = models.CharField(max_length=1000, null=True, help_text='Optional detail for tag')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     date_added = models.DateField(null=True, blank=True)
     public = models.BooleanField(default=False)
@@ -884,6 +1246,13 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
         return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['value', 'type', 'user'],
+                name='tag_unique_on_value_type_and_user',
+                # nulls_distinct=False,
+            ),
+        ]
         ordering = [
             'type',
             'date_added',
@@ -902,16 +1271,16 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
 
 class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this track and owner library")
-    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
-    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.")
-    date_added = models.DateField(null=True, blank=True)
+    track = models.ForeignKey('Track', on_delete=models.RESTRICT)
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this track.", null=True)
+    date_added = models.DateField(null=True)
     play_count = models.IntegerField(default=0)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
     public = models.BooleanField(default=False)
     objects = UserModelPermissionManager()
 
-    TRACK_RATING = [
+    RATING_CHOICES = [
         ('0', 'unplayable'),
         ('1', 'atrocious'),
         ('2', 'terrible'),
@@ -927,14 +1296,17 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
 
     rating = models.CharField(
         max_length=2,
-        choices=TRACK_RATING,
-        blank=True,
+        choices=RATING_CHOICES,
+        null=True,
         default=None,
         help_text='Track rating',
     )
 
     def __str__(self):
-        return self.track.title
+        if self.track.title:
+            return self.track.title
+        else:
+            return str(self.track.beatport_track_id)
     
     def get_absolute_url(self):
         return self.track.get_absolute_url()
@@ -976,7 +1348,7 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
         constraints = [
             UniqueConstraint(
                 fields=['track', 'user'],
-                name='user_track_unique',
+                name='trackinstance_unique_on_track_and_user',
                 violation_error_message="User already has this track in their library"
             ),
         ]
@@ -995,9 +1367,147 @@ class TrackInstance(models.Model, SharedModelMixin, TrackInstanceMixin):
         )
 
 
+class SetList(models.Model, SharedModelMixin, SetListMixin):   
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist and owner library")
+    name = models.CharField(max_length=200) 
+    date_played = models.DateField(null=True, blank=True)
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this setlist.", null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this setlist.", blank=True)
+    public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+        return reverse('setlist-detail', args=[str(self.id), url_friendly_name])
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'user'], 
+                name='setlist_unique_on_name_and_user',
+            ),
+        ]
+        ordering = [
+            'date_played',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_setlist', 'SetList - Create Own - DJ'),
+            ('moxtool_can_create_any_setlist', 'SetList - Create Any - MOX'),
+            ('moxtool_can_view_own_setlist', 'SetList - View Own - DJ'),
+            ('moxtool_can_view_public_setlist', 'SetList - View Public - DJ'),
+            ('moxtool_can_view_any_setlist', 'SetList - View Any - MOX'),
+            ('moxtool_can_modify_own_setlist', 'SetList - Modify Own - DJ'),
+            ('moxtool_can_modify_public_setlist', 'SetList - Modify Public - DJ'),
+            ('moxtool_can_modify_any_setlist', 'SetList - Modify Any - MOX'),
+        )
+
+
+class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist item")
+    setlist = models.ForeignKey('SetList', on_delete=models.RESTRICT, null=True)
+    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, help_text='Select a track for this setlist.')
+    start_time = models.TimeField(null=True)
+    objects = UserModelPermissionManager()
+
+    def __str__(self):
+        return str(self.track) + ' at ' + str(self.start_time)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['setlist', 'start_time'], 
+                name='setlistitem_unique_on_setlist_and_start_time',
+            ),
+        ]
+        ordering = [
+            'setlist',
+            'start_time',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_setlistitem', 'SetListItem - Create Own - DJ'),
+            ('moxtool_can_create_any_setlistitem', 'SetListItem - Create Any - MOX'),
+            ('moxtool_can_view_own_setlistitem', 'SetListItem - View Own - DJ'),
+            ('moxtool_can_view_public_setlistitem', 'SetListItem - View Public - DJ'),
+            ('moxtool_can_view_any_setlistitem', 'SetListItem - View Any - MOX'),
+            ('moxtool_can_modify_own_setlistitem', 'SetListItem - Modify Own - DJ'),
+            ('moxtool_can_modify_public_setlistitem', 'SetListItem - Modify Public - DJ'),
+            ('moxtool_can_modify_any_setlistitem', 'SetListItem - Modify Any - MOX'),
+        )
+
+
+class Transition(models.Model, SharedModelMixin, TransitionMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this transition and owner library")
+    from_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='from_track')
+    to_track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, related_name='to_track')
+    comments = models.TextField(max_length=1000, help_text = "Enter any notes you want to remember about this transition.", null=True)
+    date_modified = models.DateField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    public = models.BooleanField(default=False)
+    objects = UserModelPermissionManager()
+
+    RATING_CHOICES = [
+        ('0', 'unplayable'),
+        ('1', 'atrocious'),
+        ('2', 'terrible'),
+        ('3', 'bad'),
+        ('4', 'meh'),
+        ('5', 'okay'),
+        ('6', 'fine'),
+        ('7', 'good'),
+        ('8', 'great'),
+        ('9', 'excellent'),
+        ('10', 'perfect'),
+    ]
+
+    rating = models.CharField(
+        max_length=2,
+        choices=RATING_CHOICES,
+        null=True,
+        default=None,
+        help_text='Transition rating',
+    )
+
+    def __str__(self):
+        return 'from ' + str(self.from_track) + ' to ' + str(self.to_track)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=~Q(from_track=F('to_track')),
+                name='track_cannot_transition_itself'
+            ),
+            UniqueConstraint(
+                fields=['from_track', 'to_track', 'user'], 
+                name='unique_user_track_transition'
+            ),
+        ]
+        ordering = [
+            'date_modified',
+        ]
+        permissions = (
+            ('moxtool_can_create_own_transition', 'Transition - Create Own - DJ'),
+            ('moxtool_can_create_any_transition', 'Transition - Create Any - MOX'),
+            ('moxtool_can_view_own_transition', 'Transition - View Own - DJ'),
+            ('moxtool_can_view_public_transition', 'Transition - View Public - DJ'),
+            ('moxtool_can_view_any_transition', 'Transition - View Any - MOX'),
+            ('moxtool_can_modify_own_transition', 'Transition - Modify Own - DJ'),
+            ('moxtool_can_modify_public_transition', 'Transition - Modify Public - DJ'),
+            ('moxtool_can_modify_any_transition', 'Transition - Modify Any - MOX'),
+        )
+
+    def clean(self):
+        if self.from_track == self.to_track:
+            raise ValidationError("From track and to track cannot be equal.")
+        super().clean()
+
+
 class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
     name = models.CharField(max_length=200)
-    track = models.ManyToManyField(TrackInstance, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
+    track = models.ManyToManyField(Track, verbose_name="tracks", help_text="Select one or more tracks for this playlist.")
     date_added = models.DateField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     tag = models.ManyToManyField(Tag, verbose_name="tags", help_text="Select one or more tags for this playlist.", blank=True)
@@ -1015,6 +1525,11 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
         return reverse('add-track-to-playlist-dj', args=[str(self.id)]) 
 
     class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'user'],
+                name='playlist_unique_on_name_and_user'),
+        ]
         ordering = [
             'date_added',
         ]
@@ -1028,3 +1543,32 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
             ('moxtool_can_modify_public_playlist', 'Playlist - Modify Public - DJ'),
             ('moxtool_can_modify_any_playlist', 'Playlist - Modify Any - MOX'),
         )
+
+
+# functions
+
+
+def metadata_action_statuses(external_id_none, any_metadata_none, public):
+    if external_id_none == False:
+        if any_metadata_none == True:
+            scrape = True
+            add = False
+            if public == True:
+                remove = True
+            else:
+                remove = False
+        else:
+            scrape = False
+            remove = False
+            if public == True:
+                add = False
+            else:
+                add = True
+    else:
+        scrape = False
+        add = False
+        if public == True:
+            remove = True
+        else:
+            remove = False
+    return scrape, remove, add

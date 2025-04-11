@@ -1,5 +1,5 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Tag, Track, TrackInstance, TrackRequest
-from datetime import date
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from datetime import date, time
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -10,10 +10,10 @@ class CatalogTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'playlist', 'tag', 'track', 'trackinstance', 'trackrequest'],
+            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'label', 'playlist', 'setlist', 'setlistitem', 'tag', 'track', 'trackinstance', 'trackrequest', 'transition'],
             'domain': ['any', 'public', 'own'],
         }
-        user_models = ['playlist', 'tag', 'trackinstance']
+        user_models = ['playlist', 'setlist', 'setlistitem', 'tag', 'trackinstance', 'transition']
         groups = {}
         users = {}
         perms = {}
@@ -37,7 +37,7 @@ class CatalogTestMixin:
             users[group].groups.add(groups[group])
         users['anonymous'] = AnonymousUser()
         Artist.objects.create(name='EnterTheMox', public=True)
-        Artist.objects.create(name='Stars Align', public=False)
+        Artist.objects.create(beatport_artist_id=402072, public=False)
         Artist.objects.create(name='m4ri55a', public=False)
         ArtistRequest.objects.create(
             artist=Artist.objects.get(id=1),
@@ -49,7 +49,7 @@ class CatalogTestMixin:
         ArtistRequest.objects.create(
             artist=Artist.objects.get(id=2),
             public=True,
-            name=Artist.objects.get(id=2).get_field('name'),
+            name='Max Styler',
             user=users['dj'],
             date_requested=date(2025, 3, 14),
         )
@@ -73,7 +73,7 @@ class CatalogTestMixin:
             date_requested=date(2024, 8, 4),
         )
         Genre.objects.create(name='House', public=True)
-        Genre.objects.create(name='Techno', public=False)
+        Genre.objects.create(beatport_genre_id=6, public=False)
         GenreRequest.objects.create(
             genre=Genre.objects.get(id=1),
             public=True,
@@ -84,13 +84,13 @@ class CatalogTestMixin:
         GenreRequest.objects.create(
             genre=Genre.objects.get(id=2),
             public=True,
-            name=Genre.objects.get(id=2).get_field('name'),
+            name='Techno',
             user=users['dj'],
             date_requested=date(2025, 3, 1),
         )
         GenreRequest.objects.create(
             public=True,
-            name='Trance',
+            beatport_genre_id=7,
             user=users['admin'],
             date_requested=date(2025, 3, 26),
         )
@@ -107,16 +107,17 @@ class CatalogTestMixin:
             user=users['dj'],
             date_requested=date(2024, 12, 31),
         )
+        Label.objects.create(name='Cautionary Tapes', public=True)
+        Label.objects.create(beatport_label_id=586, public=False)
         Track.objects.create(
-            beatport_track_id=1, 
             title='Not in my Haus', 
             genre=Genre.objects.get(id=1),
+            label=Label.objects.get(id=1),
             mix='e',
             public=False,
         )
         Track.objects.get(id=1).artist.set(Artist.objects.filter(id=1))
         Track.objects.create(
-            beatport_track_id=2, 
             title='TechYES!', 
             genre=Genre.objects.get(id=2),
             mix='x',
@@ -125,34 +126,30 @@ class CatalogTestMixin:
         Track.objects.get(id=2).artist.set(Artist.objects.filter(id=2))
         Track.objects.get(id=2).remix_artist.set(Artist.objects.filter(id=3))
         Track.objects.create(
-            beatport_track_id=3, 
-            title='Drums in a Cave', 
-            genre=Genre.objects.get(id=2),
-            mix='o',
-            public=True,
+            beatport_track_id=20079434, 
+            public=False,
         )
         Track.objects.get(id=3).artist.set(Artist.objects.filter(id=2))
         Track.objects.create(
-            beatport_track_id=4, 
             title='Mau5 Hau5', 
             genre=Genre.objects.get(id=1),
+            label=Label.objects.get(id=1),
             mix='x',
-            public=False,
+            public=True,
         )
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
         TrackRequest.objects.create(
-            track=Track.objects.get(id=1),
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title='Frisco Disco',
+            track=Track.objects.get(beatport_track_id=20079434),
+            beatport_track_id=20079434,
+            title='I Know You Want To',
             genre=Track.objects.get(id=1).genre,
             mix=Track.objects.get(id=1).mix,
             public=Track.objects.get(id=1).public,
             user=users['dj'],
             date_requested=date(2025, 3, 1),
         )
-        TrackRequest.objects.get(id=1).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=1).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+        TrackRequest.objects.get(beatport_track_id=20079434).artist.add(Artist.objects.get(beatport_artist_id=402072))
         TrackRequest.objects.create(
             track=Track.objects.get(id=2),
             beatport_track_id=Track.objects.get(id=2).beatport_track_id,
@@ -245,13 +242,67 @@ class CatalogTestMixin:
             user=users['dj'],
             public=False,
         )
-        Playlist.objects.get(id=1).track.set(TrackInstance.objects.filter(user=users['dj']))
+        dj_playlist_trackinstances = TrackInstance.objects.filter(user=users['dj'])
+        dj_playlist_track_list = []
+        for ti in dj_playlist_trackinstances:
+            dj_playlist_track_list.append(ti.track.id)
+        Playlist.objects.get(id=1).track.set(Track.objects.filter(id__in=dj_playlist_track_list))
         Playlist.objects.create(
             name='Secret Bunker',
             date_added=date(2024, 12, 25),
             user=users['admin'],
             public=False,
         )
-        Playlist.objects.get(id=2).track.set(TrackInstance.objects.filter(user=users['admin']))
+        admin_playlist_trackinstances = TrackInstance.objects.filter(user=users['admin'])
+        admin_playlist_track_list = []
+        for ti in admin_playlist_trackinstances:
+            admin_playlist_track_list.append(ti.track.id)
+        Playlist.objects.get(id=2).track.set(Track.objects.filter(id__in=admin_playlist_track_list))
         Playlist.objects.get(id=2).tag.set(Tag.objects.filter(id=2))
+        SetList.objects.create(
+            name='Enter The Mix #5',
+            date_played=date(2025, 4, 6),
+            comments='mix of progressive house and techno on a rainy day',
+            user=users['dj'],
+            public=True,
+        )
+        SetList.objects.get(name='Enter The Mix #5').tag.set(Tag.objects.filter(user=users['dj']))
+        t = 0
+        for ti_dj in TrackInstance.objects.filter(user=users['dj']):
+            item = SetListItem.objects.create(
+                setlist=SetList.objects.get(name='Enter The Mix #5'),
+                track=ti_dj.track,
+                start_time=time(0, t, 0, 0),
+            )
+            if t > 0:
+                Transition.objects.create(
+                    from_track=last_item.track,
+                    to_track=item.track,
+                    user=users['dj'],
+                    date_modified=date.today(),
+                )
+            t+=5
+            last_item = item
+        SetList.objects.create(
+            name='Secret Future Mix',
+            date_played=date(2025, 4, 13),
+            user=users['admin'],
+            public=False,
+        )
+        t = 0
+        for ti_admin in TrackInstance.objects.filter(user=users['admin']).reverse():
+            item = SetListItem.objects.create(
+                setlist=SetList.objects.get(name='Secret Future Mix'),
+                track=ti_admin.track,
+                start_time=time(0, t, 0, 0),
+            )
+            if t > 0:
+                Transition.objects.create(
+                    from_track=last_item.track,
+                    to_track=item.track,
+                    user=users['admin'],
+                    date_modified=date.today(),
+                )
+            t+=6
+            last_item = item
         return users, groups

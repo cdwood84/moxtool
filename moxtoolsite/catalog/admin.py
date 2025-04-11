@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Artist, ArtistRequest, Genre, Playlist, Tag, Track, TrackInstance, TrackRequest
+from .models import Artist, ArtistRequest, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
 
 
 @admin.register(Artist)
@@ -19,10 +19,26 @@ class GenreAdmin(admin.ModelAdmin):
     list_filter = ['public']
 
 
+@admin.register(Label)
+class LabelAdmin(admin.ModelAdmin):
+    list_display = ['name', 'public']
+    list_filter = ['public']
+
+
 @admin.register(Playlist)
 class PlaylistAdmin(admin.ModelAdmin):
     list_display = ['name', 'user', 'date_added']
     list_filter = ['user', 'date_added', 'tag']
+
+
+@admin.register(SetList)
+class SetListAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(SetListItem)
+class SetListItemAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(Tag)
@@ -56,3 +72,8 @@ class TrackInstanceAdmin(admin.ModelAdmin):
         (None,{'fields': ['track', 'id']}),
         ('User Info',{'fields': ['user', 'date_added', 'play_count', 'rating', 'tag', 'comments']})
     )
+
+
+@admin.register(Transition)
+class TransitionAdmin(admin.ModelAdmin):
+    pass

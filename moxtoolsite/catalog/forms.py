@@ -2,7 +2,8 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Playlist, Track, TrackInstance, TrackRequest
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Track, TrackInstance, TrackRequest
+from .utils import scrape_artist, scrape_genre, scrape_label, scrape_track
 import datetime
 
 
@@ -223,7 +224,6 @@ class TrackForm(forms.Form, ObjectFormMixin):
     mix = forms.ChoiceField(
         help_text="Enter the mix name, which can be found in parenthases in the title.",
         required=False,
-        choices=Track.MIX_LIST,
     )
     public = forms.BooleanField(
         help_text="Indicate whether you want this track to be made public on MoxToolSite (default is false).",
@@ -287,3 +287,87 @@ class TrackForm(forms.Form, ObjectFormMixin):
                 del cleaned_data['remix_artist_names']
 
         return cleaned_data
+    
+
+class TrackInstanceForm(forms.Form, ObjectFormMixin):
+    track_beatport_track_id = forms.IntegerField(
+        help_text="Enter the beatport_track_id of the track.",
+        required=True,
+    )
+    date_added = forms.DateField(
+        help_text="Enter the date you added this track to your library.",
+        required=False,
+    )
+    rating = forms.ChoiceField(
+        help_text="Enter your rating for the track.",
+        choices=TrackInstance.RATING_CHOICES,
+        required=False,
+    )
+    comments = forms.CharField(
+        help_text="Enter the artist name.",
+        required=False,
+        max_length=1000,
+    )
+    play_count = forms.IntegerField(
+        help_text="Enter the number of times you have played this track.",
+        required=False,
+    )
+    public = forms.BooleanField(
+        help_text="Indicate whether you want this track to be made public as a part of your library on MoxToolSite (default is false).",
+        required=False,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.many_to_many_data = None
+        return cleaned_data
+
+
+class BulkUploadForm(forms.Form):
+    OBJECTS = [
+        ('artist', 'Artist'),
+        ('genre', 'Genre'),
+        ('label', 'Label'),
+        ('track', 'Track'),
+    ]
+    object_name = forms.ChoiceField(
+        choices=OBJECTS,
+        help_text="Choose an object type to upload.",
+        required=True,
+    )
+    beatport_id_string = forms.CharField(
+        help_text="Enter one or more beatport IDs, separated by commas.",
+        required=True,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data['beatport_id_list'] = []
+        for id in cleaned_data.get('beatport_id_string').split(','):
+            print('trying: '+id.strip())
+            try:
+                cleaned_data['beatport_id_list'].append(int(id.strip()))
+                print(' success')
+            except:
+                print('Error converting '+id+' to integer')
+        return cleaned_data
+
+    def save(self, user=None):
+        obj_name = self.cleaned_data.get('object_name')
+        for id in self.cleaned_data.get('beatport_id_list'):
+            print('starting '+str(id)+' as a '+obj_name)
+            if obj_name == 'artist':
+                obj, success = scrape_artist(id)
+            elif obj_name == 'genre':
+                obj, success = scrape_genre(id)
+            elif obj_name == 'label':
+                obj, success = scrape_label(id)
+            elif obj_name == 'track':
+                obj, success = scrape_track(id)
+                if user and success == True:
+                    ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
+                    if new_ti:
+                        print('Added '+str(ti)+' for '+str(user))
+            else:
+                raise ValidationError('Invalid object type processed')
+        return True
