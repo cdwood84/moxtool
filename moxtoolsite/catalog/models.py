@@ -254,35 +254,31 @@ class SetListItemMixin:
     @property
     def useful_field_list(self):
         return {
-            'name': {
-                'type': 'string',
+            'setlist': {
+                'type': 'model',
                 'equal': True,
             },
-            'comments': {
-                'type': 'string',
+            'track': {
+                'type': 'model',
                 'equal': True,
             },
-            'tag': {
-                'type': 'queryset',
+            'start_time': {
+                'type': 'time',
                 'equal': True,
-            },
-            'user': {
-                'type': 'user',
-                'equal': True,
-            },
-            'date_played': {
-                'type': 'date',
-                'equal': True,
-            },
-            'public': {
-                'type': 'boolean',
-                'equal': False,
             },
         }
 
     @property
     def create_by_field(self):
         return 'setlist'
+
+    @property
+    def string_by_field(self):
+        return 'track'
+    
+    @property
+    def public(self):
+        return self.setlist.public
 
 
 class TagMixin:
@@ -1136,7 +1132,29 @@ class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
 
 
 class UserModelPermissionManager(models.Manager):
-    
+
+    def get_public_set(self):
+        user_model = self.model.__name__.lower()
+        if user_model == 'setlistitem':
+            queryset = self.none()
+            for setlistitem in self.get_queryset():
+                if setlistitem.setlist.public is True:
+                    queryset = queryset | SetListItem.objects.filter(id=setlistitem.id)
+        else:
+            queryset = self.get_queryset().filter(public=True)
+        return queryset
+
+    def get_user_set(self, user):
+        user_model = self.model.__name__.lower()
+        if user_model == 'setlistitem':
+            queryset = self.none()
+            for setlistitem in self.get_queryset():
+                if setlistitem.setlist.user == user:
+                    queryset = queryset | SetListItem.objects.filter(id=setlistitem.id)
+        else:
+            queryset = self.get_queryset().filter(user=user)
+        return queryset
+
     def get_queryset_can_view(self, user):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
@@ -1145,15 +1163,16 @@ class UserModelPermissionManager(models.Manager):
             if user_model:
                 if user.has_perm('catalog.moxtool_can_view_any_'+user_model):
                     return self.get_queryset()
-                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model) and user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                    return self.get_queryset().filter(public=True) | self.get_queryset().filter(user=user)
-                elif user.has_perm('catalog.moxtool_can_view_public_'+user_model):
-                    return self.get_queryset().filter(public=True)
-                elif user.has_perm('catalog.moxtool_can_view_own_'+user_model):
-                    return self.get_queryset().filter(user=user)
                 else:
-                    model = self.model
-                    return model.objects.none()
+                    queryset = self.model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_view_public_'+user_model):
+                        queryset = queryset | self.get_public_set()
+                    if user.has_perm('catalog.moxtool_can_view_own_'+user_model):
+                        queryset = queryset | self.get_user_set(user)
+                    if queryset.count() >= 1:
+                        return queryset.distinct()
+                    else:
+                        return queryset
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -1166,10 +1185,9 @@ class UserModelPermissionManager(models.Manager):
                 if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
                     return self.get_queryset()
                 elif user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
-                    return self.get_queryset().filter(user=user)
+                    return self.get_user_set(user)
                 else:
-                    model = self.model
-                    return model.objects.none()
+                    return self.model.objects.none()
             else:
                 raise ValidationError("The request for "+user_model+" is not a valid user model.")
 
@@ -1177,24 +1195,22 @@ class UserModelPermissionManager(models.Manager):
         if user.is_anonymous:
             raise PermissionDenied("You must login.")
         else:
-            model = self.model
-            shared_model = self.model.__name__.lower()
-            if shared_model:
-                if user.has_perm('catalog.moxtool_can_modify_any_'+shared_model):
+            user_model = self.model.__name__.lower()
+            if user_model:
+                if user.has_perm('catalog.moxtool_can_modify_any_'+user_model):
                     return self.get_queryset()
                 else:
-                    queryset = model.objects.none()
-                    if user.has_perm('catalog.moxtool_can_modify_public_'+shared_model):
-                        queryset = queryset | self.get_queryset().filter(public=True)
-                    if user.has_perm('catalog.moxtool_can_modify_own_'+shared_model):
-                        queryset = queryset | self.get_queryset().filter(user=user)
+                    queryset = self.model.objects.none()
+                    if user.has_perm('catalog.moxtool_can_modify_public_'+user_model):
+                        queryset = queryset | self.get_public_set()
+                    if user.has_perm('catalog.moxtool_can_modify_own_'+user_model):
+                        queryset = queryset | self.get_user_set(user)
                     if queryset.count() >= 1:
                         return queryset.distinct()
                     else:
-                        model = self.model
-                        return model.objects.none()
+                        return queryset
             else:
-                raise ValidationError("The request for "+shared_model+" is not a valid shared model.")
+                raise ValidationError("The request for "+user_model+" is not a valid shared model.")
 
     def display(self, user):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
@@ -1389,15 +1405,12 @@ class SetList(models.Model, SharedModelMixin, SetListMixin):
 class SetListItem(models.Model, SharedModelMixin, SetListItemMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this setlist item")
     setlist = models.ForeignKey('SetList', on_delete=models.RESTRICT, null=True)
-    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
+    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True, help_text='Select a track for this setlist.')
     start_time = models.TimeField(null=True)
     objects = UserModelPermissionManager()
 
     def __str__(self):
-        return str(self.trackinstance.track) + ' at ' + str(self.start_time)
-
-    def get_absolute_url(self):
-        return reverse('setlistitem-detail', args=[str(self.id)])
+        return str(self.track) + ' at ' + str(self.start_time)
 
     class Meta:
         constraints = [

@@ -3,6 +3,7 @@ from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.test import TestCase
+from datetime import time
 import re
 
 
@@ -1716,6 +1717,14 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
 
     # test object manager
 
+    def test_get_public_set(self):
+        expected_set = Playlist.objects.filter(public=True)
+        self.assertEqual(set(Playlist.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = Playlist.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Playlist.objects.get_user_set(self.users['dj'])), set(expected_set))
+
     def test_get_queryset_can_view(self):
         all_playlists = Playlist.objects.all()
         self.assertRaises(PermissionDenied, Playlist.objects.get_queryset_can_view, (self.users['anonymous']))
@@ -1769,7 +1778,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
         playlist2 = Playlist.objects.first()
         self.assertRaises(IntegrityError, Playlist.objects.create, user=playlist2.user, name=playlist2.name)
 
-#wip
+
 class SetListModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1898,6 +1907,14 @@ class SetListModelTest(TestCase, CatalogTestMixin):
 
     # test object manager
 
+    def test_get_public_set(self):
+        expected_set = SetList.objects.filter(public=True)
+        self.assertEqual(set(SetList.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = SetList.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(SetList.objects.get_user_set(self.users['dj'])), set(expected_set))
+
     def test_get_queryset_can_view(self):
         all_setlists = SetList.objects.all()
         self.assertRaises(PermissionDenied, SetList.objects.get_queryset_can_view, (self.users['anonymous']))
@@ -1952,8 +1969,169 @@ class SetListModelTest(TestCase, CatalogTestMixin):
         self.assertRaises(IntegrityError, SetList.objects.create, user=setlist2.user, name=setlist2.name)
 
 
-#wip
-# class SetListItemModelTest(TestCase, CatalogTestMixin):
+class SetListItemModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_setlist_field(self):
+        setlistitem = SetListItem.objects.first()
+        field_label = setlistitem._meta.get_field('setlist').verbose_name
+        self.assertEqual(field_label, 'setlist')
+
+    def test_track_field(self):
+        setlistitem = SetListItem.objects.first()
+        field_label = setlistitem._meta.get_field('track').verbose_name
+        self.assertEqual(field_label, 'track')
+        help_text = setlistitem._meta.get_field('track').help_text
+        self.assertEqual(help_text, 'Select a track for this setlist.')
+
+    def test_start_time_field(self):
+        setlistitem = SetListItem.objects.first()
+        field_label = setlistitem._meta.get_field('start_time').verbose_name
+        self.assertEqual(field_label, 'start time')
+
+    # mixin fields
+
+    def test_useful_field_list_property(self):
+        setlistitem = SetListItem.objects.first()
+        useful_field_list = setlistitem.useful_field_list
+        self.assertEqual(useful_field_list['setlist']['type'], 'model')
+        self.assertTrue(useful_field_list['setlist']['equal'])
+        self.assertEqual(useful_field_list['track']['type'], 'model')
+        self.assertTrue(useful_field_list['track']['equal'])
+        self.assertEqual(useful_field_list['start_time']['type'], 'time')
+        self.assertTrue(useful_field_list['start_time']['equal'])
+
+    def test_create_by_property(self):
+        setlistitem = SetListItem.objects.first()
+        create_by = setlistitem.create_by_field
+        self.assertEqual(create_by, 'setlist')
+
+    def test_string_by_property(self):
+        setlistitem = SetListItem.objects.first()
+        string_by = setlistitem.string_by_field
+        self.assertEqual(string_by, 'track')
+
+    def test_public(self):
+        for setlistitem in SetListItem.objects.all():
+            self.assertEqual(setlistitem.public, setlistitem.setlist.public)
+
+    # SetListItem specific functions
+
+    def test_object_string(self):
+        for setlistitem in SetListItem.objects.all():
+            expected_text = str(setlistitem.track) + ' at ' + str(setlistitem.start_time)
+            self.assertEqual(str(setlistitem), expected_text)
+
+    # Shared model functions
+
+    def test_set_field(self):
+        setlistitem = SetListItem.objects.first()
+        self.assertNotEqual(setlistitem.start_time, time(11, 59, 59, 0))
+        setlistitem.set_field('start_time', time(11, 59, 59, 0))
+        self.assertEqual(setlistitem.start_time, time(11, 59, 59, 0))
+
+    def test_get_field(self):
+        setlistitem = SetListItem.objects.first()
+        field_value = setlistitem.get_field('track')
+        self.assertEqual(field_value, setlistitem.track)
+
+    def test_get_modify_url(self):
+        setlistitem = SetListItem.objects.first()
+        self.assertEqual(setlistitem.get_modify_url(), '/catalog/setlistitem/modify/' + str(setlistitem.id))
+
+    def test_add_fields_to_initial(self):
+        setlistitem = SetListItem.objects.first()
+        expected_initial = {
+            'setlist_name': setlistitem.setlist.name,
+            'track_beatport_track_id': setlistitem.track.beatport_track_id,
+            'start_time': setlistitem.start_time,
+        }
+        self.assertEqual(setlistitem.add_fields_to_initial({}), expected_initial)
+
+    def test_is_equivalent(self):
+        setlistitem1 = SetListItem.objects.first()
+        setlistitem2 = SetListItem.objects.last()
+        self.assertFalse(setlistitem1.is_equivalent(setlistitem2))
+        self.assertTrue(setlistitem1.is_equivalent(setlistitem1))
+
+    def test_is_field_is_equivalent(self):
+        setlistitem1 = SetListItem.objects.first()
+        setlistitem2 = SetListItem.objects.last()
+        self.assertFalse(setlistitem1.field_is_equivalent(setlistitem2, 'setlist'))
+        self.assertTrue(setlistitem1.field_is_equivalent(setlistitem1, 'start_time'))
+
+    # test object manager
+
+    def test_get_public_set(self):
+        expected_set = SetListItem.objects.none()
+        for setlistitem in SetListItem.objects.all():
+            if setlistitem.setlist.public is True:
+                expected_set = expected_set | SetListItem.objects.filter(id=setlistitem.id)
+        self.assertEqual(set(SetListItem.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = SetListItem.objects.none()
+        for setlistitem in SetListItem.objects.all():
+            if setlistitem.setlist.user == self.users['dj']:
+                expected_set = expected_set | SetListItem.objects.filter(id=setlistitem.id)
+        self.assertEqual(set(SetListItem.objects.get_user_set(self.users['dj'])), set(expected_set))
+
+    def test_get_queryset_can_view(self):
+        all_setlistitems = SetListItem.objects.all()
+        self.assertRaises(PermissionDenied, SetListItem.objects.get_queryset_can_view, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        setlistitems_dj = SetListItem.objects.get_public_set() | SetListItem.objects.get_user_set(self.users['dj'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_view(self.users['dj'])), set(setlistitems_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_view(self.users['admin'])), set(all_setlistitems))
+
+    def test_get_queryset_can_direct_modify(self):
+        all_setlistitems = SetListItem.objects.all()
+        self.assertRaises(PermissionDenied, SetListItem.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        setlistitems_dj = SetListItem.objects.get_user_set(self.users['dj'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_direct_modify(self.users['dj'])), set(setlistitems_dj))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_setlistitems))
+
+    def test_get_queryset_can_request_modify(self):
+        all_setlistitems = SetListItem.objects.all()
+        self.assertRaises(PermissionDenied, SetListItem.objects.get_queryset_can_request_modify, (self.users['anonymous']))
+        self.client.force_login(self.users['dj'])
+        dj_setlistitems = SetListItem.objects.get_public_set() | SetListItem.objects.get_user_set(self.users['dj'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_request_modify(self.users['dj'])), set(dj_setlistitems))
+        self.client.force_login(self.users['admin'])
+        self.assertEqual(set(SetListItem.objects.get_queryset_can_request_modify(self.users['admin'])), set(all_setlistitems))
+
+    def test_display(self):
+        self.assertRaises(PermissionDenied, SetListItem.objects.display, self.users['anonymous'])
+        dj_setlistitems = SetListItem.objects.get_public_set() | SetListItem.objects.get_user_set(self.users['dj'])
+        dj_setlistitem_list = ', '.join(str(setlistitem) for setlistitem in dj_setlistitems)
+        self.assertEqual(SetListItem.objects.display(self.users['dj']), dj_setlistitem_list)
+        admin_setlistitems = SetListItem.objects.all()
+        admin_setlistitem_list = ', '.join(str(setlistitem) for setlistitem in admin_setlistitems)
+        self.assertEqual(SetListItem.objects.display(self.users['admin']), admin_setlistitem_list)
+
+    # test constraints
+
+    def test_setlistitem_unique_on_setlist_and_start_time(self):
+        data = {}
+        duplicates = False
+        for setlistitem1 in SetListItem.objects.all():
+            if str(setlistitem1.setlist.id) not in data:
+                data[str(setlistitem1.setlist.id)] = {}
+            if str(setlistitem1.start_time) not in data[str(setlistitem1.setlist.id)]:
+                data[str(setlistitem1.setlist.id)][str(setlistitem1.start_time)] = 1
+            else:
+                data[str(setlistitem1.setlist.id)][str(setlistitem1.start_time)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        setlistitem2 = SetListItem.objects.first()
+        self.assertRaises(IntegrityError, SetListItem.objects.create, setlist=setlistitem2.setlist, start_time=setlistitem2.start_time)
 
 
 class TagModelTest(TestCase, CatalogTestMixin):
@@ -2109,6 +2287,14 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.assertTrue(tag1.field_is_equivalent(tag1, 'type'))
 
     # test permissions
+
+    def test_get_public_set(self):
+        expected_set = Tag.objects.filter(public=True)
+        self.assertEqual(set(Tag.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = Tag.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(Tag.objects.get_user_set(self.users['dj'])), set(expected_set))
 
     def test_get_queryset_can_view(self):
         all_tags = Tag.objects.all()
@@ -2355,6 +2541,14 @@ class TrackInstanceModelTest(TestCase, CatalogTestMixin):
         self.assertTrue(trackinstance1.field_is_equivalent(trackinstance1, 'user'))
 
     # test object manager
+
+    def test_get_public_set(self):
+        expected_set = TrackInstance.objects.filter(public=True)
+        self.assertEqual(set(TrackInstance.objects.get_public_set()), set(expected_set))
+
+    def test_get_user_set(self):
+        expected_set = TrackInstance.objects.filter(user=self.users['dj'])
+        self.assertEqual(set(TrackInstance.objects.get_user_set(self.users['dj'])), set(expected_set))
 
     def test_get_queryset_can_view(self):
         all_trackinstances = TrackInstance.objects.all()
