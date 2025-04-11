@@ -2,15 +2,14 @@ import datetime
 from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError
-from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Tag, Track, TrackInstance, TrackRequest
-from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, TrackForm, ArtistForm, GenreForm, BulkUploadForm
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm
 import importlib
 
 
@@ -58,6 +57,7 @@ def index(request):
 @login_required
 def modify_object(request, obj_name, pk=None):
     context = {}
+    print('trying to modify '+obj_name)
 
     try:
 
@@ -271,10 +271,21 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
+        for label in Label.objects.get_queryset_can_view(self.request.user):
+            if label == context['track'].label:
+                context['viewable_label'] = label
         context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
         context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
         context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
-        context['user_trackinstnce'] = TrackInstance.objects.get(user=self.request.user, track=context['track'])
+        context['user_trackinstance'] = TrackInstance.objects.filter(user=self.request.user, track=context['track']).first()
+        context['user_playlist_list'] = Playlist.objects.filter(user=self.request.user, track=context['track'])
+        context['user_transition_to_list'] = Transition.objects.filter(user=self.request.user, to_track=context['track'])
+        context['user_transition_from_list'] = Transition.objects.filter(user=self.request.user, from_track=context['track'])
+        setlists = SetList.objects.filter(user=self.request.user)
+        ids = []
+        for setlist in setlists:
+            ids.append(setlist.id)
+        context['user_setlistitem_list'] = SetListItem.objects.filter(track=context['track'], setlist__id__in=ids)
         return context
 
 

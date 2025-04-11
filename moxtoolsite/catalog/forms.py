@@ -1,11 +1,10 @@
-from bs4 import BeautifulSoup
 from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Track, TrackInstance, TrackRequest
 from .utils import scrape_artist, scrape_genre, scrape_label, scrape_track
-import datetime, os, random, string, requests, time
+import datetime
 
 
 class AddTrackToLibraryForm(forms.Form):
@@ -289,6 +288,40 @@ class TrackForm(forms.Form, ObjectFormMixin):
 
         return cleaned_data
     
+
+class TrackInstanceForm(forms.Form, ObjectFormMixin):
+    track_beatport_track_id = forms.IntegerField(
+        help_text="Enter the beatport_track_id of the track.",
+        required=True,
+    )
+    date_added = forms.DateField(
+        help_text="Enter the date you added this track to your library.",
+        required=False,
+    )
+    rating = forms.ChoiceField(
+        help_text="Enter your rating for the track.",
+        choices=TrackInstance.RATING_CHOICES,
+        required=False,
+    )
+    comments = forms.CharField(
+        help_text="Enter the artist name.",
+        required=False,
+        max_length=1000,
+    )
+    play_count = forms.IntegerField(
+        help_text="Enter the number of times you have played this track.",
+        required=False,
+    )
+    public = forms.BooleanField(
+        help_text="Indicate whether you want this track to be made public as a part of your library on MoxToolSite (default is false).",
+        required=False,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.many_to_many_data = None
+        return cleaned_data
+
 
 class BulkUploadForm(forms.Form):
     OBJECTS = [
