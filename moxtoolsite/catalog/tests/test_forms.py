@@ -1,9 +1,6 @@
 from catalog.forms import ArtistForm, GenreForm, TrackForm
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Track, TrackRequest
 from catalog.tests.mixins import CatalogTestMixin
-from django.apps import apps
-from django.contrib.auth.models import AnonymousUser, Group, Permission, User
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 
@@ -14,24 +11,38 @@ class ArtistFormTest(TestCase, CatalogTestMixin):
 
     # fields
 
+    def test_beatport_artist_id_field(self):
+        form = ArtistForm()
+        self.assertTrue(form.fields['beatport_artist_id'].label is None or form.fields['beatport_artist_id'].label == 'beatport artist id')
+        self.assertEqual(form.fields['beatport_artist_id'].help_text, 'Enter the Beatport artist ID.')
+
     def test_name_field(self):
         form = ArtistForm()
         self.assertTrue(form.fields['name'].label is None or form.fields['name'].label == 'name')
-        self.assertTrue(form.fields['name'].help_text == 'Enter the artist name.')
+        self.assertEqual(form.fields['name'].help_text, 'Enter the artist name.')
 
     def test_public_field(self):
         form = ArtistForm()
         self.assertTrue(form.fields['public'].label is None or form.fields['public'].label == 'public')
-        self.assertTrue(form.fields['public'].help_text == 'Indicate whether you want this artist to be made public on MoxToolSite (default is false).')
+        self.assertEqual(form.fields['public'].help_text, 'Indicate whether you want this artist to be made public on MoxToolSite (default is false).')
 
     # ArtistForm specific functions
 
     def test_data_cleaning(self):
-        data = {
+
+        # case where name max length is exceeded
+        data1 = {
             'name': "This guy DJ's, and, thus, this guy F*#@$.  Y'all need to recognize the staggering genious by getting your butts to the dancefloor!  No, I'm really serious, this is the best DJ ever.  Don't make me say it again, or I will unleash the drums...all of them",
         }
-        form = ArtistForm(data)
-        self.assertFalse(form.is_valid())
+        form1 = ArtistForm(data1)
+        self.assertFalse(form1.is_valid())
+
+        # case where neither beatport_artist_id nor name are set
+        data2 = {
+            'public': False,
+        }
+        form2 = ArtistForm(data2)
+        self.assertFalse(form2.is_valid())
 
     # Shared form functions
 
@@ -41,15 +52,17 @@ class ArtistFormTest(TestCase, CatalogTestMixin):
         }
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_own_artist"))
         self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_public_artist"))
         self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_create_any_artist"))
-        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'], None)
+        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'])
         self.assertFalse(failure)
         self.assertEqual(bad_artist, None)
         self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_create_own_artist"))
         self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_create_public_artist"))
         self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_create_any_artist"))
-        artist, success = form.save(Artist, ArtistRequest, self.users['dj'], None)
+        artist, success = form.save(Artist, ArtistRequest, self.users['dj'])
         self.assertTrue(success)
         expected_string = 'New artist request: ' + data['name']
         self.assertEqual(str(artist), expected_string)
@@ -79,15 +92,17 @@ class ArtistFormTest(TestCase, CatalogTestMixin):
         }
         form = ArtistForm(data)
         self.assertTrue(form.is_valid())
+        self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_own_artist"))
         self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_public_artist"))
         self.assertFalse(self.users['anonymous'].has_perm("catalog.moxtool_can_modify_any_artist"))
-        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'], None)
+        bad_artist, failure = form.save(Artist, ArtistRequest, self.users['anonymous'])
         self.assertFalse(failure)
         self.assertEqual(bad_artist, None)
         self.client.force_login(self.users['dj'])
+        self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_own_artist"))
         self.assertTrue(self.users['dj'].has_perm("catalog.moxtool_can_modify_public_artist"))
         self.assertFalse(self.users['dj'].has_perm("catalog.moxtool_can_modify_any_artist"))
-        artist, success = form.save(Artist, ArtistRequest, self.users['dj'], None)
+        artist, success = form.save(Artist, ArtistRequest, self.users['dj'])
         self.assertTrue(success)
         expected_string = 'Modify artist request: ' + data['name'] + ', change public to ' + str(data['public'])
         self.assertEqual(str(artist), expected_string)

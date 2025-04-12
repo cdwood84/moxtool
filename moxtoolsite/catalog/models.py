@@ -491,14 +491,14 @@ class RequestMixin:
     def field_substr(self, message, field_name):
         request_value = self.get_field(field_name)
         existing_value = self.get_field(self.model_name).get_field(field_name)
-        if request_value:
+        if request_value is not None:
             if self.useful_field_list[field_name]['type'] == 'queryset':
-                if not(existing_value) or (set(request_value) != set(existing_value)):
+                if existing_value is None or set(request_value) != set(existing_value):
                     message += ', change ' + field_name + ' to ' + request_value.display()
             else:
-                if not(existing_value) or (request_value != existing_value):
+                if existing_value is None or request_value != existing_value:
                     message += ', change ' + field_name + ' to ' + str(request_value)
-        elif not(request_value) and existing_value:
+        elif request_value is None and existing_value is not None:
             message += ', remove ' + field_name
         return message
 

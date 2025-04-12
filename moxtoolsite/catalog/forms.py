@@ -70,7 +70,7 @@ class AddTrackToPlaylistForm(forms.Form):
 
 class ObjectFormMixin:
 
-    def save(self, model, action_model, user, existing_obj, commit=True):
+    def save(self, model, action_model, user, existing_obj=None, commit=True):
         
         try:
             obj_name = model.__name__.lower()
@@ -110,18 +110,21 @@ class ObjectFormMixin:
                         raise PermissionError
                 # case 4: request create
                 else:
-                    if user.has_perm("catalog.moxtool_can_create_public_"+obj_name):
-                        create_field = model.objects.first().create_by_field
-                        existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
-                        existing_queryset = model.objects.filter(**existing_create_kwargs)
-                        if existing_queryset.count() > 0:
-                            if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
-                                existing_obj = existing_queryset.first()
-                                obj_kwargs[obj_name] = existing_obj
-                            else:
-                                raise PermissionError
-                    else:
-                        raise PermissionError
+                    useful_fields = model.objects.first().useful_field_list
+                    get_kwargs = {}
+                    for field, value in useful_fields.items():
+                        input_item = self.cleaned_data.get(field)
+                        if value['equal'] is True and input_item:
+                            get_kwargs[field] = input_item
+                    try:
+                        existing_obj = model.objects.get(**get_kwargs)
+                        if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
+                            obj_kwargs[obj_name] = existing_obj
+                        else:
+                            raise PermissionError
+                    except:
+                        if not user.has_perm("catalog.moxtool_can_create_public_"+obj_name):
+                            raise PermissionError
                 obj = action_model.objects.create(**obj_kwargs)
                 obj = self.append_many_to_many_data(obj)
 
@@ -164,9 +167,13 @@ class ObjectFormMixin:
 
 
 class ArtistForm(forms.Form, ObjectFormMixin):
+    beatport_artist_id = forms.IntegerField(
+        help_text="Enter the Beatport artist ID.",
+        required=False,
+    )
     name = forms.CharField(
         help_text="Enter the artist name.",
-        required=True,
+        required=False,
         max_length=200,
     )
     public = forms.BooleanField(
@@ -176,6 +183,10 @@ class ArtistForm(forms.Form, ObjectFormMixin):
 
     def clean(self):
         cleaned_data = super().clean()
+        beatport_artist_id = cleaned_data.get('beatport_artist_id')
+        name = cleaned_data.get('name')
+        if not beatport_artist_id and not name:
+            raise ValidationError("At least one of Beatport artist ID or  is required.")
         self.many_to_many_data = None
         return cleaned_data
 
