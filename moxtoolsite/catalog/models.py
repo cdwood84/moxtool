@@ -516,22 +516,16 @@ class RequestMixin:
                 message = 'New ' + model + ' request: ' + self.get_field(self.string_by_field)
             else:
                 message = 'New ' + model + ' request: ' + str(self.get_field(self.create_by_field))
+            get_kwargs = {}
+            for col, info in self.useful_field_list.items():
+                item = self.get_field(col)
+                if info['equal'] is True and item is not None:
+                    get_kwargs[col] = item
             try:
-                id_kwarg = {}
-                id_kwarg[self.create_by_field] = self.get_field(self.create_by_field)
-                obj = apps.get_model('catalog', model.title()).objects.get(**id_kwarg)
-            except Exception as e:
-                print('Error: ' + str(e))
+                obj = apps.get_model('catalog', model.title()).objects.get(**get_kwargs)
+            except:
                 obj = None
-            if obj is None:
-                try:
-                    string_kwarg = {}
-                    string_kwarg[self.string_by_field] = self.get_field(self.string_by_field)
-                    obj = apps.get_model('catalog', model.title()).objects.get(**string_kwarg)
-                except Exception as e:
-                    print('Error: ' + str(e))
-                    obj = None
-            if obj:
+            if obj is not None:
                 message += ' (ALREADY EXISTS)'
         return message
 
@@ -735,7 +729,6 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             external_id_none = True
         if self.name is None:
             any_metadata_none = True
-            print('NO NAME!')
 
         # determine action statuses
         return metadata_action_statuses(external_id_none, any_metadata_none, self.public)

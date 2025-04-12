@@ -223,7 +223,6 @@ def scrape_track(id, text=None):
                     }
                 else:
                     beatport_data[field] = str(data).split('<span>')[1].split('<')[0].strip()
-            print(beatport_data)
             
             # use extractied data to update model fields
             track.set_field('title', beatport_data['title'])
