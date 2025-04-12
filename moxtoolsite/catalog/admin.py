@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Artist, ArtistRequest, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
 
 
 @admin.register(Artist)
@@ -10,7 +10,8 @@ class ArtistAdmin(admin.ModelAdmin):
 
 @admin.register(ArtistRequest)
 class ArtistRequestAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['artist', 'beatport_artist_id', 'name']
+    list_filter = ['user', 'date_requested']
 
 
 @admin.register(Genre)
@@ -19,10 +20,22 @@ class GenreAdmin(admin.ModelAdmin):
     list_filter = ['public']
 
 
+@admin.register(GenreRequest)
+class GenreRequestAdmin(admin.ModelAdmin):
+    list_display = ['genre', 'beatport_genre_id', 'name']
+    list_filter = ['user', 'date_requested']
+
+
 @admin.register(Label)
 class LabelAdmin(admin.ModelAdmin):
     list_display = ['name', 'public']
     list_filter = ['public']
+
+
+# @admin.register(LabelRequest)
+# class LabelRequestAdmin(admin.ModelAdmin):
+#     list_display = ['label', 'beatport_label_id', 'name']
+#     list_filter = ['user', 'date_requested']
 
 
 @admin.register(Playlist)
@@ -31,14 +44,22 @@ class PlaylistAdmin(admin.ModelAdmin):
     list_filter = ['user', 'date_added', 'tag']
 
 
+class SetListItemInline(admin.TabularInline):
+    model = SetListItem
+    extra = 1
+
+
 @admin.register(SetList)
 class SetListAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['user', 'name', 'date_played', 'public']
+    list_filter = ['user', 'date_played', 'tag']
+    inlines = [SetListItemInline]
 
 
 @admin.register(SetListItem)
 class SetListItemAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['setlist', 'track', 'start_time']
+    list_filter = ['setlist']
 
 
 @admin.register(Tag)
@@ -60,8 +81,9 @@ class TrackAdmin(admin.ModelAdmin):
 
 
 @admin.register(TrackRequest)
-class ArtistRequestAdmin(admin.ModelAdmin):
-    pass
+class TrackRequestAdmin(admin.ModelAdmin):
+    list_display = ['track', 'beatport_track_id', 'title', 'mix']
+    list_filter = ['user', 'date_requested']
 
 
 @admin.register(TrackInstance)
@@ -76,4 +98,5 @@ class TrackInstanceAdmin(admin.ModelAdmin):
 
 @admin.register(Transition)
 class TransitionAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['from_track', 'to_track', 'user', 'date_modified', 'rating']
+    list_filter = ['user', 'date_modified', 'rating']
