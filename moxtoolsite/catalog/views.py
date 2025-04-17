@@ -127,14 +127,11 @@ def modify_object(request, obj_name, pk=None):
 
 
 @login_required
-def bulk_upload(request):
+def bulk_upload(request, obj_name=None):
     if request.method == 'POST':
         form = BulkUploadForm(request.POST)
-        print('progress 1')
         if form.is_valid():
-            print('progress 2')
             success = form.save(request.user)
-            print('progress 3 - '+str(success))
             if success is True:
                 HttpResponseRedirect('/')
             else:
@@ -142,7 +139,10 @@ def bulk_upload(request):
         else:
             print(form.errors)
     else:
-        form = BulkUploadForm()
+        initial = {}
+        if obj_name is not None:
+            initial['object_name'] = obj_name
+        form = BulkUploadForm(initial)
 
     context = {
         'form': form,
