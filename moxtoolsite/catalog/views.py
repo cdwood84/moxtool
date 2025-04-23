@@ -127,7 +127,7 @@ def modify_object(request, obj_name, pk=None):
 
 
 @login_required
-def bulk_upload(request, obj_name=None):
+def bulk_upload(request, obj_name):
     if request.method == 'POST':
         form = BulkUploadForm(request.POST)
         if form.is_valid():
@@ -140,8 +140,10 @@ def bulk_upload(request, obj_name=None):
             print(form.errors)
     else:
         initial = {}
-        if obj_name is not None:
+        if obj_name is not None and obj_name in ['artist', 'genre', 'label', 'track']:
             initial['object_name'] = obj_name
+        else:
+            initial['object_name'] = 'track'
         form = BulkUploadForm(initial)
 
     context = {
@@ -269,6 +271,19 @@ class SetListDetailView(LoginRequiredMixin, generic.DetailView):
         return SetList.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
+class UserSetListListView(LoginRequiredMixin, generic.ListView):
+    model = SetList
+    template_name = 'catalog/user_setlist_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            SetList.objects
+            .filter(user=self.request.user)
+            .order_by('-date_played')
+        )
+   
+
 # track
 
 
@@ -321,6 +336,23 @@ class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
+    
+class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
+    model = TrackInstance
+    template_name = 'catalog/user_trackinstance_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        if self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
+            list_result = (
+                TrackInstance.objects
+                .filter(user=self.request.user)
+                .order_by('date_added', '-play_count')
+            )
+        else:
+            raise PermissionDenied
+        return list_result
+
 
 # playlist
 
@@ -343,6 +375,19 @@ class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return Playlist.objects.get_queryset_can_view(self.request.user, 'playlist').get(id=pk)
+
+
+class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
+    model = Playlist
+    template_name = 'catalog/user_playlist_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Playlist.objects
+            .filter(user=self.request.user)
+            .order_by('name')
+        )
 
 
 # tag
@@ -374,24 +419,56 @@ class TagDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-# lower navigation pages and assocciated form pages
-
-
-class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
-    model = TrackInstance
-    template_name = 'catalog/user_trackinstance_list.html'
+class UserTagView(LoginRequiredMixin, generic.ListView):
+    model = Tag
+    template_name = 'catalog/user_tag_list.html'
     paginate_by = 20
 
     def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
-            list_result = (
-                TrackInstance.objects
-                .filter(user=self.request.user)
-                .order_by('date_added', '-play_count')
-            )
-        else:
-            raise PermissionDenied
-        return list_result
+        return (
+            Tag.objects
+            .filter(user=self.request.user)
+            .order_by('type', 'value')
+        )
+
+
+# transitions
+
+
+class TransitionListView(LoginRequiredMixin, generic.ListView):
+    model = Transition
+    context_object_name = 'transition_list'
+    template_name = 'catalog/transition_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Transition.objects.get_queryset_can_view(self.request.user)
+
+
+class TransitionDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Transition
+    context_object_name = 'transition'
+    template_name = "catalog/transition_detail.html"
+    
+    def get_object(self):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        return Transition.objects.get_queryset_can_view(self.request.user).get(id=pk)
+
+
+class UserTransitionListView(LoginRequiredMixin, generic.ListView):
+    model = Transition
+    template_name = 'catalog/user_transition_list.html'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Transition.objects
+            .filter(user=self.request.user)
+            .order_by('-rating')
+        )
+    
+
+# lower navigation pages and assocciated form pages
 
 
 @login_required
@@ -489,32 +566,6 @@ def add_track_dj(request):
 
 def add_track_failure(request):
     return render(request, 'catalog/add_track_failure.html')
-
-
-class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
-    model = Playlist
-    template_name = 'catalog/user_playlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Playlist.objects
-            .filter(user=self.request.user)
-            .order_by('name')
-        )
-
-
-class UserTagView(LoginRequiredMixin, generic.ListView):
-    model = Tag
-    template_name = 'catalog/user_tag_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Tag.objects
-            .filter(user=self.request.user)
-            .order_by('type', 'value')
-        )
 
 
 @login_required

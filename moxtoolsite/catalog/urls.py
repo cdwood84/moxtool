@@ -6,7 +6,7 @@ urlpatterns = [
 
     # shared
     path('<str:obj_name>/create', views.modify_object, name='create-object'),
-    path('create/bulk', views.bulk_upload, name='bulk-create'),
+    path('<str:obj_name>/create/bulk', views.bulk_upload, name='bulk-create'),
     path('<str:obj_name>/modify/<int:pk>', views.modify_object, name='modify-object'),
     path('<str:obj_name>/modify/<uuid:pk>', views.modify_object, name='modify-object'),
 
@@ -38,6 +38,10 @@ urlpatterns = [
     path('setlists/', views.SetListListView.as_view(), name='setlists'),
     path('setlist/<uuid:pk>/<str:name>', views.SetListDetailView.as_view(), name='setlist-detail'),
     
+    # setlist
+    path('transitions/', views.TransitionListView.as_view(), name='transitions'),
+    path('transition/<uuid:pk>/<str:name>', views.TransitionDetailView.as_view(), name='transition-detail'),
+    
     # track
     path('tracks/', views.TrackListView.as_view(), name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
@@ -55,6 +59,8 @@ urlpatterns = [
     path('mytracks/add', views.add_track_dj, name='add-track-dj'),
     path('mytracks/add/failure', views.add_track_failure, name='add-track-failure'),
     path('myplaylists/', views.UserPlaylistListView.as_view(), name='user-playlists'),
+    path('mysetlists/', views.UserSetListListView.as_view(), name='user-setlists'),
+    path('mytransitions/', views.UserTransitionListView.as_view(), name='user-transitions'),
     path('myplaylists/add', views.add_playlist_dj, name='add-playlist-dj'),
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
     # path('myplaylists/<uuid:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),

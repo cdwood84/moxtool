@@ -30,9 +30,12 @@
             <ul class="sidebar-nav">
               <li><a href="{% url 'index' %}">Home</a></li>
               <li><a href="{% url 'genres' %}">All genres</a></li>
+              <li><a href="{% url 'labels' %}">All labels</a></li>
               <li><a href="{% url 'artists' %}">All artists</a></li>
               <li><a href="{% url 'tracks' %}">All tracks</a></li>
               <li><a href="{% url 'playlists' %}">All playlists</a></li>
+              <li><a href="{% url 'setlists' %}">All setlists</a></li>
+              <li><a href="{% url 'transitions' %}">All transitions</a></li>
               <li><a href="{% url 'tags' %}">All tags</a></li>
             </ul>
             <ul class="sidebar-nav">
@@ -40,6 +43,8 @@
                 <li><strong>{{ user.get_username }}</strong></li>
                 <li><a href="{% url 'user-trackinstances' %}">My tracks</a></li>
                 <li><a href="{% url 'user-playlists' %}">My playlists</a></li>
+                <li><a href="{% url 'user-setlists' %}">My setlists</a></li>
+                <li><a href="{% url 'user-transitions' %}">My transitions</a></li>
                 <li><a href="{% url 'user-tags' %}">My tags</a></li>
                 <li>
                   <form id="logout-form" method="post" action="{% url 'logout' %}">

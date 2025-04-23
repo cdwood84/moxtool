@@ -52,6 +52,8 @@ def scrape_artist(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -62,7 +64,7 @@ def scrape_artist(id, text=None):
 
             # append data and check for completeness
             artist.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         artist.delete()
@@ -98,6 +100,8 @@ def scrape_genre(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -108,7 +112,7 @@ def scrape_genre(id, text=None):
 
             # append data and check for completeness
             genre.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         genre.delete()
@@ -144,6 +148,8 @@ def scrape_label(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -154,7 +160,7 @@ def scrape_label(id, text=None):
 
             # append data and check for completeness
             label.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         label.delete()
@@ -190,6 +196,8 @@ def scrape_track(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -255,7 +263,7 @@ def scrape_track(id, text=None):
                 else:
                     track.remix_artist.clear()
                     break
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         track.delete()
