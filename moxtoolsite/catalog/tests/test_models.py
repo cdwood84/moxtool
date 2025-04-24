@@ -1,4 +1,4 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition, metadata_action_statuses
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_statuses
 from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
@@ -914,6 +914,34 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(no_tracks.count(), 0)
         self.assertRaises(IntegrityError, Track.objects.create, public=True)
 
+#WIP
+class Track404ModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_track_id(self):
+        track = Track404.objects.get(id=1)
+        field_label = track._meta.get_field('beatport_track_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Track ID')
+
+    # test constraints
+
+    def test_beatport_track_id_unique(self):
+        data = {}
+        duplicates = False
+        for track1 in Track404.objects.all():
+            if str(track1.beatport_track_id) not in data:
+                data[str(track1.beatport_track_id)] = 1
+            else:
+                data[str(track1.beatport_track_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        track2 = Track404.objects.first()
+        self.assertRaises(IntegrityError, Track.objects.create, beatport_track_id=track2.beatport_track_id)
+        
 
 # user shared model requests
 

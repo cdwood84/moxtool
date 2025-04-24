@@ -1,4 +1,4 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition
 from datetime import date, time
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
@@ -139,6 +139,7 @@ class CatalogTestMixin:
         )
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
+        Track404.objects.create(beatport_track_id=1900504)
         TrackRequest.objects.create(
             track=Track.objects.get(beatport_track_id=20079434),
             beatport_track_id=20079434,

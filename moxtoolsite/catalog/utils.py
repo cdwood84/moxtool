@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
+from catalog.models import Artist, Genre, Label, Track, Track404
 from datetime import date
-from .models import Artist, Genre, Label, Track
 import os, random, requests, string, time
 
 
@@ -174,6 +174,8 @@ def scrape_track(id, text=None):
         return None, False
     elif id <= 0:
         return None, False
+    elif id in Track404.objects.values_list('beatport_track_id', flat=True):
+        return None, False
     track, created = Track.objects.get_or_create(beatport_track_id=id)
     iteration_count = 0
     while iteration_count < 3:
@@ -195,9 +197,12 @@ def scrape_track(id, text=None):
         try:
             soup = get_soup(url, iteration_count)
         except Exception as e:
-            print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
+                track.delete()
+                Track404.objects.create(beatport_track_id=id)
                 break
+            else:
+                print('Error scraping data: ' + str(e))
         if soup:
 
             # extract model fields from data
@@ -270,3 +275,20 @@ def scrape_track(id, text=None):
         return None, False
     else:
         return track, False
+    
+
+def random_scraper(iteration_max=1):
+    track_id_list = Track.objects.values_list('beatport_track_id', flat=True)
+    message = 'No new tracks found'
+    iteration = 0
+    while iteration < iteration_max:
+        id = random.choice([i for i in range(1, max(track_id_list)) if i not in track_id_list])
+        if Track.objects.filter(beatport_track_id=id).count() == 0:
+            track, success = scrape_track(id)
+            if success is True:
+                if message == 'No new tracks found':
+                    message = 'New tracks scraped: '+str(track)
+                else:
+                    message += ', '+str(track)
+        iteration += 1
+    return message

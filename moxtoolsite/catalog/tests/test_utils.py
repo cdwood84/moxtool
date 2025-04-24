@@ -1,5 +1,5 @@
-from catalog.models import Artist, Genre, Label, Track
-from catalog.utils import get_soup, scrape_artist, scrape_genre, scrape_label, scrape_track
+from catalog.models import Artist, Genre, Label, Track, Track404
+from catalog.utils import get_soup, scrape_artist, scrape_genre, scrape_label, scrape_track, random_scraper
 from datetime import date
 from django.test import TestCase
 from requests.exceptions import HTTPError
@@ -44,6 +44,7 @@ class ScrapingUtilsTest(TestCase):
             mix = 'Original Mix',
             public = True,
         )
+        Track404.objects.create(beatport_track_id=1900504)
 
     # functions
 
@@ -60,7 +61,6 @@ class ScrapingUtilsTest(TestCase):
         self.assertTrue(len(link) > 0)
 
         # raises 404 for bad iteration
-        # self.assertRaises(HTTPError, get_soup, 'http://www.beatport.com/label/records/1')
         with self.assertRaisesMessage(HTTPError, '404'):
             try:
                 soup = get_soup('http://www.beatport.com/label/records/1')
@@ -307,3 +307,14 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(track6.artist.first().name, 'Discip')
         self.assertEqual(track6.remix_artist.count(), 0)
         self.assertTrue(track6.public)
+
+    def test_random_scraper(self):
+        track_count = Track.objects.all().count()
+        message1 = random_scraper(0)
+        self.assertEqual(message1, 'No new tracks found')
+        track_count1 = Track.objects.all().count()
+        self.assertEqual(track_count, track_count1)
+        message2 = random_scraper(5)
+        self.assertNotEqual(message2, 'No new tracks found')
+        track_count2 = Track.objects.all().count()
+        self.assertNotEqual(track_count1, track_count2)

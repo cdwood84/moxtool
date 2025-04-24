@@ -1538,6 +1538,21 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
         )
 
 
+# database management
+
+
+class Track404(models.Model):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_track_id'],
+                name='beatport_track_id_unique',
+                violation_error_message="This track ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
 # functions
 
 
