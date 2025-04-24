@@ -1,4 +1,5 @@
-import datetime
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from catalog.forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm
 from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,9 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
-from .forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm
-import importlib
+import datetime, importlib
 
 
 def index(request):
@@ -50,7 +49,6 @@ def index(request):
     else:
         context = {}
 
-    # render HTML template
     return render(request, 'index.html', context=context)
 
 
@@ -336,7 +334,7 @@ class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
-    
+
 class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
     model = TrackInstance
     template_name = 'catalog/user_trackinstance_list.html'
