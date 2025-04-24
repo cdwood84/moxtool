@@ -308,6 +308,20 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(track6.remix_artist.count(), 0)
         self.assertTrue(track6.public)
 
+        # scraping a known 404
+        id7 = 1900504
+        track7, success7 = scrape_track(id7)
+        self.assertIsNone(track7)
+        self.assertFalse(success7)
+
+        # scraping an unknown 404
+        id8 = 16015141
+        count404 = Track404.objects.all().count()
+        track8, success8 = scrape_track(id8)
+        self.assertIsNone(track8)
+        self.assertFalse(success8)
+        self.assertTrue(count404 < Track404.objects.all().count())
+
     def test_random_scraper(self):
         track_count = Track.objects.all().count()
         message1 = random_scraper(0)

@@ -271,18 +271,20 @@ def scrape_track(id, text=None):
         iteration_count += 1
 
     if created == True:
-        track.delete()
+        if track.id is not None:
+            track.delete()
         return None, False
     else:
         return track, False
     
 
 def random_scraper(iteration_max=1):
-    track_id_list = Track.objects.values_list('beatport_track_id', flat=True)
+    good_track_ids = list(Track.objects.values_list('beatport_track_id', flat=True))
+    bad_track_ids = list(Track404.objects.values_list('beatport_track_id', flat=True))
     message = 'No new tracks found'
     iteration = 0
     while iteration < iteration_max:
-        id = random.choice([i for i in range(1, max(track_id_list)) if i not in track_id_list])
+        id = random.choice([i for i in range(1, max(good_track_ids)) if i not in good_track_ids + bad_track_ids])
         if Track.objects.filter(beatport_track_id=id).count() == 0:
             track, success = scrape_track(id)
             if success is True:
