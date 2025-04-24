@@ -12,13 +12,25 @@ class ScrapingUtilsTest(TestCase):
             beatport_artist_id = 1072157,
             public = False,
         )
+        Artist.objects.create(
+            beatport_artist_id = 325252,
+            public = True,
+        )
         Genre.objects.create(
             beatport_genre_id = 5,
             public = False,
         )
+        Genre.objects.create(
+            beatport_genre_id = 12,
+            public = True,
+        )
         Label.objects.create(
             beatport_label_id = 2752,
             public = False,
+        )
+        Label.objects.create(
+            beatport_label_id = 23732,
+            public = True,
         )
         Track.objects.create(
             beatport_track_id = 20085129,
@@ -27,16 +39,33 @@ class ScrapingUtilsTest(TestCase):
             label =  Label.objects.get(beatport_label_id=2752),
             public = False,
         )
+        Track.objects.create(
+            beatport_track_id = 19432763,
+            mix = 'Original Mix',
+            public = True,
+        )
 
     # functions
 
     def test_get_soup(self):
+
+        # raises error for completely made up url
         self.assertRaises(HTTPError, get_soup, 'http://www.enterthemox.com/utopia')
+
+        # returns html for real url
         soup = get_soup('http://www.beatport.com')
         header = soup.find('h1').text
         self.assertTrue(len(header) > 0)
         link = soup.find('a', href=True)['href']
         self.assertTrue(len(link) > 0)
+
+        # raises 404 for bad iteration
+        # self.assertRaises(HTTPError, get_soup, 'http://www.beatport.com/label/records/1')
+        with self.assertRaisesMessage(HTTPError, '404'):
+            try:
+                soup = get_soup('http://www.beatport.com/label/records/1')
+            except HTTPError as e:
+                raise HTTPError(str(e)[:3])
 
     def test_scrape_artist(self):
 
@@ -77,6 +106,17 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(artist5.name, 'Mau P')
         self.assertTrue(artist5.public)
 
+        # public with missing data
+        id6 = 325252
+        artist = Artist.objects.get(beatport_artist_id=id6)
+        self.assertIsNone(artist.name)
+        self.assertTrue(artist.public)
+        artist6, success6 = scrape_artist(id6)
+        self.assertTrue(success6)
+        self.assertEqual(artist, artist6)
+        self.assertEqual(artist6.name, 'Dennis Cruz')
+        self.assertTrue(artist6.public)
+
     def test_scrape_genre(self):
 
         # id only case
@@ -116,6 +156,17 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(genre5.name, 'House')
         self.assertTrue(genre5.public)
 
+        # public with missing data
+        id6 = 12
+        genre = Genre.objects.get(beatport_genre_id=id6)
+        self.assertIsNone(genre.name)
+        self.assertTrue(genre.public)
+        genre6, success6 = scrape_genre(id6)
+        self.assertTrue(success6)
+        self.assertEqual(genre, genre6)
+        self.assertEqual(genre6.name, 'Deep House')
+        self.assertTrue(genre6.public)
+
     def test_scrape_label(self):
 
         # id only case
@@ -154,6 +205,17 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(label, label5)
         self.assertEqual(label5.name, 'Nervous Records')
         self.assertTrue(label5.public)
+
+        # public with missing data
+        id6 = 23732
+        label = Label.objects.get(beatport_label_id=id6)
+        self.assertIsNone(label.name)
+        self.assertTrue(label.public)
+        label6, success6 = scrape_label(id6)
+        self.assertTrue(success6)
+        self.assertEqual(label, label6)
+        self.assertEqual(label6.name, 'Moan')
+        self.assertTrue(label6.public)
 
     def test_scrape_track(self):
 
@@ -224,3 +286,24 @@ class ScrapingUtilsTest(TestCase):
         self.assertEqual(track5.artist.first().name, 'Mau P')
         self.assertEqual(track5.remix_artist.count(), 0)
         self.assertTrue(track5.public)
+
+        # public with missing data
+        id6 = 19432763
+        track = Track.objects.get(beatport_track_id=id6)
+        self.assertIsNone(track.title)
+        self.assertTrue(track.public)
+        track6, success6 = scrape_track(id6)
+        self.assertTrue(success6)
+        self.assertEqual(track, track6)
+        self.assertEqual(track6.title, 'WWYS')
+        self.assertEqual(track6.mix, 'Original Mix')
+        self.assertEqual(track6.length, '5:46')
+        self.assertEqual(track6.released, date(2024, 10, 11))
+        self.assertEqual(track6.bpm, 128)
+        self.assertEqual(track6.key, 'Bb Minor')
+        self.assertEqual(track6.genre.name, 'Minimal / Deep Tech')
+        self.assertEqual(track6.label.name, 'Moan')
+        self.assertEqual(track6.artist.count(), 1)
+        self.assertEqual(track6.artist.first().name, 'Discip')
+        self.assertEqual(track6.remix_artist.count(), 0)
+        self.assertTrue(track6.public)

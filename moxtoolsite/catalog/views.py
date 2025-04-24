@@ -130,8 +130,9 @@ def bulk_upload(request, obj_name):
         form = BulkUploadForm(request.POST)
         if form.is_valid():
             success = form.save(request.user)
+            print(success)
             if success is True:
-                HttpResponseRedirect('/')
+                return HttpResponseRedirect(reverse('index'))
             else:
                 print('Invalid form')
         else:
