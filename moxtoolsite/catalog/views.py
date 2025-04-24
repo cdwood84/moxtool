@@ -1,5 +1,6 @@
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
 from catalog.forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm
+from catalog.utils import random_scraper
 from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -85,6 +86,11 @@ def modify_object(request, obj_name, pk=None):
 
         # process the form
         if request.method == 'POST':
+
+            # find additional data
+            print(random_scraper(1))
+
+            # process form
             form = form_class(request.POST)
             if form.is_valid():
                 obj, success = form.save(model, action_model, request.user, existing_obj)
@@ -127,6 +133,11 @@ def modify_object(request, obj_name, pk=None):
 @login_required
 def bulk_upload(request, obj_name):
     if request.method == 'POST':
+
+        # find additional data
+        print(random_scraper(1))
+
+        # process form
         form = BulkUploadForm(request.POST)
         if form.is_valid():
             success = form.save(request.user)
@@ -188,14 +199,26 @@ class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
 # genre
 
 
-class GenreListView(LoginRequiredMixin, generic.ListView):
-    model = Genre
-    context_object_name = 'genre_list'
-    template_name = 'catalog/genre_list.html'
-    paginate_by = 20
+# class GenreListView(LoginRequiredMixin, generic.ListView):
+#     model = Genre
+#     context_object_name = 'genre_list'
+#     template_name = 'catalog/genre_list.html'
+#     paginate_by = 20
 
-    def get_queryset(self):
-        return Genre.objects.get_queryset_can_view(self.request.user)
+#     def get_queryset(self):
+#         return Genre.objects.get_queryset_can_view(self.request.user)
+@login_required
+def GenreListView(request):
+    context = {
+        'genre_list': {},
+    }
+    for genre in Genre.objects.get_queryset_can_view(request.user):
+        context['genre_list'][genre.id] = {
+            'genre': genre,
+            'track_count':genre.count_viewable_tracks_in_genre(request.user),
+            'top_artists': genre.get_top_viewable_genre_artists(request.user),
+        }
+    return render(request, 'catalog/genre_list.html', context=context)
 
 
 class GenreDetailView(LoginRequiredMixin, generic.DetailView):

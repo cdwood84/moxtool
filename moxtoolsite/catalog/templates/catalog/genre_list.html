@@ -3,11 +3,23 @@
 {% block content %}
     {% if genre_list %}
         <h1>Genres</h1>
-        <ul>{% for genre in genre_list %}
-            <li>
-                <a href="{{ genre.get_absolute_url }}">{{ genre.name }}</a>
-            </li>
-        {% endfor %}</ul>
+        <table>
+            <!-- <caption>Statement Summary</caption> -->
+            <thead>
+              <tr>
+                <th scope="col">Genre</th>
+                <th scope="col">Track Count</th>
+                <th scope="col">Top Artists</th>
+              </tr>
+            </thead>
+            <tbody>{% for id, genre_data in genre_list.items %}
+              <tr>
+                <td data-label="Genre"><a href="{{ genre_data.genre.get_absolute_url }}">{{ genre_data.genre.name }}</a></td>
+                <td data-label="Track Count">{{ genre_data.track_count }}</td>
+                <td data-label="Top Artists">{% for artist in genre_data.top_artists %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
+              </tr>
+            {% endfor %}</tbody>
+        </table>
     {% else %}
         <p>There aren't any genres publicly shared on this site.</p>
     {% endif %}

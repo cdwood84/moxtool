@@ -712,6 +712,9 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
     def get_viewable_tracks_in_genre(self, user):
         return Track.objects.get_queryset_can_view(user).filter(genre=self)
     
+    def count_viewable_tracks_in_genre(self, user):
+        return self.get_viewable_tracks_in_genre(user).count()
+    
     def get_viewable_artists_in_genre(self, user):
         viewable_tracks = self.get_viewable_tracks_in_genre(user)
         viewable_artists = Artist.objects.none()
@@ -732,6 +735,27 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
 
         # determine action statuses
         return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
+    def get_top_viewable_genre_artists(self, user):
+        artist_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_in_genre(user):
+            track_artists = track.artist.all() | track.remix_artist.all()
+            for artist in track_artists.distinct():
+                if artist.id in artist_data:
+                    artist_data[artist.id]['count'] += 1
+                    if max < artist_data[artist.id]['count']:
+                        max = artist_data[artist.id]['count']
+                else:
+                    artist_data[artist.id] = {
+                        'count': 1,
+                    }
+        top_artists = Artist.objects.none()
+        for id, data in artist_data.items():
+            if data['count'] == max:
+                top_artists = top_artists | Artist.objects.filter(id=id)
+        return top_artists
+
     
     class Meta:
         constraints = [

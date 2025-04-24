@@ -18,7 +18,7 @@ urlpatterns = [
     # path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
 
     # genre
-    path('genres/', views.GenreListView.as_view(), name='genres'),
+    path('genres/', views.GenreListView, name='genres'),
     path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
     path('genrerequest/<int:pk>/<str:name>', views.GenreRequestDetailView.as_view(), name='genre-request-detail'),
     # path('genre/create', views.modify_genre, name='create-genre'),

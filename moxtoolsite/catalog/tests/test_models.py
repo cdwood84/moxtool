@@ -252,7 +252,7 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         genre = Genre.objects.get(id=1)
         self.assertEqual(genre.get_absolute_url(), '/catalog/genre/1/house')
 
-    def test_get_viewable_tracks_in_genre(self):
+    def test_get_viewable_tracks_in_genre_with_count(self):
         for genre in Genre.objects.all():
             self.assertRaises(PermissionDenied, genre.get_viewable_tracks_in_genre, (self.users['anonymous']))
             self.client.force_login(self.users['dj'])
@@ -260,9 +260,11 @@ class GenreModelTest(TestCase, CatalogTestMixin):
             for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
                 tracks_dj = tracks_dj | Track.objects.filter(id=trackinstance.track.id).filter(genre=genre)
             self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['dj'])), set(tracks_dj))
+            self.assertEqual(genre.count_viewable_tracks_in_genre(self.users['dj']), tracks_dj.count())
             self.client.force_login(self.users['admin'])
             tracks_admin = Track.objects.filter(genre=genre)
             self.assertEqual(set(genre.get_viewable_tracks_in_genre(self.users['admin'])), set(tracks_admin))
+            self.assertEqual(genre.count_viewable_tracks_in_genre(self.users['admin']), tracks_admin.count())
 
     def test_get_viewable_artists_in_genre(self):
         for genre in Genre.objects.all():
@@ -295,6 +297,48 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.assertTrue(scrape2)
         self.assertFalse(remove2)
         self.assertFalse(add2)
+
+    def test_get_top_viewable_genre_artists(self):
+        for genre in Genre.objects.all():
+            dj_data = {}
+            dj_max = 1
+            admin_data = {}
+            admin_max = 1
+            for track in genre.get_viewable_tracks_in_genre(self.users['admin']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in admin_data:
+                        admin_data[artist.id]['count'] += 1
+                        if admin_max < admin_data[artist.id]['count']:
+                            admin_max = admin_data[artist.id]['count']
+                    else:
+                        admin_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_admin = Artist.objects.none()
+            for id, data in admin_data.items():
+                if data['count'] == admin_max:
+                    artists_admin = artists_admin | Artist.objects.filter(id=id)
+            for track in genre.get_viewable_tracks_in_genre(self.users['dj']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in dj_data:
+                        dj_data[artist.id]['count'] += 1
+                        if dj_max < dj_data[artist.id]['count']:
+                            dj_max = dj_data[artist.id]['count']
+                    else:
+                        dj_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_dj = Artist.objects.none()
+            for id, data in dj_data.items():
+                if data['count'] == dj_max:
+                    artists_dj = artists_dj | Artist.objects.filter(id=id)
+            self.assertRaises(PermissionDenied, genre.get_top_viewable_genre_artists, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            self.assertEqual(set(genre.get_top_viewable_genre_artists(self.users['dj'])), set(artists_dj))
+            self.client.force_login(self.users['admin'])
+            self.assertEqual(set(genre.get_top_viewable_genre_artists(self.users['admin'])), set(artists_admin))
 
     # Shared model functions
 
@@ -941,7 +985,7 @@ class Track404ModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(duplicates)
         track2 = Track404.objects.first()
         self.assertRaises(IntegrityError, Track.objects.create, beatport_track_id=track2.beatport_track_id)
-        
+
 
 # user shared model requests
 
