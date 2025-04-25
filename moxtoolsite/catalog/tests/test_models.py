@@ -1865,7 +1865,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['dj'])), set(tracks_dj))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['dj']), tracks_dj.count())
             self.client.force_login(self.users['admin'])
-            tracks_admin = playlist.track
+            tracks_admin = playlist.track.all()
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['admin'])), set(tracks_admin))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['admin']), tracks_admin.count())
 
