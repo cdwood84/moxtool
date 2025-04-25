@@ -5,6 +5,7 @@ from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import IntegrityError
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
@@ -166,14 +167,28 @@ def bulk_upload(request, obj_name):
 # artist
 
 
-class ArtistListView(LoginRequiredMixin, generic.ListView):
-    model = Artist
-    context_object_name = 'artist_list'
-    template_name = 'catalog/artist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Artist.objects.get_queryset_can_view(self.request.user)
+@login_required
+def ArtistListView(request):
+    artist_data = []
+    for artist in Artist.objects.get_queryset_can_view(request.user):
+        artist_data.append({
+            'artist': artist,
+            'track_count':artist.count_viewable_tracks_by_artist(request.user),
+            'top_genres': artist.get_top_viewable_artist_genres(request.user),
+        })
+    sorted_data = sorted(artist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/artist_list.html', context=context)
 
 
 class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
@@ -199,25 +214,27 @@ class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
 # genre
 
 
-# class GenreListView(LoginRequiredMixin, generic.ListView):
-#     model = Genre
-#     context_object_name = 'genre_list'
-#     template_name = 'catalog/genre_list.html'
-#     paginate_by = 20
-
-#     def get_queryset(self):
-#         return Genre.objects.get_queryset_can_view(self.request.user)
 @login_required
 def GenreListView(request):
-    context = {
-        'genre_list': {},
-    }
+    genre_data = []
     for genre in Genre.objects.get_queryset_can_view(request.user):
-        context['genre_list'][genre.id] = {
+        genre_data.append({
             'genre': genre,
             'track_count':genre.count_viewable_tracks_in_genre(request.user),
             'top_artists': genre.get_top_viewable_genre_artists(request.user),
-        }
+        })
+    sorted_data = sorted(genre_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
     return render(request, 'catalog/genre_list.html', context=context)
 
 
@@ -250,15 +267,28 @@ class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
 # label
 
 
-class LabelListView(LoginRequiredMixin, generic.ListView):
-    model = Label
-    context_object_name = 'label_list'
-    template_name = 'catalog/label_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Label.objects.get_queryset_can_view(self.request.user)
-
+@login_required
+def LabelListView(request):
+    label_data = []
+    for label in Label.objects.get_queryset_can_view(request.user):
+        label_data.append({
+            'label': label,
+            'track_count':label.count_viewable_tracks_in_label(request.user),
+            'top_artists': label.get_top_viewable_label_artists(request.user),
+        })
+    sorted_data = sorted(label_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/label_list.html', context=context)
 
 class LabelDetailView(LoginRequiredMixin, generic.DetailView):
     model = Label

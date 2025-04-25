@@ -11,7 +11,7 @@ urlpatterns = [
     path('<str:obj_name>/modify/<uuid:pk>', views.modify_object, name='modify-object'),
 
     # artist
-    path('artists/', views.ArtistListView.as_view(), name='artists'),
+    path('artists/', views.ArtistListView, name='artists'),
     path('artist/<int:pk>/<str:name>', views.ArtistDetailView.as_view(), name='artist-detail'),
     path('artistrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),
     # path('artist/create', views.modify_artist, name='create-artist'),
@@ -25,7 +25,7 @@ urlpatterns = [
     # path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
 
     # label
-    path('labels/', views.LabelListView.as_view(), name='labels'),
+    path('labels/', views.LabelListView, name='labels'),
     path('label/<int:pk>/<str:name>', views.LabelDetailView.as_view(), name='label-detail'),
     # path('labelrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),\
 
