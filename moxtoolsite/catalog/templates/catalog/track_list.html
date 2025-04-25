@@ -47,11 +47,11 @@
     {% endif %}
     {% if perms.catalog.moxtool_can_create_any_artist %}
         <div style="margin-left:20px;margin-top:20px">
-            <p><a href="{% url 'bulk-create' 'artist' %}">Add new artists</a></p>
+            <p><a href="{% url 'bulk-create' 'track' %}">Add new tracks</a></p>
         </div>
     {% elif perms.catalog.moxtool_can_create_public_artist %}
         <div style="margin-left:20px;margin-top:20px">
-            <p><a href="{% url 'bulk-create' 'artist' %}">Request new artists</a></p>
+            <p><a href="{% url 'bulk-create' 'track' %}">Request new tracks</a></p>
         </div>
     {% endif %}
 {% endblock %}

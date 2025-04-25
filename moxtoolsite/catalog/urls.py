@@ -30,8 +30,10 @@ urlpatterns = [
     # path('labelrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),\
 
     # playlist
-    path('playlists/', views.PlaylistListView.as_view(), name='playlists'),
+    path('playlists/', views.PlaylistListView, name='playlists'),
     path('playlist/<int:pk>/<str:name>', views.PlaylistDetailView.as_view(), name='playlist-detail'),
+    path('playlists/create', views.modify_object, name='create-playlist'),
+    path('playlists/modify/<int:pk>', views.modify_playlist, name='modify-playlist'),
     path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     
     # setlist
@@ -61,7 +63,6 @@ urlpatterns = [
     path('myplaylists/', views.UserPlaylistListView.as_view(), name='user-playlists'),
     path('mysetlists/', views.UserSetListListView.as_view(), name='user-setlists'),
     path('mytransitions/', views.UserTransitionListView.as_view(), name='user-transitions'),
-    path('myplaylists/add', views.add_playlist_dj, name='add-playlist-dj'),
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
     # path('myplaylists/<uuid:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     # re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),

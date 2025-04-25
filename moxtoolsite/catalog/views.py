@@ -1,5 +1,5 @@
 from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
-from catalog.forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm
+from catalog.forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm, PlaylistForm
 from catalog.utils import random_scraper
 from django.apps import apps
 from django.contrib.auth.decorators import login_required
@@ -56,6 +56,16 @@ def index(request):
 
 @login_required
 def modify_object(request, obj_name, pk=None):
+    if obj_name in ['artist', 'genre', 'label', 'track']:
+        return modify_shared_model(request, obj_name, pk)
+    elif obj_name == 'playlist':
+        return modify_playlist(request, pk)
+    else:
+        raise ValueError('The requested object type cannot be modified.')
+
+
+@login_required
+def modify_shared_model(request, obj_name, pk):
     context = {}
     print('trying to modify '+obj_name)
 
@@ -290,6 +300,7 @@ def LabelListView(request):
     }
     return render(request, 'catalog/label_list.html', context=context)
 
+
 class LabelDetailView(LoginRequiredMixin, generic.DetailView):
     model = Label
     context_object_name = 'label'
@@ -421,14 +432,28 @@ class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
 # playlist
 
 
-class PlaylistListView(LoginRequiredMixin, generic.ListView):
-    model = Playlist
-    context_object_name = 'playlist_list'
-    template_name = 'catalog/playlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Playlist.objects.get_queryset_can_view(self.request.user, 'playlist')
+@login_required
+def PlaylistListView(request):
+    playlist_data = []
+    for playlist in Playlist.objects.get_queryset_can_view(request.user):
+        playlist_data.append({
+            'playlist': playlist,
+            'track_count':playlist.count_viewable_tracks_in_playlist(request.user),
+            'top_artists': playlist.get_top_viewable_playlist_artists(request.user),
+        })
+    sorted_data = sorted(playlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/playlist_list.html', context=context)
 
 
 class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
@@ -439,6 +464,36 @@ class PlaylistDetailView(LoginRequiredMixin, generic.DetailView):
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
         return Playlist.objects.get_queryset_can_view(self.request.user, 'playlist').get(id=pk)
+
+
+@login_required
+def modify_playlist(request, playlist_id):
+    
+    if request.method == 'POST':
+        form = PlaylistForm(request.POST, user=request.user)
+        if form.is_valid():
+            playlist, success = form.save(request.user)
+            if success is True:
+                return HttpResponseRedirect(playlist.get_absolute_url())
+            else:
+                print('Invalid form')
+        else:
+            print(form.errors)
+    else:
+        initial = {}
+        if playlist_id:
+            existing_playlist = Playlist.objects.get(id=playlist_id)
+            initial = {
+                'name': existing_playlist.name,
+                'track': existing_playlist.track,
+            }
+        form = PlaylistForm(initial, user=request.user)
+    
+    context = {
+        'form': form,
+    }
+    
+    return render(request, 'catalog/create_playlist.html', context)
 
 
 class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
@@ -630,18 +685,6 @@ def add_track_dj(request):
 
 def add_track_failure(request):
     return render(request, 'catalog/add_track_failure.html')
-
-
-@login_required
-def add_playlist_dj(request):
-    
-    # form handling here
-    
-    context = {
-        'form': form,
-    }
-
-    return render(request, 'catalog/add_playlist_dj.html', context)
 
 
 def add_playlist_failure(request):

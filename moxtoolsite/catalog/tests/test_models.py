@@ -1855,6 +1855,62 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             expected_url = '/catalog/playlist/' + str(playlist.id) + '/tracks/add'
             self.assertEqual(playlist.get_url_to_add_track(), expected_url)
 
+    def test_get_viewable_tracks_in_playlist_with_count(self):
+        for playlist in Playlist.objects.all():
+            self.assertRaises(PermissionDenied, playlist.get_viewable_tracks_in_playlist, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            tracks_dj = playlist.track.filter(public=True)
+            for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+                tracks_dj = tracks_dj | playlist.track.filter(id=trackinstance.track.id)
+            self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['dj'])), set(tracks_dj))
+            self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['dj']), tracks_dj.count())
+            self.client.force_login(self.users['admin'])
+            tracks_admin = playlist.track
+            self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['admin'])), set(tracks_admin))
+            self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['admin']), tracks_admin.count())
+
+    def test_get_top_viewable_playlist_artists(self):
+        for playlist in Playlist.objects.all():
+            dj_data = {}
+            dj_max = 1
+            admin_data = {}
+            admin_max = 1
+            for track in playlist.get_viewable_tracks_in_playlist(self.users['admin']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in admin_data:
+                        admin_data[artist.id]['count'] += 1
+                        if admin_max < admin_data[artist.id]['count']:
+                            admin_max = admin_data[artist.id]['count']
+                    else:
+                        admin_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_admin = Artist.objects.none()
+            for id, data in admin_data.items():
+                if data['count'] == admin_max:
+                    artists_admin = artists_admin | Artist.objects.filter(id=id)
+            for track in playlist.get_viewable_tracks_in_playlist(self.users['dj']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in dj_data:
+                        dj_data[artist.id]['count'] += 1
+                        if dj_max < dj_data[artist.id]['count']:
+                            dj_max = dj_data[artist.id]['count']
+                    else:
+                        dj_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_dj = Artist.objects.none()
+            for id, data in dj_data.items():
+                if data['count'] == dj_max:
+                    artists_dj = artists_dj | Artist.objects.filter(id=id)
+            self.assertRaises(PermissionDenied, playlist.get_top_viewable_playlist_artists, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            self.assertEqual(set(playlist.get_top_viewable_playlist_artists(self.users['dj'])), set(artists_dj))
+            self.client.force_login(self.users['admin'])
+            self.assertEqual(set(playlist.get_top_viewable_playlist_artists(self.users['admin'])), set(artists_admin))
+
     # Shared model functions
 
     def test_set_field(self):

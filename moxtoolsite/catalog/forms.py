@@ -426,3 +426,36 @@ class BulkUploadForm(forms.Form):
             else:
                 raise ValidationError('Invalid object type processed')
         return True
+    
+
+class PlaylistForm(forms.Form):
+    name = forms.CharField()
+    track = forms.ModelMultipleChoiceField(
+        queryset=Track.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            ids = TrackInstance.objects.filter(user=user)
+            self.fields['track'].queryset = Track.objects.filter(id__in=ids)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
+
+    def save(self, **kwargs):
+        user = kwargs.pop('user', None)
+        try:
+            playlist = Playlist.objects.create(
+                name=self.cleaned_data.get('name'),
+                user=user,
+            )
+            for track in self.cleaned_data.get('track'):
+                print(track)
+            return playlist, True
+        except:
+            return None, False
