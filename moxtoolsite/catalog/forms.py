@@ -70,7 +70,7 @@ class AddTrackToPlaylistForm(forms.Form):
 
 class ObjectFormMixin:
 
-    def save(self, model, action_model, user, existing_obj, commit=True):
+    def save(self, model, action_model, user, existing_obj=None, commit=True):
         
         try:
             obj_name = model.__name__.lower()
@@ -110,18 +110,21 @@ class ObjectFormMixin:
                         raise PermissionError
                 # case 4: request create
                 else:
-                    if user.has_perm("catalog.moxtool_can_create_public_"+obj_name):
-                        create_field = model.objects.first().create_by_field
-                        existing_create_kwargs = {create_field: self.cleaned_data[create_field]}
-                        existing_queryset = model.objects.filter(**existing_create_kwargs)
-                        if existing_queryset.count() > 0:
-                            if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
-                                existing_obj = existing_queryset.first()
-                                obj_kwargs[obj_name] = existing_obj
-                            else:
-                                raise PermissionError
-                    else:
-                        raise PermissionError
+                    useful_fields = model.objects.first().useful_field_list
+                    get_kwargs = {}
+                    for field, value in useful_fields.items():
+                        input_item = self.cleaned_data.get(field)
+                        if value['equal'] is True and input_item:
+                            get_kwargs[field] = input_item
+                    try:
+                        existing_obj = model.objects.get(**get_kwargs)
+                        if user.has_perm("catalog.moxtool_can_modify_public_"+obj_name):
+                            obj_kwargs[obj_name] = existing_obj
+                        else:
+                            raise PermissionError
+                    except:
+                        if not user.has_perm("catalog.moxtool_can_create_public_"+obj_name):
+                            raise PermissionError
                 obj = action_model.objects.create(**obj_kwargs)
                 obj = self.append_many_to_many_data(obj)
 
@@ -164,9 +167,13 @@ class ObjectFormMixin:
 
 
 class ArtistForm(forms.Form, ObjectFormMixin):
+    beatport_artist_id = forms.IntegerField(
+        help_text="Enter the Beatport artist ID.",
+        required=False,
+    )
     name = forms.CharField(
         help_text="Enter the artist name.",
-        required=True,
+        required=False,
         max_length=200,
     )
     public = forms.BooleanField(
@@ -176,14 +183,22 @@ class ArtistForm(forms.Form, ObjectFormMixin):
 
     def clean(self):
         cleaned_data = super().clean()
+        beatport_artist_id = cleaned_data.get('beatport_artist_id')
+        name = cleaned_data.get('name')
+        if not beatport_artist_id and not name:
+            raise ValidationError("At least one of Beatport artist ID or  is required.")
         self.many_to_many_data = None
         return cleaned_data
 
 
 class GenreForm(forms.Form, ObjectFormMixin):
+    beatport_genre_id = forms.IntegerField(
+        help_text="Enter the Beatport genre ID.",
+        required=False,
+    )
     name = forms.CharField(
         help_text="Enter the genre name.",
-        required=True,
+        required=False,
         max_length=200,
     )
     public = forms.BooleanField(
@@ -193,6 +208,10 @@ class GenreForm(forms.Form, ObjectFormMixin):
 
     def clean(self):
         cleaned_data = super().clean()
+        beatport_genre_id = cleaned_data.get('beatport_genre_id')
+        name = cleaned_data.get('name')
+        if not beatport_genre_id and not name:
+            raise ValidationError("At least one of Beatport genre ID or is required.")
         self.many_to_many_data = None
         return cleaned_data
 
@@ -200,32 +219,66 @@ class GenreForm(forms.Form, ObjectFormMixin):
 class TrackForm(forms.Form, ObjectFormMixin):
 
     beatport_track_id = forms.IntegerField(
+        label='Beatport Track ID',
         help_text="Enter the Beatport track ID, which can be found in the Beatport URL.",
-        required=True,
+        required=False,
     )
     title = forms.CharField(
-        help_text="Enter the track title without the mix name, which can be found on Beatport.",
-        required=True,
+        label='Title',
+        help_text="Enter the track title without the mix name.",
+        required=False,
         max_length=200,
     )
-    genre_name = forms.CharField(
-        help_text="Enter the genre name, which can be found on Beatport.",
-        required=True,
+    genre_beatport_genre_id = forms.IntegerField(
+        label='Beatport Genre ID',
+        help_text="Enter the genre ID.",
+        required=False,
+    )
+    label_beatport_label_id = forms.IntegerField(
+        label='Beatport Label ID',
+        help_text="Enter the label ID.",
+        required=False,
+    )
+    artist_beatport_artist_ids = forms.CharField(
+        label='Beatport Artist IDs',
+        help_text="Enter the artist IDs, separated by commas.",
+        required=False,
+    )
+    remix_artist_beatport_artist_ids = forms.CharField(
+        label='Beatport Artist IDs (remix)',
+        help_text="Enter the remix artist IDs, separated by commas.",
+        required=False,
+    )
+    mix = forms.CharField(
+        label='Mix',
+        help_text='Enter the mix name (example "Extended Mix").',
+        required=False,
         max_length=200,
     )
-    artist_names = forms.CharField(
-        help_text="Enter the artist names, separated by commas, which can be found on Beatport.",
+    length = forms.CharField(
+        label='Length',
+        help_text='Enter length of the track (example "8:20").',
+        required=False,
+        max_length=5,
+    )
+    released = forms.DateField(
+        label='Released',
+        help_text="Choose the release date of the track.",
         required=False,
     )
-    remix_artist_names = forms.CharField(
-        help_text="Enter the remix artist names, separated by commas, which can be found on Beatport.",
+    bpm = forms.IntegerField(
+        label='BPM',
+        help_text="Enter the BPM of the track.",
         required=False,
     )
-    mix = forms.ChoiceField(
-        help_text="Enter the mix name, which can be found in parenthases in the title.",
+    key = forms.CharField(
+        label='Key',
+        help_text='Enter the key of the track (example "F# Minor").',
         required=False,
+        max_length=8,
     )
     public = forms.BooleanField(
+        label='Public',
         help_text="Indicate whether you want this track to be made public on MoxToolSite (default is false).",
         required=False,
     )
@@ -331,11 +384,13 @@ class BulkUploadForm(forms.Form):
         ('track', 'Track'),
     ]
     object_name = forms.ChoiceField(
+        label='Object Type',
         choices=OBJECTS,
         help_text="Choose an object type to upload.",
         required=True,
     )
     beatport_id_string = forms.CharField(
+        label='List of IDs',
         help_text="Enter one or more beatport IDs, separated by commas.",
         required=True,
     )
@@ -343,19 +398,19 @@ class BulkUploadForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         cleaned_data['beatport_id_list'] = []
-        for id in cleaned_data.get('beatport_id_string').split(','):
-            print('trying: '+id.strip())
-            try:
-                cleaned_data['beatport_id_list'].append(int(id.strip()))
-                print(' success')
-            except:
-                print('Error converting '+id+' to integer')
+        if cleaned_data.get('beatport_id_string') is not None:
+            for id in cleaned_data.get('beatport_id_string').split(','):
+                try:
+                    cleaned_data['beatport_id_list'].append(int(id.strip()))
+                except:
+                    raise ValidationError('Error converting '+id+' to integer')
+        else:
+            raise ValidationError('ID list required')
         return cleaned_data
 
     def save(self, user=None):
         obj_name = self.cleaned_data.get('object_name')
         for id in self.cleaned_data.get('beatport_id_list'):
-            print('starting '+str(id)+' as a '+obj_name)
             if obj_name == 'artist':
                 obj, success = scrape_artist(id)
             elif obj_name == 'genre':
@@ -371,3 +426,36 @@ class BulkUploadForm(forms.Form):
             else:
                 raise ValidationError('Invalid object type processed')
         return True
+    
+
+class PlaylistForm(forms.Form):
+    name = forms.CharField()
+    track = forms.ModelMultipleChoiceField(
+        queryset=Track.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            ids = TrackInstance.objects.filter(user=user)
+            self.fields['track'].queryset = Track.objects.filter(id__in=ids)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
+
+    def save(self, **kwargs):
+        user = kwargs.pop('user', None)
+        try:
+            playlist = Playlist.objects.create(
+                name=self.cleaned_data.get('name'),
+                user=user,
+            )
+            for track in self.cleaned_data.get('track'):
+                print(track)
+            return playlist, True
+        except:
+            return None, False

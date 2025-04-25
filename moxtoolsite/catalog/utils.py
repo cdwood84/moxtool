@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
+from catalog.models import Artist, Genre, Label, Track, Track404
 from datetime import date
-from .models import Artist, Genre, Label, Track
 import os, random, requests, string, time
 
 
@@ -52,6 +52,8 @@ def scrape_artist(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -62,7 +64,7 @@ def scrape_artist(id, text=None):
 
             # append data and check for completeness
             artist.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         artist.delete()
@@ -98,6 +100,8 @@ def scrape_genre(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -108,7 +112,7 @@ def scrape_genre(id, text=None):
 
             # append data and check for completeness
             genre.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         genre.delete()
@@ -144,6 +148,8 @@ def scrape_label(id, text=None):
             soup = get_soup(url, iteration_count)
         except Exception as e:
             print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                break
         if soup:
 
             # extract model fields from data
@@ -154,7 +160,7 @@ def scrape_label(id, text=None):
 
             # append data and check for completeness
             label.set_field('name', beatport_data['name'])
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
         label.delete()
@@ -167,6 +173,8 @@ def scrape_track(id, text=None):
     if id is None:
         return None, False
     elif id <= 0:
+        return None, False
+    elif id in Track404.objects.values_list('beatport_track_id', flat=True):
         return None, False
     track, created = Track.objects.get_or_create(beatport_track_id=id)
     iteration_count = 0
@@ -189,7 +197,12 @@ def scrape_track(id, text=None):
         try:
             soup = get_soup(url, iteration_count)
         except Exception as e:
-            print('Error scraping data: ' + str(e))
+            if str(e).startswith('404'):
+                track.delete()
+                Track404.objects.create(beatport_track_id=id)
+                break
+            else:
+                print('Error scraping data: ' + str(e))
         if soup:
 
             # extract model fields from data
@@ -223,7 +236,6 @@ def scrape_track(id, text=None):
                     }
                 else:
                     beatport_data[field] = str(data).split('<span>')[1].split('<')[0].strip()
-            print(beatport_data)
             
             # use extractied data to update model fields
             track.set_field('title', beatport_data['title'])
@@ -256,10 +268,29 @@ def scrape_track(id, text=None):
                 else:
                     track.remix_artist.clear()
                     break
-            iteration_count += 1
+        iteration_count += 1
 
     if created == True:
-        track.delete()
+        if track.id is not None:
+            track.delete()
         return None, False
     else:
         return track, False
+    
+
+def random_scraper(iteration_max=1):
+    good_track_ids = list(Track.objects.values_list('beatport_track_id', flat=True))
+    bad_track_ids = list(Track404.objects.values_list('beatport_track_id', flat=True))
+    message = 'No new tracks found'
+    iteration = 0
+    while iteration < iteration_max:
+        id = random.choice([i for i in range(1, max(good_track_ids)) if i not in good_track_ids + bad_track_ids])
+        if Track.objects.filter(beatport_track_id=id).count() == 0:
+            track, success = scrape_track(id)
+            if success is True:
+                if message == 'No new tracks found':
+                    message = 'New tracks scraped: '+str(track)
+                else:
+                    message += ', '+str(track)
+        iteration += 1
+    return message

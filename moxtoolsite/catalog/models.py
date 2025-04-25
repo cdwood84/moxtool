@@ -491,14 +491,14 @@ class RequestMixin:
     def field_substr(self, message, field_name):
         request_value = self.get_field(field_name)
         existing_value = self.get_field(self.model_name).get_field(field_name)
-        if request_value:
+        if request_value is not None:
             if self.useful_field_list[field_name]['type'] == 'queryset':
-                if not(existing_value) or (set(request_value) != set(existing_value)):
+                if existing_value is None or set(request_value) != set(existing_value):
                     message += ', change ' + field_name + ' to ' + request_value.display()
             else:
-                if not(existing_value) or (request_value != existing_value):
+                if existing_value is None or request_value != existing_value:
                     message += ', change ' + field_name + ' to ' + str(request_value)
-        elif not(request_value) and existing_value:
+        elif request_value is None and existing_value is not None:
             message += ', remove ' + field_name
         return message
 
@@ -516,22 +516,16 @@ class RequestMixin:
                 message = 'New ' + model + ' request: ' + self.get_field(self.string_by_field)
             else:
                 message = 'New ' + model + ' request: ' + str(self.get_field(self.create_by_field))
+            get_kwargs = {}
+            for col, info in self.useful_field_list.items():
+                item = self.get_field(col)
+                if info['equal'] is True and item is not None:
+                    get_kwargs[col] = item
             try:
-                id_kwarg = {}
-                id_kwarg[self.create_by_field] = self.get_field(self.create_by_field)
-                obj = apps.get_model('catalog', model.title()).objects.get(**id_kwarg)
-            except Exception as e:
-                print('Error: ' + str(e))
+                obj = apps.get_model('catalog', model.title()).objects.get(**get_kwargs)
+            except:
                 obj = None
-            if obj is None:
-                try:
-                    string_kwarg = {}
-                    string_kwarg[self.string_by_field] = self.get_field(self.string_by_field)
-                    obj = apps.get_model('catalog', model.title()).objects.get(**string_kwarg)
-                except Exception as e:
-                    print('Error: ' + str(e))
-                    obj = None
-            if obj:
+            if obj is not None:
                 message += ' (ALREADY EXISTS)'
         return message
 
@@ -663,6 +657,31 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
         # determine action statuses
         return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
     
+    def get_viewable_tracks_by_artist(self, user):
+        return Track.objects.get_queryset_can_view(user).filter(Q(artist=self) | Q(remix_artist=self))
+    
+    def count_viewable_tracks_by_artist(self, user):
+        return self.get_viewable_tracks_by_artist(user).count()
+    
+    def get_top_viewable_artist_genres(self, user):
+        genre_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_by_artist(user):
+            if track.genre is not None:
+                if track.genre.id in genre_data:
+                    genre_data[track.genre.id]['count'] += 1
+                    if max < genre_data[track.genre.id]['count']:
+                        max = genre_data[track.genre.id]['count']
+                else:
+                    genre_data[track.genre.id] = {
+                        'count': 1,
+                    }
+        top_genres = Genre.objects.none()
+        for id, data in genre_data.items():
+            if data['count'] == max:
+                top_genres = top_genres | Genre.objects.filter(id=id)
+        return top_genres
+    
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -718,6 +737,9 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
     def get_viewable_tracks_in_genre(self, user):
         return Track.objects.get_queryset_can_view(user).filter(genre=self)
     
+    def count_viewable_tracks_in_genre(self, user):
+        return self.get_viewable_tracks_in_genre(user).count()
+    
     def get_viewable_artists_in_genre(self, user):
         viewable_tracks = self.get_viewable_tracks_in_genre(user)
         viewable_artists = Artist.objects.none()
@@ -735,10 +757,30 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             external_id_none = True
         if self.name is None:
             any_metadata_none = True
-            print('NO NAME!')
 
         # determine action statuses
         return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
+    def get_top_viewable_genre_artists(self, user):
+        artist_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_in_genre(user):
+            track_artists = track.artist.all() | track.remix_artist.all()
+            for artist in track_artists.distinct():
+                if artist.id in artist_data:
+                    artist_data[artist.id]['count'] += 1
+                    if max < artist_data[artist.id]['count']:
+                        max = artist_data[artist.id]['count']
+                else:
+                    artist_data[artist.id] = {
+                        'count': 1,
+                    }
+        top_artists = Artist.objects.none()
+        for id, data in artist_data.items():
+            if data['count'] == max:
+                top_artists = top_artists | Artist.objects.filter(id=id)
+        return top_artists
+
     
     class Meta:
         constraints = [
@@ -800,6 +842,32 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
 
         # determine action statuses
         return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+    
+    def get_viewable_tracks_in_label(self, user):
+        return Track.objects.get_queryset_can_view(user).filter(label=self)
+    
+    def count_viewable_tracks_in_label(self, user):
+        return self.get_viewable_tracks_in_label(user).count()
+    
+    def get_top_viewable_label_artists(self, user):
+        artist_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_in_label(user):
+            track_artists = track.artist.all() | track.remix_artist.all()
+            for artist in track_artists.distinct():
+                if artist.id in artist_data:
+                    artist_data[artist.id]['count'] += 1
+                    if max < artist_data[artist.id]['count']:
+                        max = artist_data[artist.id]['count']
+                else:
+                    artist_data[artist.id] = {
+                        'count': 1,
+                    }
+        top_artists = Artist.objects.none()
+        for id, data in artist_data.items():
+            if data['count'] == max:
+                top_artists = top_artists | Artist.objects.filter(id=id)
+        return top_artists
     
     class Meta:
         constraints = [
@@ -1523,6 +1591,33 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
     
     def get_url_to_add_track(self):
         return reverse('add-track-to-playlist-dj', args=[str(self.id)]) 
+    
+    def get_viewable_tracks_in_playlist(self, user):
+        ids = Track.objects.get_queryset_can_view(user).values_list('id', flat=True)
+        return self.track.filter(id__in=ids)
+    
+    def count_viewable_tracks_in_playlist(self, user):
+        return self.get_viewable_tracks_in_playlist(user).count()
+    
+    def get_top_viewable_playlist_artists(self, user):
+        artist_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_in_playlist(user):
+            track_artists = track.artist.all() | track.remix_artist.all()
+            for artist in track_artists.distinct():
+                if artist.id in artist_data:
+                    artist_data[artist.id]['count'] += 1
+                    if max < artist_data[artist.id]['count']:
+                        max = artist_data[artist.id]['count']
+                else:
+                    artist_data[artist.id] = {
+                        'count': 1,
+                    }
+        top_artists = Artist.objects.none()
+        for id, data in artist_data.items():
+            if data['count'] == max:
+                top_artists = top_artists | Artist.objects.filter(id=id)
+        return top_artists
 
     class Meta:
         constraints = [
@@ -1543,6 +1638,21 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
             ('moxtool_can_modify_public_playlist', 'Playlist - Modify Public - DJ'),
             ('moxtool_can_modify_any_playlist', 'Playlist - Modify Any - MOX'),
         )
+
+
+# database management
+
+
+class Track404(models.Model):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_track_id'],
+                name='beatport_track_id_unique',
+                violation_error_message="This track ID from Beatport is already marked as 404.",
+            ),
+        ]
 
 
 # functions

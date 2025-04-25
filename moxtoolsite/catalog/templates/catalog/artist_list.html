@@ -1,21 +1,53 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-  <h1>Artist List</h1>
-  {% if artist_list %}
-    <ul>
-      {% for artist in artist_list %}
-      <li>
-        <a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>
-      </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>There are no artists with tracks in your library.</p>
-  {% endif %}
-  {% if perms.catalog.moxtool_can_create_any_artist %}
-    <p><a href="{% url 'create-object' 'artist' %}">Create a new artist</a></p>
-  {% elif perms.catalog.moxtool_can_create_public_artist %}
-    <p><a href="{% url 'create-object' 'artist' %}">Request a new artist</a></p>
-  {% endif %}
+    {% if page_data %}
+        <h1>Artists</h1>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:25%;">Artist</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:10%;">Track Count</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Top Genres</th>
+                </tr>
+            </thead>
+            <tbody>{% for artist_data in page_data %}
+                <tr>
+                    <td data-label="Artist"><a href="{{ artist_data.artist.get_absolute_url }}">{{ artist_data.artist.name }}</a></td>
+                    <td data-label="Track Count">{{ artist_data.track_count }}</td>
+                    <td data-label="Top Genres">{% for genre in artist_data.top_genres %}{% if not forloop.first %}, {% endif %}<a href="{{ genre.get_absolute_url }}">{{ genre.name }}</a>{% endfor %}</td>
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+        <hr>
+        <div class="pagination" style="margin-left:20px;margin-top:20px">
+          <span class="step-links">
+            {% if page_data.has_previous %}
+              <a href="?page=1">&laquo; first</a>
+              <a href="?page={{ page_data.previous_page_number }}">previous</a>
+            {% endif %}
+        
+            <span class="current">
+              Page {{ page_data.number }} of {{ page_data.paginator.num_pages }}
+            </span>
+        
+            {% if page_data.has_next %}
+              <a href="?page={{ page_data.next_page_number }}">next</a>
+              <a href="?page={{ page_data.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+          </span>
+        </div>
+    {% else %}
+        <p>There aren't any artists publicly shared on this site.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_any_artist %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'bulk-create' 'artist' %}">Add new artists</a></p>
+        </div>
+    {% elif perms.catalog.moxtool_can_create_public_artist %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'bulk-create' 'artist' %}">Request new artists</a></p>
+        </div>
+    {% endif %}
 {% endblock %}
