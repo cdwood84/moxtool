@@ -667,14 +667,15 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
         genre_data = {}
         max = 1
         for track in self.get_viewable_tracks_by_artist(user):
-            if track.genre.id in genre_data:
-                genre_data[track.genre.id]['count'] += 1
-                if max < genre_data[track.genre.id]['count']:
-                    max = genre_data[track.genre.id]['count']
-            else:
-                genre_data[track.genre.id] = {
-                    'count': 1,
-                }
+            if track.genre is not None:
+                if track.genre.id in genre_data:
+                    genre_data[track.genre.id]['count'] += 1
+                    if max < genre_data[track.genre.id]['count']:
+                        max = genre_data[track.genre.id]['count']
+                else:
+                    genre_data[track.genre.id] = {
+                        'count': 1,
+                    }
         top_genres = Genre.objects.none()
         for id, data in genre_data.items():
             if data['count'] == max:

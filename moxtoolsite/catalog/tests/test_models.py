@@ -97,11 +97,11 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
             for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
                 tracks_dj = tracks_dj | Track.objects.filter(id=trackinstance.track.id).filter(Q(artist=artist) | Q(remix_artist=artist))
             self.assertEqual(set(artist.get_viewable_tracks_by_artist(self.users['dj'])), set(tracks_dj))
-            self.assertEqual(artist.get_viewable_tracks_by_artist(self.users['dj']), tracks_dj.count())
+            self.assertEqual(artist.count_viewable_tracks_by_artist(self.users['dj']), tracks_dj.count())
             self.client.force_login(self.users['admin'])
             tracks_admin = Track.objects.filter(Q(artist=artist) | Q(remix_artist=artist))
             self.assertEqual(set(artist.get_viewable_tracks_by_artist(self.users['admin'])), set(tracks_admin))
-            self.assertEqual(artist.get_viewable_tracks_by_artist(self.users['admin']), tracks_admin.count())
+            self.assertEqual(artist.count_viewable_tracks_by_artist(self.users['admin']), tracks_admin.count())
 
     def test_get_top_viewable_artist_genres(self):
         for artist in Artist.objects.all():
@@ -110,27 +110,29 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
             admin_data = {}
             admin_max = 1
             for track in artist.get_viewable_tracks_by_artist(self.users['admin']):
-                if track.genre.id in admin_data:
-                    admin_data[track.genre.id]['count'] += 1
-                    if admin_max < admin_data[track.genre.id]['count']:
-                        admin_max = admin_data[track.genre.id]['count']
-                else:
-                    admin_data[track.genre.id] = {
-                        'count': 1,
-                    }
+                if track.genre is not None:
+                    if track.genre.id in admin_data:
+                        admin_data[track.genre.id]['count'] += 1
+                        if admin_max < admin_data[track.genre.id]['count']:
+                            admin_max = admin_data[track.genre.id]['count']
+                    else:
+                        admin_data[track.genre.id] = {
+                            'count': 1,
+                        }
             artists_admin = Genre.objects.none()
             for id, data in admin_data.items():
                 if data['count'] == admin_max:
                     artists_admin = artists_admin | Genre.objects.filter(id=id)
             for track in artist.get_viewable_tracks_by_artist(self.users['dj']):
-                if track.genre.id in dj_data:
-                    dj_data[track.genre.id]['count'] += 1
-                    if dj_max < dj_data[track.genre.id]['count']:
-                        dj_max = dj_data[track.genre.id]['count']
-                else:
-                    dj_data[track.genre.id] = {
-                        'count': 1,
-                    }
+                if track.genre is not None:
+                    if track.genre.id in dj_data:
+                        dj_data[track.genre.id]['count'] += 1
+                        if dj_max < dj_data[track.genre.id]['count']:
+                            dj_max = dj_data[track.genre.id]['count']
+                    else:
+                        dj_data[track.genre.id] = {
+                            'count': 1,
+                        }
             artists_dj = Genre.objects.none()
             for id, data in dj_data.items():
                 if data['count'] == dj_max:
