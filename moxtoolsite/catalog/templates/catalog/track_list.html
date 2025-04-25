@@ -11,7 +11,7 @@
                     <th scope="col" style="padding-left:5px;padding-right:15px;width:5%;">Time</th>
                     <th scope="col" style="padding-left:5px;padding-right:15px;">Genre</th>
                     <th scope="col" style="padding-left:5px;padding-right:15px;">Artists</th>
-                    <!-- <th scope="col" style="padding-left:5px;padding-right:15px;">Remix Artists</th> -->
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Remix Artists</th>
                 </tr>
             </thead>
             <tbody>{% for track_data in page_data %}
@@ -20,7 +20,7 @@
                     <td data-label="Time">{{ track_data.track.length }}</td>
                     <td data-label="Genre">{% if track_data.track.genre is not None %}<a href="{{ track_data.track.genre.get_absolute_url }}">{{ track_data.track.genre.name }}</a>{% endif %}</td>
                     <td data-label="Artists">{% for artist in track_data.track.artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
-                    <!-- <td data-label="Remix Artists">{% for remix_artist in track_data.track.remix_artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ remix_artist.get_absolute_url }}">{{ remix_artist.name }}</a>{% endfor %}</td> -->
+                    <td data-label="Remix Artists">{% for remix_artist in track_data.track.remix_artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ remix_artist.get_absolute_url }}">{{ remix_artist.name }}</a>{% endfor %}</td>
                 </tr>
             {% endfor %}</tbody>
         </table>
