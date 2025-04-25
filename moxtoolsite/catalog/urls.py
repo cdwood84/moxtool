@@ -43,7 +43,7 @@ urlpatterns = [
     path('transition/<uuid:pk>/<str:name>', views.TransitionDetailView.as_view(), name='transition-detail'),
     
     # track
-    path('tracks/', views.TrackListView.as_view(), name='tracks'),
+    path('tracks/', views.TrackListView, name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
     path('trackrequest/<int:pk>/<str:name>', views.TrackRequestDetailView.as_view(), name='track-request-detail'),
     # path('track/create', views.modify_track, name='create-track'),

@@ -339,14 +339,26 @@ class UserSetListListView(LoginRequiredMixin, generic.ListView):
 # track
 
 
-class TrackListView(LoginRequiredMixin, generic.ListView):
-    model = Track
-    context_object_name = 'track_list'
-    template_name = 'catalog/track_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Track.objects.get_queryset_can_view(self.request.user)
+@login_required
+def TrackListView(request):
+    track_data = []
+    for track in Track.objects.get_queryset_can_view(request.user):
+        track_data.append({
+            'track': track,
+        })
+    sorted_data = sorted(track_data, key=lambda item: item['track'].title)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/track_list.html', context=context)
 
 
 class TrackDetailView(LoginRequiredMixin, generic.DetailView):

@@ -1,22 +1,57 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-  <h1>Track List</h1>
-  {% if track_list %}
-    <ul>
-      {% for track in track_list %}
-      <li>
-        <a href="{{ track.get_absolute_url }}">{{ track.title }}</a>
-        ({{track.display_artist}})
-      </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>There are no tracks in your library.</p>
-  {% endif %}
-  {% if perms.catalog.moxtool_can_create_any_track %}
-    <p><a href="{% url 'create-object' 'track' %}">Create a track</a></p>
-  {% elif perms.catalog.moxtool_can_create_public_track %}
-    <p><a href="{% url 'create-object' 'track' %}">Request a new track</a></p>
-  {% endif %}
+    {% if page_data %}
+        <h1>Tracks</h1>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:25%;">Track</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:5%;">Time</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Genre</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Artists</th>
+                    <!-- <th scope="col" style="padding-left:5px;padding-right:15px;">Remix Artists</th> -->
+                </tr>
+            </thead>
+            <tbody>{% for track_data in page_data %}
+                <tr>
+                    <td data-label="Track"><a href="{{ track_data.track.get_absolute_url }}">{{ track_data.track.title }} ({{ track_data.track.mix }})</a></td>
+                    <td data-label="Time">{{ track_data.track.length }}</td>
+                    <td data-label="Genre">{% if track_data.track.genre is not None %}<a href="{{ track_data.track.genre.get_absolute_url }}">{{ track_data.track.genre.name }}</a>{% endif %}</td>
+                    <td data-label="Artists">{% for artist in track_data.track.artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
+                    <!-- <td data-label="Remix Artists">{% for remix_artist in track_data.track.remix_artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ remix_artist.get_absolute_url }}">{{ remix_artist.name }}</a>{% endfor %}</td> -->
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+        <hr>
+        <div class="pagination" style="margin-left:20px;margin-top:20px">
+          <span class="step-links">
+            {% if page_data.has_previous %}
+              <a href="?page=1">&laquo; first</a>
+              <a href="?page={{ page_data.previous_page_number }}">previous</a>
+            {% endif %}
+        
+            <span class="current">
+              Page {{ page_data.number }} of {{ page_data.paginator.num_pages }}
+            </span>
+        
+            {% if page_data.has_next %}
+              <a href="?page={{ page_data.next_page_number }}">next</a>
+              <a href="?page={{ page_data.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+          </span>
+        </div>
+    {% else %}
+        <p>There aren't any artists publicly shared on this site.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_any_artist %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'bulk-create' 'artist' %}">Add new artists</a></p>
+        </div>
+    {% elif perms.catalog.moxtool_can_create_public_artist %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'bulk-create' 'artist' %}">Request new artists</a></p>
+        </div>
+    {% endif %}
 {% endblock %}
