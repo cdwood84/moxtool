@@ -314,14 +314,28 @@ class LabelDetailView(LoginRequiredMixin, generic.DetailView):
 # setlist
 
 
-class SetListListView(LoginRequiredMixin, generic.ListView):
-    model = SetList
-    context_object_name = 'setlist_list'
-    template_name = 'catalog/setlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return SetList.objects.get_queryset_can_view(self.request.user)
+@login_required
+def SetListListView(request):
+    setlist_data = []
+    for setlist in SetList.objects.get_queryset_can_view(request.user):
+        setlist_data.append({
+            'setlist': setlist,
+            'track_count':setlist.count_viewable_tracks_in_playlist(request.user),
+            'top_artists': setlist.get_top_viewable_playlist_artists(request.user),
+        })
+    sorted_data = sorted(setlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/setlist_list.html', context=context)
 
 
 class SetListDetailView(LoginRequiredMixin, generic.DetailView):

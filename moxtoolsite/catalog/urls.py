@@ -37,7 +37,7 @@ urlpatterns = [
     path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     
     # setlist
-    path('setlists/', views.SetListListView.as_view(), name='setlists'),
+    path('setlists/', views.SetListListView, name='setlists'),
     path('setlist/<uuid:pk>/<str:name>', views.SetListDetailView.as_view(), name='setlist-detail'),
     
     # setlist
