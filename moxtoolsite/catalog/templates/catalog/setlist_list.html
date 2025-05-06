@@ -7,18 +7,18 @@
         <table>
             <thead>
                 <tr>
-                    <th scope="col" style="padding-left:5px;padding-right:15px;width:12%;">Setlist</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:15%;">Setlist</th>
                     <th scope="col" style="padding-left:5px;padding-right:15px;width:12%;">Owner</th>
                     <th scope="col" style="padding-left:5px;padding-right:15px;width:10%;">Track Count</th>
                     <th scope="col" style="padding-left:5px;padding-right:15px;">Top Artists</th>
                 </tr>
             </thead>
-            <tbody>{% for playlist_data in page_data %}
+            <tbody>{% for setlist_data in page_data %}
                 <tr>
-                    <td data-label="Playlist"><a href="{{ playlist_data.playlist.get_absolute_url }}">{{ playlist_data.playlist.name }}</a></td>
-                    <td data-label="Owner">{{ playlist_data.playlist.user }}</td>
-                    <td data-label="Track Count">{{ playlist_data.track_count }}</td>
-                    <td data-label="Top Artists">{% for artist in playlist_data.top_artists %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
+                    <td data-label="Setlist"><a href="{{ setlist_data.setlist.get_absolute_url }}">{{ setlist_data.setlist.name }}</a></td>
+                    <td data-label="Owner">{{ setlist_data.setlist.user }}</td>
+                    <td data-label="Track Count">{{ setlist_data.track_count }}</td>
+                    <td data-label="Top Artists">{% for artist in setlist_data.top_artists %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
                 </tr>
             {% endfor %}</tbody>
         </table>
@@ -41,11 +41,11 @@
           </span>
         </div>
     {% else %}
-        <p>There aren't any playlists publicly shared on this site.</p>
+        <p>There aren't any setlists publicly shared on this site.</p>
     {% endif %}
-    {% if perms.catalog.moxtool_can_create_own_playlist %}
+    {% if perms.catalog.moxtool_can_create_own_setlist %}
         <div style="margin-left:20px;margin-top:20px">
-            <p><a href="{% url 'create-object' 'playlist' %}">Create a new playlist</a></p>
+            <p><a href="{% url 'create-object' 'setlist' %}">Create a new setlist</a></p>
         </div>
     {% endif %}
 {% endblock %}

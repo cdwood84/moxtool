@@ -2545,6 +2545,16 @@ class TagModelTest(TestCase, CatalogTestMixin):
         playlists_admin = Playlist.objects.filter(tag__in=[tag])
         self.assertEqual(set(tag.get_viewable_playlists_tagged(self.users['admin'])), set(playlists_admin))
 
+    def test_get_viewable_setlists_tagged(self):
+        tag = Tag.objects.get(id=1)
+        self.assertRaises(PermissionDenied, tag.get_viewable_setlists_tagged, self.users['anonymous'])
+        self.client.force_login(self.users['dj'])
+        playlists_dj = SetList.objects.get_queryset_can_view(self.users['dj']).filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_setlists_tagged(self.users['dj'])), set(playlists_dj))
+        self.client.force_login(self.users['admin'])
+        playlists_admin = SetList.objects.filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_setlists_tagged(self.users['admin'])), set(playlists_admin))
+
     # Shared model functions
 
     def test_set_field(self):

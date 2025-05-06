@@ -1,0 +1,53 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if page_data %}
+        <h1>Transitions</h1>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:30%;">Starting Track</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:30%;">Ending Track</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:20%;">Owner</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Rating</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Link</th>
+                </tr>
+            </thead>
+            <tbody>{% for transition_data in page_data %}
+                <tr>
+                    <td data-label="Starting Track"><a href="{{ transition_data.transition.from_track.get_absolute_url }}">{{ transition_data.transition.from_track }}</a></td>
+                    <td data-label="Ending Track"><a href="{{ transition_data.transition.to_track.get_absolute_url }}">{{ transition_data.transition.to_track }}</a></td>
+                    <td data-label="Owner">{{ transition_data.transition.user }}</td>
+                    <td data-label="Rating" style="padding-left:20px;">{{ transition_data.transition.rating }}</td>
+                    <td data-label="Link"><a href="{{ transition_data.transition.get_absolute_url }}">transition detail</a></td>
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+        <hr>
+        <div class="pagination" style="margin-left:20px;margin-top:20px">
+          <span class="step-links">
+            {% if page_data.has_previous %}
+              <a href="?page=1">&laquo; first</a>
+              <a href="?page={{ page_data.previous_page_number }}">previous</a>
+            {% endif %}
+        
+            <span class="current">
+              Page {{ page_data.number }} of {{ page_data.paginator.num_pages }}
+            </span>
+        
+            {% if page_data.has_next %}
+              <a href="?page={{ page_data.next_page_number }}">next</a>
+              <a href="?page={{ page_data.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+          </span>
+        </div>
+    {% else %}
+        <p>There aren't any transitions publicly shared on this site.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_own_transition %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'create-object' 'transition' %}">Create a new transition</a></p>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -320,8 +320,8 @@ def SetListListView(request):
     for setlist in SetList.objects.get_queryset_can_view(request.user):
         setlist_data.append({
             'setlist': setlist,
-            'track_count':setlist.count_viewable_tracks_in_playlist(request.user),
-            'top_artists': setlist.get_top_viewable_playlist_artists(request.user),
+            'track_count':setlist.count_viewable_tracks_in_setlist(request.user),
+            'top_artists': setlist.get_top_viewable_setlist_artists(request.user),
         })
     sorted_data = sorted(setlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
     paginator = Paginator(sorted_data, 20)
@@ -526,14 +526,29 @@ class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
 # tag
 
 
-class TagListView(LoginRequiredMixin, generic.ListView):
-    model = Tag
-    context_object_name = 'tag_list'
-    template_name = 'catalog/tag_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Tag.objects.get_queryset_can_view(self.request.user, 'tag')
+@login_required
+def TagListView(request):
+    tag_data = []
+    for tag in Tag.objects.get_queryset_can_view(request.user):
+        tag_data.append({
+            'tag': tag,
+            'trackinstances':tag.get_viewable_trackinstances_tagged(request.user),
+            'playlists': tag.get_viewable_playlists_tagged(request.user),
+            'setlists': tag.get_viewable_setlists_tagged(request.user),
+        })
+    sorted_data = sorted(tag_data, key=lambda dictionary: str(dictionary["tag"]), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/tag_list.html', context=context)
 
 
 class TagDetailView(LoginRequiredMixin, generic.DetailView):
@@ -568,14 +583,26 @@ class UserTagView(LoginRequiredMixin, generic.ListView):
 # transitions
 
 
-class TransitionListView(LoginRequiredMixin, generic.ListView):
-    model = Transition
-    context_object_name = 'transition_list'
-    template_name = 'catalog/transition_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Transition.objects.get_queryset_can_view(self.request.user)
+@login_required
+def TransitionListView(request):
+    transition_data = []
+    for transition in Transition.objects.get_queryset_can_view(request.user):
+        transition_data.append({
+            'transition': transition,
+        })
+    sorted_data = sorted(transition_data, key=lambda dictionary: str(dictionary["transition"].user), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/transition_list.html', context=context)
 
 
 class TransitionDetailView(LoginRequiredMixin, generic.DetailView):

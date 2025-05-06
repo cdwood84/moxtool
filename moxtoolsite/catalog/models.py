@@ -1313,6 +1313,9 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
     def get_viewable_playlists_tagged(self, user):
         return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
+    def get_viewable_setlists_tagged(self, user):
+        return SetList.objects.get_queryset_can_view(user).filter(tag__in=[self])
+    
     class Meta:
         constraints = [
             UniqueConstraint(

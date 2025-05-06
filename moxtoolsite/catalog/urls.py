@@ -40,8 +40,8 @@ urlpatterns = [
     path('setlists/', views.SetListListView, name='setlists'),
     path('setlist/<uuid:pk>/<str:name>', views.SetListDetailView.as_view(), name='setlist-detail'),
     
-    # setlist
-    path('transitions/', views.TransitionListView.as_view(), name='transitions'),
+    # transitions
+    path('transitions/', views.TransitionListView, name='transitions'),
     path('transition/<uuid:pk>/<str:name>', views.TransitionDetailView.as_view(), name='transition-detail'),
     
     # track
@@ -53,7 +53,7 @@ urlpatterns = [
     # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
 
     # tag
-    path('tags/', views.TagListView.as_view(), name='tags'),
+    path('tags/', views.TagListView, name='tags'),
     path('tag/<int:pk>/<str:value>', views.TagDetailView.as_view(), name='tag-detail'),
 
     # user library
