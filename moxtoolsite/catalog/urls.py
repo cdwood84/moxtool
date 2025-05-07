@@ -48,6 +48,7 @@ urlpatterns = [
     path('tracks/', views.TrackListView, name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
     path('trackrequest/<int:pk>/<str:name>', views.TrackRequestDetailView.as_view(), name='track-request-detail'),
+    path('user/tracks/', views.UserTrackInstanceListView, name='user-trackinstances'),
     # path('track/create', views.modify_track, name='create-track'),
     # path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
     # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
@@ -57,7 +58,6 @@ urlpatterns = [
     path('tag/<int:pk>/<str:value>', views.TagDetailView.as_view(), name='tag-detail'),
 
     # user library
-    path('mytracks/', views.UserTrackInstanceListView.as_view(), name='user-trackinstances'),
     path('mytracks/add', views.add_track_dj, name='add-track-dj'),
     path('mytracks/add/failure', views.add_track_failure, name='add-track-failure'),
     path('myplaylists/', views.UserPlaylistListView.as_view(), name='user-playlists'),

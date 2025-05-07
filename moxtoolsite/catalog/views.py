@@ -426,21 +426,26 @@ class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
         return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
-class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
-    model = TrackInstance
-    template_name = 'catalog/user_trackinstance_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
-            list_result = (
-                TrackInstance.objects
-                .filter(user=self.request.user)
-                .order_by('date_added', '-play_count')
-            )
-        else:
-            raise PermissionDenied
-        return list_result
+@login_required
+def UserTrackInstanceListView(request):
+    trackinstance_data = []
+    for trackinstance in TrackInstance.objects.filter(user=request.user):
+        trackinstance_data.append({
+            'trackinstance': trackinstance,
+        })
+    sorted_data = sorted(trackinstance_data, key=lambda item: item['trackinstance'].rating, reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_track_list.html', context=context)
 
 
 # playlist
