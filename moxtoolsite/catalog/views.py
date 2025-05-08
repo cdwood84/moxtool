@@ -348,17 +348,28 @@ class SetListDetailView(LoginRequiredMixin, generic.DetailView):
         return SetList.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-class UserSetListListView(LoginRequiredMixin, generic.ListView):
-    model = SetList
-    template_name = 'catalog/user_setlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            SetList.objects
-            .filter(user=self.request.user)
-            .order_by('-date_played')
-        )
+@login_required
+def UserSetListListView(request):
+    setlist_data = []
+    for setlist in SetList.objects.filter(user=request.user):
+        setlist_data.append({
+            'setlist': setlist,
+            'track_count':setlist.count_viewable_tracks_in_setlist(request.user),
+            'top_artists': setlist.get_top_viewable_setlist_artists(request.user),
+        })
+    sorted_data = sorted(setlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_setlist_list.html', context=context)
    
 
 # track
@@ -643,18 +654,27 @@ class TransitionDetailView(LoginRequiredMixin, generic.DetailView):
         return Transition.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-class UserTransitionListView(LoginRequiredMixin, generic.ListView):
-    model = Transition
-    template_name = 'catalog/user_transition_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Transition.objects
-            .filter(user=self.request.user)
-            .order_by('-rating')
-        )
-    
+@login_required
+def UserTransitionListView(request):
+    transition_data = []
+    for transition in Transition.objects.filter(user=request.user):
+        transition_data.append({
+            'transition': transition,
+        })
+    sorted_data = sorted(transition_data, key=lambda dictionary: str(dictionary["transition"].user), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_transition_list.html', context=context)
+  
 
 # lower navigation pages and assocciated form pages
 

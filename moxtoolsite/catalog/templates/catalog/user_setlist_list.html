@@ -1,0 +1,53 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    {% if page_data %}
+        <h1>{{ user }}'s setlists</h1>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:15%;">Setlist</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:30%;">Comments</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:10%;">Track Count</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;">Top Artists</th>
+                </tr>
+            </thead>
+            <tbody>{% for setlist_data in page_data %}
+                <tr>
+                    <td data-label="Setlist"><a href="{{ setlist_data.setlist.get_absolute_url }}">{{ setlist_data.setlist.name }}</a></td>
+                    <td data-label="Comments">{{ setlist_data.setlist.comments }}</td>
+                    <td data-label="Track Count">{{ setlist_data.track_count }}</td>
+                    <td data-label="Top Artists">{% for artist in setlist_data.top_artists %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+        <hr>
+        {% if page_data.paginator.num_pages > 1 %}
+          <div class="pagination" style="margin-left:20px;margin-top:20px">
+            <span class="step-links">
+              {% if page_data.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ page_data.previous_page_number }}">previous</a>
+              {% endif %}
+          
+              <span class="current">
+                Page {{ page_data.number }} of {{ page_data.paginator.num_pages }}
+              </span>
+          
+              {% if page_data.has_next %}
+                <a href="?page={{ page_data.next_page_number }}">next</a>
+                <a href="?page={{ page_data.paginator.num_pages }}">last &raquo;</a>
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
+    {% else %}
+        <p>You don't have any setlists in your library.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_own_setlist %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'create-object' 'setlist' %}">Create a new setlist</a></p>
+        </div>
+    {% endif %}
+{% endblock %}

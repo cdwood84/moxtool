@@ -40,10 +40,12 @@ urlpatterns = [
     # setlist
     path('setlists/', views.SetListListView, name='setlists'),
     path('setlist/<uuid:pk>/<str:name>', views.SetListDetailView.as_view(), name='setlist-detail'),
+    path('user/setlists/', views.UserSetListListView, name='user-setlists'),
     
     # transitions
     path('transitions/', views.TransitionListView, name='transitions'),
     path('transition/<uuid:pk>/<str:name>', views.TransitionDetailView.as_view(), name='transition-detail'),
+    path('user/transitions/', views.UserTransitionListView, name='user-transitions'),
     
     # track
     path('tracks/', views.TrackListView, name='tracks'),
@@ -62,8 +64,6 @@ urlpatterns = [
     # user library
     path('mytracks/add', views.add_track_dj, name='add-track-dj'),
     path('mytracks/add/failure', views.add_track_failure, name='add-track-failure'),
-    path('mysetlists/', views.UserSetListListView.as_view(), name='user-setlists'),
-    path('mytransitions/', views.UserTransitionListView.as_view(), name='user-transitions'),
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
     # path('myplaylists/<uuid:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
     # re_path(r'^myplaylists/(?P<pk>\d+)/tracks/add$', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
