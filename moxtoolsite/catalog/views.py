@@ -515,17 +515,28 @@ def modify_playlist(request, playlist_id):
     return render(request, 'catalog/create_playlist.html', context)
 
 
-class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
-    model = Playlist
-    template_name = 'catalog/user_playlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Playlist.objects
-            .filter(user=self.request.user)
-            .order_by('name')
-        )
+@login_required
+def UserPlaylistListView(request):
+    playlist_data = []
+    for playlist in Playlist.objects.filter(user=request.user):
+        playlist_data.append({
+            'playlist': playlist,
+            'track_count':playlist.count_viewable_tracks_in_playlist(request.user),
+            'top_artists': playlist.get_top_viewable_playlist_artists(request.user),
+        })
+    sorted_data = sorted(playlist_data, key=lambda item: item['track_count'], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_playlist_list.html', context=context)
 
 
 # tag

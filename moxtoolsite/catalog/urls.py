@@ -35,6 +35,7 @@ urlpatterns = [
     path('playlists/create', views.modify_object, name='create-playlist'),
     path('playlists/modify/<int:pk>', views.modify_playlist, name='modify-playlist'),
     path('playlist/<int:pk>/tracks/add', views.add_track_to_playlist_dj, name='add-track-to-playlist-dj'),
+    path('user/playlists/', views.UserPlaylistListView, name='user-playlists'),
     
     # setlist
     path('setlists/', views.SetListListView, name='setlists'),
@@ -60,7 +61,6 @@ urlpatterns = [
     # user library
     path('mytracks/add', views.add_track_dj, name='add-track-dj'),
     path('mytracks/add/failure', views.add_track_failure, name='add-track-failure'),
-    path('myplaylists/', views.UserPlaylistListView.as_view(), name='user-playlists'),
     path('mysetlists/', views.UserSetListListView.as_view(), name='user-setlists'),
     path('mytransitions/', views.UserTransitionListView.as_view(), name='user-transitions'),
     path('my/playlists/add/failure', views.add_playlist_failure, name='add-playlist-failure'),
