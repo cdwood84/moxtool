@@ -404,26 +404,27 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Track.objects.get_queryset_can_view(self.request.user).get(id=pk)
+        return Track.objects.get_queryset_can_view(self.request.user).filter(id=pk).first()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
-        for label in Label.objects.get_queryset_can_view(self.request.user):
-            if label == context['track'].label:
-                context['viewable_label'] = label
-        context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
-        context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
-        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
-        context['user_trackinstance'] = TrackInstance.objects.filter(user=self.request.user, track=context['track']).first()
-        context['user_playlist_list'] = Playlist.objects.filter(user=self.request.user, track=context['track'])
-        context['user_transition_to_list'] = Transition.objects.filter(user=self.request.user, to_track=context['track'])
-        context['user_transition_from_list'] = Transition.objects.filter(user=self.request.user, from_track=context['track'])
-        setlists = SetList.objects.filter(user=self.request.user)
-        ids = []
-        for setlist in setlists:
-            ids.append(setlist.id)
-        context['user_setlistitem_list'] = SetListItem.objects.filter(track=context['track'], setlist__id__in=ids)
+        if 'track' in context:
+            context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
+            for label in Label.objects.get_queryset_can_view(self.request.user):
+                if label == context['track'].label:
+                    context['viewable_label'] = label
+            context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
+            context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
+            context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
+            context['user_trackinstance'] = TrackInstance.objects.filter(user=self.request.user, track=context['track']).first() 
+            context['user_playlist_list'] = Playlist.objects.filter(user=self.request.user, track=context['track'])
+            context['user_transition_to_list'] = Transition.objects.filter(user=self.request.user, to_track=context['track'])
+            context['user_transition_from_list'] = Transition.objects.filter(user=self.request.user, from_track=context['track'])
+            setlists = SetList.objects.filter(user=self.request.user)
+            ids = []
+            for setlist in setlists:
+                ids.append(setlist.id)
+            context['user_setlistitem_list'] = SetListItem.objects.filter(track=context['track'], setlist__id__in=ids)
         return context
 
 
