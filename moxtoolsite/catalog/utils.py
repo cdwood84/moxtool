@@ -284,7 +284,11 @@ def random_scraper(iteration_max=1):
     message = 'No new tracks found'
     iteration = 0
     while iteration < iteration_max:
-        id = random.choice([i for i in range(1, max(good_track_ids)) if i not in good_track_ids + bad_track_ids])
+        if len(good_track_ids) == 0:
+            max_id = 20000000
+        else:
+            max_id = max(good_track_ids)
+        id = random.choice([i for i in range(1, max_id) if i not in good_track_ids + bad_track_ids])
         if Track.objects.filter(beatport_track_id=id).count() == 0:
             track, success = scrape_track(id)
             if success is True:
