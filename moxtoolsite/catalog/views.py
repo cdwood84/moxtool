@@ -144,16 +144,13 @@ def modify_shared_model(request, obj_name, pk):
 @login_required
 def bulk_upload(request, obj_name):
     if request.method == 'POST':
-
-        # find additional data
-        print(random_scraper(1))
-
-        # process form
         form = BulkUploadForm(request.POST)
         if form.is_valid():
             success = form.save(request.user)
             print(success)
             if success is True:
+                # find additional data
+                print(random_scraper(1))
                 return HttpResponseRedirect(reverse('index'))
             else:
                 print('Invalid form')
