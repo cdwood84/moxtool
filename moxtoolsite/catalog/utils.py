@@ -10,6 +10,7 @@ import os, random, requests, string, time
 def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(3+extra_time, 8+extra_time))
+    print(' proxy'+str(os.environ.get('MY_PROXY_LIST')))
     proxies = os.environ.get('MY_PROXY_LIST').split(',')
     proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
     user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
