@@ -335,3 +335,12 @@ def convert_url(url, s=True):
     elif url.startswith('https://') and s is False:
         clean_url = 'http://' + url.replace('https://', '', 1)
     return clean_url
+
+
+def process_backlog_items():
+    strikes = 0
+    success_count = 0
+    while strikes < 3:
+        # TBD
+        strikes += 1
+    return success_count 

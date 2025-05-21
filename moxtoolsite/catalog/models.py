@@ -655,7 +655,7 @@ class Artist(models.Model, SharedModelMixin, ArtistMixin):
             any_metadata_none = True
 
         # determine action statuses
-        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+        return metadata_action_status(external_id_none, any_metadata_none, self.public)
     
     def get_viewable_tracks_by_artist(self, user):
         return Track.objects.get_queryset_can_view(user).filter(Q(artist=self) | Q(remix_artist=self))
@@ -759,7 +759,7 @@ class Genre(models.Model, SharedModelMixin, GenreMixin):
             any_metadata_none = True
 
         # determine action statuses
-        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+        return metadata_action_status(external_id_none, any_metadata_none, self.public)
     
     def get_top_viewable_genre_artists(self, user):
         artist_data = {}
@@ -841,7 +841,7 @@ class Label(models.Model, SharedModelMixin, LabelMixin):
             any_metadata_none = True
 
         # determine action statuses
-        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+        return metadata_action_status(external_id_none, any_metadata_none, self.public)
     
     def get_viewable_tracks_in_label(self, user):
         return Track.objects.get_queryset_can_view(user).filter(label=self)
@@ -1006,7 +1006,7 @@ class Track(models.Model, SharedModelMixin, TrackMixin):
                 any_metadata_none = True
 
         # determine action statuses
-        return metadata_action_statuses(external_id_none, any_metadata_none, self.public)
+        return metadata_action_status(external_id_none, any_metadata_none, self.public)
 
     class Meta:
         constraints = [
@@ -1643,8 +1643,48 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
 # database management
 
 
+class Artist404(models.Model):
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID')
+    date_discovered = models.DateTimeField('Date Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_artist_id'],
+                name='beatport_artist_id_unique',
+                violation_error_message="This artist ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class Genre404(models.Model):
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID')
+    date_discovered = models.DateTimeField('Date Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_genre_id'],
+                name='beatport_genre_id_unique',
+                violation_error_message="This genre ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class Label404(models.Model):
+    beatport_label_id = models.BigIntegerField('Beatport Label ID')
+    date_discovered = models.DateTimeField('Date Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_label_id'],
+                name='beatport_label_id_unique',
+                violation_error_message="This label ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
 class Track404(models.Model):
     beatport_track_id = models.BigIntegerField('Beatport Track ID')
+    date_discovered = models.DateTimeField('Date Discovered')
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -1658,27 +1698,28 @@ class Track404(models.Model):
 # functions
 
 
-def metadata_action_statuses(external_id_none, any_metadata_none, public):
+def metadata_action_status(external_id_none, any_metadata_none, public):
+    status = {}
     if external_id_none == False:
         if any_metadata_none == True:
-            scrape = True
-            add = False
+            status['scrape'] = True
+            status['add'] = False
             if public == True:
-                remove = True
+                status['remove'] = True
             else:
-                remove = False
+                status['remove'] = False
         else:
-            scrape = False
-            remove = False
+            status['scrape'] = False
+            status['remove'] = False
             if public == True:
-                add = False
+                status['add'] = False
             else:
-                add = True
+                status['add'] = True
     else:
-        scrape = False
-        add = False
+        status['scrape'] = False
+        status['add'] = False
         if public == True:
-            remove = True
+            status['remove'] = True
         else:
-            remove = False
-    return scrape, remove, add
+            status['remove'] = False
+    return status
