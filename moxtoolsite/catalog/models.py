@@ -1645,7 +1645,7 @@ class Playlist(models.Model, SharedModelMixin, PlaylistMixin):
 
 class Artist404(models.Model):
     beatport_artist_id = models.BigIntegerField('Beatport Artist ID')
-    date_discovered = models.DateTimeField('Date Discovered')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -1658,7 +1658,7 @@ class Artist404(models.Model):
 
 class Genre404(models.Model):
     beatport_genre_id = models.BigIntegerField('Beatport Genre ID')
-    date_discovered = models.DateTimeField('Date Discovered')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -1671,7 +1671,7 @@ class Genre404(models.Model):
 
 class Label404(models.Model):
     beatport_label_id = models.BigIntegerField('Beatport Label ID')
-    date_discovered = models.DateTimeField('Date Discovered')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -1684,7 +1684,7 @@ class Label404(models.Model):
 
 class Track404(models.Model):
     beatport_track_id = models.BigIntegerField('Beatport Track ID')
-    date_discovered = models.DateTimeField('Date Discovered')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
     class Meta:
         constraints = [
             UniqueConstraint(

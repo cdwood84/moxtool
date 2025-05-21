@@ -1,4 +1,4 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_status
+from catalog.models import Artist, Artist404, ArtistRequest, Genre, Genre404, GenreRequest, Label, Label404, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_status
 from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -243,6 +243,39 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         no_artists = Artist.objects.filter(beatport_artist_id__isnull=True, name__isnull=True)
         self.assertEqual(no_artists.count(), 0)
         self.assertRaises(IntegrityError, Artist.objects.create, public=True)
+
+#WIP
+class Artist404ModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_artist_id(self):
+        artist = Artist404.objects.get(id=1)
+        field_label = artist._meta.get_field('beatport_artist_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Artist ID')
+
+    def test_datetime_discovered(self):
+        artist = Artist404.objects.get(id=1)
+        field_label = artist._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_artist_id_unique(self):
+        data = {}
+        duplicates = False
+        for artist1 in Artist404.objects.all():
+            if str(artist1.beatport_artist_id) not in data:
+                data[str(artist1.beatport_artist_id)] = 1
+            else:
+                data[str(artist1.beatport_artist_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        artist2 = Artist404.objects.first()
+        self.assertRaises(IntegrityError, Artist.objects.create, beatport_artist_id=artist2.beatport_artist_id)
 
 
 class GenreModelTest(TestCase, CatalogTestMixin):
@@ -496,6 +529,39 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         no_genres = Genre.objects.filter(beatport_genre_id__isnull=True, name__isnull=True)
         self.assertEqual(no_genres.count(), 0)
         self.assertRaises(IntegrityError, Genre.objects.create, public=True)
+
+#WIP
+class Genre404ModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_genre_id(self):
+        genre = Genre404.objects.get(id=1)
+        field_label = genre._meta.get_field('beatport_genre_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Genre ID')
+
+    def test_datetime_discovered(self):
+        genre = Genre404.objects.get(id=1)
+        field_label = genre._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_genre_id_unique(self):
+        data = {}
+        duplicates = False
+        for genre1 in Genre404.objects.all():
+            if str(genre1.beatport_genre_id) not in data:
+                data[str(genre1.beatport_genre_id)] = 1
+            else:
+                data[str(genre1.beatport_genre_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        genre2 = Genre404.objects.first()
+        self.assertRaises(IntegrityError, Artist.objects.create, beatport_genre_id=genre2.beatport_genre_id)
 
 
 class LabelModelTest(TestCase, CatalogTestMixin):
@@ -1081,6 +1147,11 @@ class Track404ModelTest(TestCase, CatalogTestMixin):
         track = Track404.objects.get(id=1)
         field_label = track._meta.get_field('beatport_track_id').verbose_name
         self.assertEqual(field_label, 'Beatport Track ID')
+
+    def test_datetime_discovered(self):
+        track = Track404.objects.get(id=1)
+        field_label = track._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
 
     # test constraints
 
