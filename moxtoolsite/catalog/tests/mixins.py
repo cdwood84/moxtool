@@ -76,7 +76,7 @@ class CatalogTestMixin:
         )
         Genre.objects.create(name='House', public=True)
         Genre.objects.create(beatport_genre_id=6, public=False)
-        Genre404.objects.create(beatport_artist_id=999, datetime_discovered=datetime.datetime(2020,3,1,11,59,59))
+        Genre404.objects.create(beatport_genre_id=999, datetime_discovered=datetime.datetime(2020,3,1,11,59,59))
         GenreRequest.objects.create(
             genre=Genre.objects.get(id=1),
             public=True,
@@ -112,7 +112,7 @@ class CatalogTestMixin:
         )
         Label.objects.create(name='Cautionary Tapes', public=True)
         Label.objects.create(beatport_label_id=586, public=False)
-        Label404.objects.create(beatport_artist_id=28347239833, datetime_discovered=datetime.datetime(2025,4,1,0,0,1))
+        Label404.objects.create(beatport_label_id=28347239833, datetime_discovered=datetime.datetime(2025,4,1,0,0,1))
         Track.objects.create(
             title='Not in my Haus', 
             genre=Genre.objects.get(id=1),

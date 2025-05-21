@@ -275,7 +275,7 @@ class Artist404ModelTest(TestCase, CatalogTestMixin):
                 duplicates = True
         self.assertFalse(duplicates)
         artist2 = Artist404.objects.first()
-        self.assertRaises(IntegrityError, Artist.objects.create, beatport_artist_id=artist2.beatport_artist_id)
+        self.assertRaises(IntegrityError, Artist404.objects.create, beatport_artist_id=artist2.beatport_artist_id)
 
 
 class GenreModelTest(TestCase, CatalogTestMixin):
@@ -561,7 +561,7 @@ class Genre404ModelTest(TestCase, CatalogTestMixin):
                 duplicates = True
         self.assertFalse(duplicates)
         genre2 = Genre404.objects.first()
-        self.assertRaises(IntegrityError, Artist.objects.create, beatport_genre_id=genre2.beatport_genre_id)
+        self.assertRaises(IntegrityError, Genre404.objects.create, beatport_genre_id=genre2.beatport_genre_id)
 
 
 class LabelModelTest(TestCase, CatalogTestMixin):
@@ -794,6 +794,39 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         no_labels = Label.objects.filter(beatport_label_id__isnull=True, name__isnull=True)
         self.assertEqual(no_labels.count(), 0)
         self.assertRaises(IntegrityError, Label.objects.create, public=True)
+
+#WIP
+class Label404ModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_label_id(self):
+        label = Label404.objects.get(id=1)
+        field_label = label._meta.get_field('beatport_label_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Label ID')
+
+    def test_datetime_discovered(self):
+        label = Label404.objects.get(id=1)
+        field_label = label._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_label_id_unique(self):
+        data = {}
+        duplicates = False
+        for label1 in Label404.objects.all():
+            if str(label1.beatport_label_id) not in data:
+                data[str(label1.beatport_label_id)] = 1
+            else:
+                data[str(label1.beatport_label_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        label2 = Label404.objects.first()
+        self.assertRaises(IntegrityError, Label404.objects.create, beatport_label_id=label2.beatport_label_id)
 
 
 class TrackModelTest(TestCase, CatalogTestMixin):
@@ -1166,7 +1199,7 @@ class Track404ModelTest(TestCase, CatalogTestMixin):
                 duplicates = True
         self.assertFalse(duplicates)
         track2 = Track404.objects.first()
-        self.assertRaises(IntegrityError, Track.objects.create, beatport_track_id=track2.beatport_track_id)
+        self.assertRaises(IntegrityError, Track404.objects.create, beatport_track_id=track2.beatport_track_id)
 
 
 # user shared model requests
