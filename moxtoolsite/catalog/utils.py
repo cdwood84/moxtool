@@ -12,40 +12,39 @@ def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(2+extra_time, 4+extra_time))
 
-    # v1
-    # user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
-    # user_agent = random.choice(user_agents)
-    # if os.environ.get('USE_PROXY') == True:
-    #     proxies = os.environ.get('MY_PROXY_LIST').split(',')
-    #     proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
-    #     response = requests.get(
-    #         url, 
-    #         proxies = {'http': proxy}, 
-    #         headers = {'User-Agent': user_agent} , 
-    #         timeout = 15,
-    #     )
-    # else:
-    #     response = requests.get(
-    #         url, 
-    #         headers = {'User-Agent': user_agent} , 
-    #         timeout = 15,
-    #     )
+    # v1, by free proxy
+    if os.environ.get('MD_METHOD') == 'PROXY':
+        user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
+        user_agent = random.choice(user_agents)
+        proxies = os.environ.get('MY_PROXY_LIST').split(',')
+        proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
+        response = requests.get(
+            convert_url(url, False), 
+            proxies = {'http': proxy}, 
+            headers = {'User-Agent': user_agent} , 
+            timeout = 15,
+        )
 
-    # v2
-    if url.startswith('http://'):
-        new_url = 'https://' + url.split('tp://')[1]
+    # v2, by scrapingbee
+    elif os.environ.get('MD_METHOD') == 'BEE':
+        client = ScrapingBeeClient(api_key=os.environ.get('BEE_KEY'))
+        response = client.get(
+            convert_url(url, True),
+            params={
+                # 'render_js': 'true',
+                # 'premium_proxy': 'true',
+                # 'country_code': 'US',
+            },
+            timeout=60,
+        )
+
+    # v3, by apify
+    # elif os.environ.get('MD_METHOD') == 'APIFY':
+    #     # TBD
+
+    # unknown method requires an error
     else:
-        new_url = url
-    client = ScrapingBeeClient(api_key=os.environ.get('BEE_KEY'))
-    response = client.get(
-        new_url,
-        params={
-            # 'render_js': 'true',
-            # 'premium_proxy': 'true',
-            # 'country_code': 'US',
-        },
-        timeout=60,
-    )
+        raise('Error: unselected or unsupoorted web scraping method')
 
     # return text
     response.raise_for_status()
@@ -327,3 +326,12 @@ def random_scraper(iteration_max=1):
                     message += ', '+str(track)
         iteration += 1
     return message
+
+
+def convert_url(url, s=True):
+    clean_url = url
+    if url.startswith('http://') and s is True:
+        clean_url = 'https://' + url.replace('http://', '', 1)
+    elif url.startswith('https://') and s is False:
+        clean_url = 'http://' + url.replace('https://', '', 1)
+    return clean_url
