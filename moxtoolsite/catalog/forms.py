@@ -2,8 +2,7 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, Track, TrackInstance, TrackRequest
-from .utils import scrape_artist, scrape_genre, scrape_label, scrape_track
+from .models import Artist, ArtistBacklog, Genre, GenreBacklog, Label, LabelBacklog, Playlist, Track, TrackBacklog, TrackInstance
 import datetime
 
 

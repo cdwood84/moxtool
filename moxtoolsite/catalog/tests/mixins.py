@@ -1,6 +1,7 @@
 from catalog.models import Artist, Artist404, ArtistBacklog, ArtistRequest, Genre, Genre404, GenreBacklog, GenreRequest, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, TrackRequest, Transition
 from datetime import date, time
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
 import datetime
@@ -148,6 +149,7 @@ class CatalogTestMixin:
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
         Track404.objects.create(beatport_track_id=1900504, datetime_discovered=datetime.datetime(2025,1,1,9,15,0))
         TrackBacklog.objects.create(beatport_track_id=19143493, datetime_discovered=datetime.datetime(2025,1,2,9,15,0))
+        TrackBacklog.objects.get(id=1).users.add(users['dj'])
         TrackRequest.objects.create(
             track=Track.objects.get(beatport_track_id=20079434),
             beatport_track_id=20079434,

@@ -1737,6 +1737,7 @@ class Track404(models.Model):
 class TrackBacklog(models.Model):
     beatport_track_id = models.BigIntegerField('Beatport Track ID')
     datetime_discovered = models.DateTimeField('Date & Time Discovered')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, verbose_name="Users", blank=True)
     class Meta:
         constraints = [
             UniqueConstraint(

@@ -1318,6 +1318,11 @@ class TrackBacklogModelTest(TestCase, CatalogTestMixin):
         field_label = track._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
 
+    def test_users(self):
+        track = TrackBacklog.objects.get(id=1)
+        field_label = track._meta.get_field('users').verbose_name
+        self.assertEqual(field_label, 'Users')
+
     # test constraints
 
     def test_beatport_track_id_unique(self):
