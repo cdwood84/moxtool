@@ -62,12 +62,12 @@ def scrape_artist(id, text=None):
     while iteration_count < 3:
     
         # check to see if data is already populated
-        scrape, remove, add = artist.metadata_status()
-        if add == True:
+        status = artist.metadata_status()
+        if status['add'] == True:
             artist.set_field('public', True)
-        if remove == True:
+        if status['remove'] == True:
             artist.set_field('public', False)
-        if scrape == False:
+        if status['scrape'] == False:
             return artist, True
 
         # scrape data from Beatport
@@ -110,12 +110,12 @@ def scrape_genre(id, text=None):
     while iteration_count < 3:
     
         # check to see if data is already populated
-        scrape, remove, add = genre.metadata_status()
-        if add == True:
+        status = genre.metadata_status()
+        if status['add'] == True:
             genre.set_field('public', True)
-        if remove == True:
+        if status['remove'] == True:
             genre.set_field('public', False)
-        if scrape == False:
+        if status['scrape'] == False:
             return genre, True
 
         # scrape data from Beatport
@@ -158,12 +158,12 @@ def scrape_label(id, text=None):
     while iteration_count < 3:
     
         # check to see if data is already populated
-        scrape, remove, add = label.metadata_status()
-        if add == True:
+        status = label.metadata_status()
+        if status['add'] == True:
             label.set_field('public', True)
-        if remove == True:
+        if status['remove'] == True:
             label.set_field('public', False)
-        if scrape == False:
+        if status['scrape'] == False:
             return label, True
 
         # scrape data from Beatport
@@ -208,12 +208,12 @@ def scrape_track(id, text=None):
     while iteration_count < 3:
     
         # check to see if data is already populated
-        scrape, remove, add = track.metadata_status()
-        if add == True:
+        status = track.metadata_status()
+        if status['add'] == True:
             track.set_field('public', True)
-        if remove == True:
+        if status['remove'] == True:
             track.set_field('public', False)
-        if scrape == False:
+        if status['scrape'] == False:
             return track, True
 
         # scrape data from Beatport
@@ -337,10 +337,25 @@ def convert_url(url, s=True):
     return clean_url
 
 
-def process_backlog_items():
+def process_backlog_items(num=1):
     strikes = 0
     success_count = 0
+
+    # backlog loop
     while strikes < 3:
+        # if nothing to process or num achieved break
         # TBD
+        # if bad status 
         strikes += 1
+        # else 
+        success_count += 1
+
+    # additional items for 
+    while strikes < 3:
+        random_scraper()
+        # if bad status 
+        strikes += 1
+        # else 
+        success_count += 1
+        
     return success_count 
