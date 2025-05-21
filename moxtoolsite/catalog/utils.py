@@ -8,12 +8,11 @@ import os, random, requests, string, time
 # scraping utils
 
 
-def get_soup(url):
-# def get_soup(url, iteration_count=0):
+def get_soup(url, iteration_count=0):
+    extra_time = iteration_count * 5
+    time.sleep(random.randint(2+extra_time, 4+extra_time))
 
     # v1
-    # extra_time = iteration_count * 5
-    # time.sleep(random.randint(3+extra_time, 8+extra_time))
     # user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
     # user_agent = random.choice(user_agents)
     # if os.environ.get('USE_PROXY') == True:
@@ -31,13 +30,25 @@ def get_soup(url):
     #         headers = {'User-Agent': user_agent} , 
     #         timeout = 15,
     #     )
-    # response.raise_for_status()
 
     # v2
+    if url.startswith('http://'):
+        new_url = 'https://' + url.split('tp://')[1]
+    else:
+        new_url = url
     client = ScrapingBeeClient(api_key=os.environ.get('BEE_KEY'))
-    response = client.get(url)
+    response = client.get(
+        new_url,
+        params={
+            # 'render_js': 'true',
+            # 'premium_proxy': 'true',
+            # 'country_code': 'US',
+        },
+        timeout=60,
+    )
 
     # return text
+    response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
     return soup
 
@@ -306,6 +317,7 @@ def random_scraper(iteration_max=1):
         else:
             max_id = max(good_track_ids)
         id = random.choice([i for i in range(1, max_id) if i not in good_track_ids + bad_track_ids])
+        print('Trying random track: ' + str(id))
         if Track.objects.filter(beatport_track_id=id).count() == 0:
             track, success = scrape_track(id)
             if success is True:
