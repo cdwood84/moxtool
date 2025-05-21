@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from scrapingbee import ScrapingBeeClient
 from catalog.models import Artist, Genre, Label, Track, Track404
 from datetime import date
 import os, random, requests, string, time
@@ -7,27 +8,36 @@ import os, random, requests, string, time
 # scraping utils
 
 
-def get_soup(url, iteration_count=0):
-    extra_time = iteration_count * 5
-    time.sleep(random.randint(3+extra_time, 8+extra_time))
-    user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
-    user_agent = random.choice(user_agents)
-    if os.environ.get('USE_PROXY') == True:
-        proxies = os.environ.get('MY_PROXY_LIST').split(',')
-        proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
-        response = requests.get(
-            url, 
-            proxies = {'http': proxy}, 
-            headers = {'User-Agent': user_agent} , 
-            timeout = 15,
-        )
-    else:
-        response = requests.get(
-            url, 
-            headers = {'User-Agent': user_agent} , 
-            timeout = 15,
-        )
-    response.raise_for_status()
+def get_soup(url):
+# def get_soup(url, iteration_count=0):
+
+    # v1
+    # extra_time = iteration_count * 5
+    # time.sleep(random.randint(3+extra_time, 8+extra_time))
+    # user_agents = os.environ.get('MY_USER_AGENT_LIST').split('&')
+    # user_agent = random.choice(user_agents)
+    # if os.environ.get('USE_PROXY') == True:
+    #     proxies = os.environ.get('MY_PROXY_LIST').split(',')
+    #     proxy = 'http://' + os.environ.get('MY_PROXY_CREDS') + '@' + random.choice(proxies)
+    #     response = requests.get(
+    #         url, 
+    #         proxies = {'http': proxy}, 
+    #         headers = {'User-Agent': user_agent} , 
+    #         timeout = 15,
+    #     )
+    # else:
+    #     response = requests.get(
+    #         url, 
+    #         headers = {'User-Agent': user_agent} , 
+    #         timeout = 15,
+    #     )
+    # response.raise_for_status()
+
+    # v2
+    client = ScrapingBeeClient(api_key=os.environ.get('BEE_KEY'))
+    response = client.get(url)
+
+    # return text
     soup = BeautifulSoup(response.text, 'html.parser')
     return soup
 
