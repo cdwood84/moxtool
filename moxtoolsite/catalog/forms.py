@@ -2,7 +2,7 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, ArtistBacklog, Genre, GenreBacklog, Label, LabelBacklog, Playlist, Track, TrackBacklog, TrackInstance
+from .models import Artist, Artist404, ArtistBacklog, Genre, Genre404, GenreBacklog, Label, Label404, LabelBacklog, Playlist, Track, Track404, TrackBacklog, TrackInstance
 import datetime
 
 
@@ -411,17 +411,19 @@ class BulkUploadForm(forms.Form):
         obj_name = self.cleaned_data.get('object_name')
         for id in self.cleaned_data.get('beatport_id_list'):
             if obj_name == 'artist':
-                obj, success = scrape_artist(id)
+                if Artist.objects.filter(beatport_artist_id=id).count() == 0 and Artist404.objects.filter(beatport_artist_id=id).count() == 0 and ArtistBacklog.objects.filter(beatport_artist_id=id).count() == 0:
+                    ArtistBacklog.objects.create(beatport_artist_id=id, datetime_discovered=datetime.datetime.now())
             elif obj_name == 'genre':
-                obj, success = scrape_genre(id)
+                if Genre.objects.filter(beatport_genre_id=id).count() == 0 and Genre404.objects.filter(beatport_genre_id=id).count() == 0 and GenreBacklog.objects.filter(beatport_genre_id=id).count() == 0:
+                    GenreBacklog.objects.create(beatport_genre_id=id, datetime_discovered=datetime.datetime.now())
             elif obj_name == 'label':
-                obj, success = scrape_label(id)
+                if Label.objects.filter(beatport_label_id=id).count() == 0 and Label404.objects.filter(beatport_label_id=id).count() == 0 and LabelBacklog.objects.filter(beatport_label_id=id).count() == 0:
+                    LabelBacklog.objects.create(beatport_label_id=id, datetime_discovered=datetime.datetime.now())
             elif obj_name == 'track':
-                obj, success = scrape_track(id)
-                if user and success == True:
-                    ti, new_ti = TrackInstance.objects.get_or_create(track=obj, user=user)
-                    if new_ti:
-                        print('Added '+str(ti)+' for '+str(user))
+                if Track.objects.filter(beatport_track_id=id).count() == 0 and Track404.objects.filter(beatport_track_id=id).count() == 0:
+                    track, created = TrackBacklog.objects.get_or_create(beatport_track_id=id, defaults={'datetime_discovered':datetime.datetime.now()})
+                    if user and track:
+                        track.users.add(user)
             else:
                 raise ValidationError('Invalid object type processed')
         return True
