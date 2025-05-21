@@ -1,4 +1,4 @@
-from catalog.models import Artist, Artist404, ArtistRequest, Genre, Genre404, GenreRequest, Label, Label404, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition
+from catalog.models import Artist, Artist404, ArtistBacklog, ArtistRequest, Genre, Genre404, GenreBacklog, GenreRequest, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, TrackRequest, Transition
 from datetime import date, time
 from django.apps import apps
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
@@ -41,6 +41,7 @@ class CatalogTestMixin:
         Artist.objects.create(beatport_artist_id=402072, public=False)
         Artist.objects.create(name='m4ri55a', public=False)
         Artist404.objects.create(beatport_artist_id=98137192719823, datetime_discovered=datetime.datetime(2019,8,4,6,59,59))
+        ArtistBacklog.objects.create(beatport_artist_id=84, datetime_discovered=datetime.datetime(2019,8,5,6,59,59))
         ArtistRequest.objects.create(
             artist=Artist.objects.get(id=1),
             public=True,
@@ -77,6 +78,7 @@ class CatalogTestMixin:
         Genre.objects.create(name='House', public=True)
         Genre.objects.create(beatport_genre_id=6, public=False)
         Genre404.objects.create(beatport_genre_id=999, datetime_discovered=datetime.datetime(2020,3,1,11,59,59))
+        GenreBacklog.objects.create(beatport_genre_id=20, datetime_discovered=datetime.datetime(2020,3,2,11,59,59))
         GenreRequest.objects.create(
             genre=Genre.objects.get(id=1),
             public=True,
@@ -113,6 +115,7 @@ class CatalogTestMixin:
         Label.objects.create(name='Cautionary Tapes', public=True)
         Label.objects.create(beatport_label_id=586, public=False)
         Label404.objects.create(beatport_label_id=28347239833, datetime_discovered=datetime.datetime(2025,4,1,0,0,1))
+        LabelBacklog.objects.create(beatport_label_id=100, datetime_discovered=datetime.datetime(2025,4,2,0,0,1))
         Track.objects.create(
             title='Not in my Haus', 
             genre=Genre.objects.get(id=1),
@@ -144,6 +147,7 @@ class CatalogTestMixin:
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
         Track404.objects.create(beatport_track_id=1900504, datetime_discovered=datetime.datetime(2025,1,1,9,15,0))
+        TrackBacklog.objects.create(beatport_track_id=19143493, datetime_discovered=datetime.datetime(2025,1,2,9,15,0))
         TrackRequest.objects.create(
             track=Track.objects.get(beatport_track_id=20079434),
             beatport_track_id=20079434,

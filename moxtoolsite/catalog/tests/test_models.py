@@ -1,4 +1,4 @@
-from catalog.models import Artist, Artist404, ArtistRequest, Genre, Genre404, GenreRequest, Label, Label404, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_status
+from catalog.models import Artist, Artist404, ArtistBacklog, ArtistRequest, Genre, Genre404, GenreBacklog, GenreRequest, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, TrackRequest, Transition, metadata_action_status
 from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -244,7 +244,7 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(no_artists.count(), 0)
         self.assertRaises(IntegrityError, Artist.objects.create, public=True)
 
-#WIP
+
 class Artist404ModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -276,6 +276,39 @@ class Artist404ModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(duplicates)
         artist2 = Artist404.objects.first()
         self.assertRaises(IntegrityError, Artist404.objects.create, beatport_artist_id=artist2.beatport_artist_id)
+
+
+class ArtistBacklogModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_artist_id(self):
+        artist = ArtistBacklog.objects.get(id=1)
+        field_label = artist._meta.get_field('beatport_artist_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Artist ID')
+
+    def test_datetime_discovered(self):
+        artist = ArtistBacklog.objects.get(id=1)
+        field_label = artist._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_artist_id_unique(self):
+        data = {}
+        duplicates = False
+        for artist1 in ArtistBacklog.objects.all():
+            if str(artist1.beatport_artist_id) not in data:
+                data[str(artist1.beatport_artist_id)] = 1
+            else:
+                data[str(artist1.beatport_artist_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        artist2 = ArtistBacklog.objects.first()
+        self.assertRaises(IntegrityError, ArtistBacklog.objects.create, beatport_artist_id=artist2.beatport_artist_id)
 
 
 class GenreModelTest(TestCase, CatalogTestMixin):
@@ -530,7 +563,7 @@ class GenreModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(no_genres.count(), 0)
         self.assertRaises(IntegrityError, Genre.objects.create, public=True)
 
-#WIP
+
 class Genre404ModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -562,6 +595,39 @@ class Genre404ModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(duplicates)
         genre2 = Genre404.objects.first()
         self.assertRaises(IntegrityError, Genre404.objects.create, beatport_genre_id=genre2.beatport_genre_id)
+
+
+class GenreBacklogModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_genre_id(self):
+        genre = GenreBacklog.objects.get(id=1)
+        field_label = genre._meta.get_field('beatport_genre_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Genre ID')
+
+    def test_datetime_discovered(self):
+        genre = GenreBacklog.objects.get(id=1)
+        field_label = genre._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_genre_id_unique(self):
+        data = {}
+        duplicates = False
+        for genre1 in GenreBacklog.objects.all():
+            if str(genre1.beatport_genre_id) not in data:
+                data[str(genre1.beatport_genre_id)] = 1
+            else:
+                data[str(genre1.beatport_genre_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        genre2 = GenreBacklog.objects.first()
+        self.assertRaises(IntegrityError, GenreBacklog.objects.create, beatport_genre_id=genre2.beatport_genre_id)
 
 
 class LabelModelTest(TestCase, CatalogTestMixin):
@@ -795,7 +861,7 @@ class LabelModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(no_labels.count(), 0)
         self.assertRaises(IntegrityError, Label.objects.create, public=True)
 
-#WIP
+
 class Label404ModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -827,6 +893,39 @@ class Label404ModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(duplicates)
         label2 = Label404.objects.first()
         self.assertRaises(IntegrityError, Label404.objects.create, beatport_label_id=label2.beatport_label_id)
+
+
+class LabelBacklogModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_label_id(self):
+        label = LabelBacklog.objects.get(id=1)
+        field_label = label._meta.get_field('beatport_label_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Label ID')
+
+    def test_datetime_discovered(self):
+        label = LabelBacklog.objects.get(id=1)
+        field_label = label._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_label_id_unique(self):
+        data = {}
+        duplicates = False
+        for label1 in LabelBacklog.objects.all():
+            if str(label1.beatport_label_id) not in data:
+                data[str(label1.beatport_label_id)] = 1
+            else:
+                data[str(label1.beatport_label_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        label2 = LabelBacklog.objects.first()
+        self.assertRaises(IntegrityError, LabelBacklog.objects.create, beatport_label_id=label2.beatport_label_id)
 
 
 class TrackModelTest(TestCase, CatalogTestMixin):
@@ -1168,7 +1267,7 @@ class TrackModelTest(TestCase, CatalogTestMixin):
         self.assertEqual(no_tracks.count(), 0)
         self.assertRaises(IntegrityError, Track.objects.create, public=True)
 
-#WIP
+
 class Track404ModelTest(TestCase, CatalogTestMixin):
     @classmethod
     def setUpTestData(cls):
@@ -1200,6 +1299,39 @@ class Track404ModelTest(TestCase, CatalogTestMixin):
         self.assertFalse(duplicates)
         track2 = Track404.objects.first()
         self.assertRaises(IntegrityError, Track404.objects.create, beatport_track_id=track2.beatport_track_id)
+
+
+class TrackBacklogModelTest(TestCase, CatalogTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users, cls.groups = cls.create_test_data()
+
+    # fields
+
+    def test_beatport_track_id(self):
+        track = TrackBacklog.objects.get(id=1)
+        field_label = track._meta.get_field('beatport_track_id').verbose_name
+        self.assertEqual(field_label, 'Beatport Track ID')
+
+    def test_datetime_discovered(self):
+        track = TrackBacklog.objects.get(id=1)
+        field_label = track._meta.get_field('datetime_discovered').verbose_name
+        self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # test constraints
+
+    def test_beatport_track_id_unique(self):
+        data = {}
+        duplicates = False
+        for track1 in TrackBacklog.objects.all():
+            if str(track1.beatport_track_id) not in data:
+                data[str(track1.beatport_track_id)] = 1
+            else:
+                data[str(track1.beatport_track_id)] += 1
+                duplicates = True
+        self.assertFalse(duplicates)
+        track2 = TrackBacklog.objects.first()
+        self.assertRaises(IntegrityError, TrackBacklog.objects.create, beatport_track_id=track2.beatport_track_id)
 
 
 # user shared model requests

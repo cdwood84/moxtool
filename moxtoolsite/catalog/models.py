@@ -1650,8 +1650,21 @@ class Artist404(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=['beatport_artist_id'],
-                name='beatport_artist_id_unique',
+                name='beatport_artist_id_unique_404',
                 violation_error_message="This artist ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class ArtistBacklog(models.Model):
+    beatport_artist_id = models.BigIntegerField('Beatport Artist ID')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_artist_id'],
+                name='beatport_artist_id_unique_backlog',
+                violation_error_message="This artist ID from Beatport is already on the backlog.",
             ),
         ]
 
@@ -1663,8 +1676,21 @@ class Genre404(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=['beatport_genre_id'],
-                name='beatport_genre_id_unique',
+                name='beatport_genre_id_unique_404',
                 violation_error_message="This genre ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class GenreBacklog(models.Model):
+    beatport_genre_id = models.BigIntegerField('Beatport Genre ID')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_genre_id'],
+                name='beatport_genre_id_unique_backlog',
+                violation_error_message="This genre ID from Beatport is already on the backlog.",
             ),
         ]
 
@@ -1676,8 +1702,21 @@ class Label404(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=['beatport_label_id'],
-                name='beatport_label_id_unique',
+                name='beatport_label_id_unique_404',
                 violation_error_message="This label ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class LabelBacklog(models.Model):
+    beatport_label_id = models.BigIntegerField('Beatport Label ID')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_label_id'],
+                name='beatport_label_id_unique_backlog',
+                violation_error_message="This label ID from Beatport is already on the backlog.",
             ),
         ]
 
@@ -1689,8 +1728,21 @@ class Track404(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=['beatport_track_id'],
-                name='beatport_track_id_unique',
+                name='beatport_track_id_unique_404',
                 violation_error_message="This track ID from Beatport is already marked as 404.",
+            ),
+        ]
+
+
+class TrackBacklog(models.Model):
+    beatport_track_id = models.BigIntegerField('Beatport Track ID')
+    datetime_discovered = models.DateTimeField('Date & Time Discovered')
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['beatport_track_id'],
+                name='beatport_track_id_unique_backlog',
+                violation_error_message="This track ID from Beatport is already on the backlog.",
             ),
         ]
 
