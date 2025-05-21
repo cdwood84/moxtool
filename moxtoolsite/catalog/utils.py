@@ -40,7 +40,7 @@ def get_soup(url, iteration_count=0):
 
     # v3, by apify
     # elif os.environ.get('MD_METHOD') == 'APIFY':
-    #     response = None
+    #     # TBD
 
     # unknown method requires an error
     else:
@@ -331,7 +331,7 @@ def random_scraper(iteration_max=1):
 def convert_url(url, s=True):
     clean_url = url
     if url.startswith('http://') and s is True:
-        clean_url = 'https://' + url.split('ttp://')[1]
+        clean_url = 'https://' + url.replace('http://', '', 1)
     elif url.startswith('https://') and s is False:
-        clean_url = 'http://' + url.split('ttps://')[1]
+        clean_url = 'http://' + url.replace('https://', '', 1)
     return clean_url
