@@ -327,3 +327,12 @@ def random_scraper(iteration_max=1):
                     message += ', '+str(track)
         iteration += 1
     return message
+
+
+def convert_url(url, s=True):
+    clean_url = url
+    if url.startswith('http://') and s is True:
+        clean_url = 'https://' + url.split('ttp://')[1]
+    elif url.startswith('https://') and s is False:
+        clean_url = 'http://' + url.split('ttps://')[1]
+    return clean_url
