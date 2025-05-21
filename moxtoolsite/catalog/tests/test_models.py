@@ -1,4 +1,4 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_statuses
+from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition, metadata_action_status
 from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -79,15 +79,15 @@ class ArtistModelTest(TestCase, CatalogTestMixin):
 
     def test_metadata_status(self):
         artist1 = Artist.objects.get(name='EnterTheMox')
-        scrape1, remove1, add1 = artist1.metadata_status()
-        self.assertFalse(scrape1)
-        self.assertTrue(remove1)
-        self.assertFalse(add1)
+        status1 = artist1.metadata_status()
+        self.assertFalse(status1['scrape'])
+        self.assertTrue(status1['remove'])
+        self.assertFalse(status1['add'])
         artist2 = Artist.objects.get(beatport_artist_id=402072)
-        scrape2, remove2, add2 = artist2.metadata_status()
-        self.assertTrue(scrape2)
-        self.assertFalse(remove2)
-        self.assertFalse(add2)
+        status2 = artist2.metadata_status()
+        self.assertTrue(status2['scrape'])
+        self.assertFalse(status2['remove'])
+        self.assertFalse(status2['add'])
 
     def test_get_viewable_tracks_by_artist_with_count(self):
         for artist in Artist.objects.all():
@@ -343,15 +343,15 @@ class GenreModelTest(TestCase, CatalogTestMixin):
 
     def test_metadata_status(self):
         genre1 = Genre.objects.get(name='House')
-        scrape1, remove1, add1 = genre1.metadata_status()
-        self.assertFalse(scrape1)
-        self.assertTrue(remove1)
-        self.assertFalse(add1)
+        status1 = genre1.metadata_status()
+        self.assertFalse(status1['scrape'])
+        self.assertTrue(status1['remove'])
+        self.assertFalse(status1['add'])
         genre2 = Genre.objects.get(beatport_genre_id=6)
-        scrape2, remove2, add2 = genre2.metadata_status()
-        self.assertTrue(scrape2)
-        self.assertFalse(remove2)
-        self.assertFalse(add2)
+        status2 = genre2.metadata_status()
+        self.assertTrue(status2['scrape'])
+        self.assertFalse(status2['remove'])
+        self.assertFalse(status2['add'])
 
     def test_get_top_viewable_genre_artists(self):
         for genre in Genre.objects.all():
@@ -562,15 +562,15 @@ class LabelModelTest(TestCase, CatalogTestMixin):
 
     def test_metadata_status(self):
         label1 = Label.objects.get(name='Cautionary Tapes')
-        scrape1, remove1, add1 = label1.metadata_status()
-        self.assertFalse(scrape1)
-        self.assertTrue(remove1)
-        self.assertFalse(add1)
+        status1 = label1.metadata_status()
+        self.assertFalse(status1['scrape'])
+        self.assertTrue(status1['remove'])
+        self.assertFalse(status1['add'])
         label2 = Label.objects.get(beatport_label_id=586)
-        scrape2, remove2, add2 = label2.metadata_status()
-        self.assertTrue(scrape2)
-        self.assertFalse(remove2)
-        self.assertFalse(add2)
+        status2 = label2.metadata_status()
+        self.assertTrue(status2['scrape'])
+        self.assertFalse(status2['remove'])
+        self.assertFalse(status2['add'])
 
     def test_get_viewable_tracks_in_label_with_count(self):
         for label in Label.objects.all():
@@ -952,15 +952,15 @@ class TrackModelTest(TestCase, CatalogTestMixin):
 
     def test_metadata_status(self):
         track1 = Track.objects.get(title='Mau5 Hau5')
-        scrape1, remove1, add1 = track1.metadata_status()
-        self.assertFalse(scrape1)
-        self.assertTrue(remove1)
-        self.assertFalse(add1)
+        status1 = track1.metadata_status()
+        self.assertFalse(status1['scrape'])
+        self.assertTrue(status1['remove'])
+        self.assertFalse(status1['add'])
         track2 = Track.objects.get(beatport_track_id=20079434)
-        scrape2, remove2, add2 = track2.metadata_status()
-        self.assertTrue(scrape2)
-        self.assertFalse(remove2)
-        self.assertFalse(add2)
+        status2 = track2.metadata_status()
+        self.assertTrue(status2['scrape'])
+        self.assertFalse(status2['remove'])
+        self.assertFalse(status2['add'])
 
     # Shared model functions
 
@@ -3049,44 +3049,44 @@ class TransitionModelTest(TestCase, CatalogTestMixin):
 
 class TestModelFunctions(TestCase):
 
-    def test_metadata_action_statuses(self):
+    def test_metadata_action_status(self):
         # valid id, valid data, not public
-        scrape, remove, add = metadata_action_statuses(False, False, False)
-        self.assertFalse(scrape)
-        self.assertFalse(remove)
-        self.assertTrue(add)
+        status = metadata_action_status(False, False, False)
+        self.assertFalse(status['scrape'])
+        self.assertFalse(status['remove'])
+        self.assertTrue(status['add'])
         # missing id, valid data, not public
-        scrape, remove, add = metadata_action_statuses(True, False, False)
-        self.assertFalse(scrape)
-        self.assertFalse(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(True, False, False)
+        self.assertFalse(status['scrape'])
+        self.assertFalse(status['remove'])
+        self.assertFalse(status['add'])
         # valid id, missing data, not public
-        scrape, remove, add = metadata_action_statuses(False, True, False)
-        self.assertTrue(scrape)
-        self.assertFalse(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(False, True, False)
+        self.assertTrue(status['scrape'])
+        self.assertFalse(status['remove'])
+        self.assertFalse(status['add'])
         # missing id, missing data, not public
-        scrape, remove, add = metadata_action_statuses(True, True, False)
-        self.assertFalse(scrape)
-        self.assertFalse(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(True, True, False)
+        self.assertFalse(status['scrape'])
+        self.assertFalse(status['remove'])
+        self.assertFalse(status['add'])
         # valid id, valid data, public
-        scrape, remove, add = metadata_action_statuses(False, False, True)
-        self.assertFalse(scrape)
-        self.assertFalse(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(False, False, True)
+        self.assertFalse(status['scrape'])
+        self.assertFalse(status['remove'])
+        self.assertFalse(status['add'])
         # missing id, valid data, public
-        scrape, remove, add = metadata_action_statuses(True, False, True)
-        self.assertFalse(scrape)
-        self.assertTrue(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(True, False, True)
+        self.assertFalse(status['scrape'])
+        self.assertTrue(status['remove'])
+        self.assertFalse(status['add'])
         # valid id, missing data, public
-        scrape, remove, add = metadata_action_statuses(False, True, True)
-        self.assertTrue(scrape)
-        self.assertTrue(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(False, True, True)
+        self.assertTrue(status['scrape'])
+        self.assertTrue(status['remove'])
+        self.assertFalse(status['add'])
         # missing id, missing data, public
-        scrape, remove, add = metadata_action_statuses(True, True, True)
-        self.assertFalse(scrape)
-        self.assertTrue(remove)
-        self.assertFalse(add)
+        status = metadata_action_status(True, True, True)
+        self.assertFalse(status['scrape'])
+        self.assertTrue(status['remove'])
+        self.assertFalse(status['add'])

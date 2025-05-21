@@ -1,8 +1,8 @@
 from bs4 import BeautifulSoup
 from scrapingbee import ScrapingBeeClient
-from catalog.models import Artist, Genre, Label, Track, Track404
+from catalog.models import Artist, Artist404, Genre, Label, Track, Track404
 from datetime import date
-import os, random, requests, string, time
+import datetime, os, random, requests, string, time, traceback
 
 
 # scraping utils
@@ -53,22 +53,33 @@ def get_soup(url, iteration_count=0):
 
 
 def scrape_artist(id, text=None):
-    if id is None:
-        return None, False
-    elif id <= 0:
-        return None, False
-    artist, created = Artist.objects.get_or_create(beatport_artist_id=id)
+
+    # initialize the result dictionary
+    result = {
+        'data': {
+            'artist': {},
+        },
+        'success': False,
+        'message': None,
+        'count': 0,
+    }
+
+    # handle invalid id values
+    if id is None or id <= 0:
+        result['message'] = 'Error: invalid artist ID provided'
+        return result
+    
+    # handle existing, complete artist
+    if Artist.objects.filter(beatport_artist_id=id).count() > 0:
+        artist = Artist.objects.get(beatport_artist_id=id)
+        if should_object_be_scraped(artist) == False:
+            result['success'] = True
+            result['message'] = 'Process Skipped: artist is already populated'
+            return result
+
+    # scraping loop
     iteration_count = 0
     while iteration_count < 3:
-    
-        # check to see if data is already populated
-        status = artist.metadata_status()
-        if status['add'] == True:
-            artist.set_field('public', True)
-        if status['remove'] == True:
-            artist.set_field('public', False)
-        if status['scrape'] == False:
-            return artist, True
 
         # scrape data from Beatport
         if text is None:
@@ -80,24 +91,34 @@ def scrape_artist(id, text=None):
         except Exception as e:
             print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
+                Artist404.objects.create(beatport_artist_id=id, datetime_discovered=datetime.datetime.now())
                 break
-        if soup:
+            else:
+                traceback.print_exc()
 
-            # extract model fields from data
-            title_line = soup.find('body').find('h1')
-            beatport_data = {
-                'name': title_line.text,
-            }
+        # parse html text if successful
+        if soup is not None:
+            try:
+                title_line = soup.find('body').find('h1')
+                data = {
+                    'name': title_line.text,
+                }
+                if data['name'] is not None and len() > 0:
+                    result['data']['artist'][str(id)] = data
+                    result['count'] += 1
+                    result['success'] = True
+                    result['message'] = 'Artist data scraped: ' + data['name']
+                    break
+            except:
+                print('Error parsing html: ' + str(e))
+                traceback.print_exc()
 
-            # append data and check for completeness
-            artist.set_field('name', beatport_data['name'])
+        # iterate the loop
         iteration_count += 1
+        result['message'] = 'Error: web scraping unsuccessful'
 
-    if created == True:
-        artist.delete()
-        return None, False
-    else:
-        return artist, False
+    # return result
+    return result
 
 
 def scrape_genre(id, text=None):
@@ -276,21 +297,21 @@ def scrape_track(id, text=None):
                 int(beatport_data['released'].split('-')[2])
             ))
             g, ng = scrape_genre(beatport_data['genre']['id'], beatport_data['genre']['text'])
-            if ng is True:
+            if ng == True:
                 track.set_field('genre', g)
             l, nl = scrape_label(beatport_data['label']['id'], beatport_data['label']['text'])
-            if nl is True:
+            if nl == True:
                 track.set_field('label', l)
             for art in beatport_data['artists']:
                 a, na = scrape_artist(art['id'], art['text'])
-                if na is True:
+                if na == True:
                     track.artist.add(a)
                 else:
                     track.artist.clear()
                     break
             for ra in beatport_data['remix_artists']:
                 r, nr = scrape_artist(ra['id'], ra['text'])
-                if nr is True:
+                if nr == True:
                     track.remix_artist.add(r)
                 else:
                     track.remix_artist.clear()
@@ -319,7 +340,7 @@ def random_scraper(iteration_max=1):
         print('Trying random track: ' + str(id))
         if Track.objects.filter(beatport_track_id=id).count() == 0:
             track, success = scrape_track(id)
-            if success is True:
+            if success == True:
                 if message == 'No new tracks found':
                     message = 'New tracks scraped: '+str(track)
                 else:
@@ -330,32 +351,60 @@ def random_scraper(iteration_max=1):
 
 def convert_url(url, s=True):
     clean_url = url
-    if url.startswith('http://') and s is True:
+    if url.startswith('http://') and s == True:
         clean_url = 'https://' + url.replace('http://', '', 1)
-    elif url.startswith('https://') and s is False:
+    elif url.startswith('https://') and s == False:
         clean_url = 'http://' + url.replace('https://', '', 1)
     return clean_url
 
 
-def process_backlog_items(num=1):
-    strikes = 0
+def object_lookup(object_name):
+    lookup = {}
+    if object_name == 'track':
+        lookup['model'] = Track
+        lookup['404'] = Track404
+    return lookup
+
+
+def process_backlog_items(object_name='track', num=1):
+    lookup = object_lookup(object_name)
+    strike_count = 0
     success_count = 0
 
-    # backlog loop
-    while strikes < 3:
+    # non-public loop
+    while strike_count < 3:
         # if nothing to process or num achieved break
         # TBD
         # if bad status 
-        strikes += 1
+        strike_count += 1
         # else 
         success_count += 1
 
-    # additional items for 
-    while strikes < 3:
-        random_scraper()
+    # backlog loop
+    while strike_count < 3:
+        # if nothing to process or num achieved break
+        # TBD
         # if bad status 
-        strikes += 1
+        strike_count += 1
         # else 
         success_count += 1
-        
+
+    # random tracks loop
+    while strike_count < 3:
+        # if num+1 achieved break
+        random_scraper()
+        # if bad status 
+        strike_count += 1
+        # else 
+        success_count += 1
+
     return success_count 
+
+
+def should_object_be_scraped(object):
+    status = object.metadata_status()
+    if status['add'] == True:
+        object.set_field('public', True)
+    if status['remove'] == True:
+        object.set_field('public', False)
+    return status['scrape']
