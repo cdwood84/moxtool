@@ -397,7 +397,7 @@ def scrape_track(id, text=None):
     return result
     
 
-def object_model_scraper(object_name, id, text):
+def object_model_scraper(object_name, id, text=None):
     result = None
     if object_name == 'artist':
         result = scrape_artist(id, text)
@@ -469,28 +469,20 @@ def object_model_data_checker(object_name, data):
     return success
 
 
-def random_scraper(iteration_max=1):
-    good_track_ids = list(Track.objects.values_list('beatport_track_id', flat=True))
-    bad_track_ids = list(Track404.objects.values_list('beatport_track_id', flat=True))
-    medium_track_ids = list(TrackBacklog.objects.values_list('beatport_track_id', flat=True))
-    message = 'No new tracks found'
-    iteration = 0
-    while iteration < iteration_max:
-        if len(good_track_ids) == 0:
-            max_id = 20000000
-        else:
-            max_id = max(good_track_ids)
-        id = random.choice([i for i in range(1, max_id) if i not in good_track_ids + bad_track_ids + medium_track_ids])
-        print('Trying random track: ' + str(id))
-        if Track.objects.filter(beatport_track_id=id).count() == 0:
-            track, success = scrape_track(id)
-            if success == True:
-                if message == 'No new tracks found':
-                    message = 'New tracks scraped: '+str(track)
-                else:
-                    message += ', '+str(track)
-        iteration += 1
-    return message
+def random_scraper(object_name, lookup):
+    result = None
+    good_ids = list(lookup['model'].objects.values_list('beatport_track_id', flat=True))
+    bad_ids = list(lookup['404'].objects.values_list('beatport_track_id', flat=True))
+    medium_ids = list(lookup['backlog'].objects.values_list('beatport_track_id', flat=True))
+    if len(good_ids) == 0:
+        max_id = 20000000
+    else:
+        max_id = max(good_ids)
+    id = random.choice([i for i in range(1, max_id) if i not in good_ids + bad_ids + medium_ids])
+    print('Trying random ' + object_name + ': ' + str(id))
+    if lookup['model'].objects.filter(beatport_track_id=id).count() == 0:
+        result = object_model_scraper(object_name, id)
+    return result
 
 
 def convert_url(url, s=True):
@@ -508,42 +500,51 @@ def object_lookup(object_name):
         lookup['model'] = Track
         lookup['backlog'] = TrackBacklog
         lookup['404'] = Track404
-    return lookup
+    return lookup 
 
 
 def process_backlog_items(object_name='track', num=1):
     lookup = object_lookup(object_name)
+    start = datetime.datetime.now()
     strike_count = 0
     success_count = 0
 
     # non-public loop
+    # while strike_count < 3:
+    #     # if nothing to process or num achieved break
+    #     # TBD
+    #     # if bad status 
+    #     strike_count += 1
+    #     # else 
+    #     success_count += 1
+
+    # backlog loop
     while strike_count < 3:
-        # if nothing to process or num achieved break
-        
-        result = object_model_scraper(object_name, )
+        backlog = lookup['backlog'].objects.all()
+        print(backlog)
+        if backlog.count() == 0 or success_count >= num:
+            break
+        backlog_item = backlog.first()
+        result = object_model_scraper(object_name, backlog_item.get_id())
+        print(result)
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
 
-    # backlog loop
-    while strike_count < 3:
-        # if nothing to process or num achieved break
-        # TBD
-        # if bad status 
-        strike_count += 1
-        # else 
-        success_count += 1
-
     # random tracks loop
     while strike_count < 3:
-        # if num+1 achieved break
-        random_scraper()
-        # if bad status 
-        strike_count += 1
-        # else 
-        success_count += 1
+        if success_count >= num + 1:
+            break
+        result = random_scraper()
+        print(result)
+        uccess_count += result['count']
+        if result['success'] == False:
+            strike_count += 1
 
-    return success_count 
+    end = datetime.datetime.now()
+    difference = end - start
+    difference_seconds = difference.total_seconds()
+    return 'Backlog processing: completed ' + str(success_count) + ' items successfully, with ' + str(strike_count) + ' errors, in ' + str(difference_seconds) + ' seconds'
 
 
 def should_object_be_scraped(object):
