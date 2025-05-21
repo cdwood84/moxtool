@@ -1654,6 +1654,10 @@ class Artist404(models.Model):
                 violation_error_message="This artist ID from Beatport is already marked as 404.",
             ),
         ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_artist_id',
+        ]
 
 
 class ArtistBacklog(models.Model):
@@ -1666,6 +1670,10 @@ class ArtistBacklog(models.Model):
                 name='beatport_artist_id_unique_backlog',
                 violation_error_message="This artist ID from Beatport is already on the backlog.",
             ),
+        ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_artist_id',
         ]
 
 
@@ -1680,6 +1688,10 @@ class Genre404(models.Model):
                 violation_error_message="This genre ID from Beatport is already marked as 404.",
             ),
         ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_genre_id',
+        ]
 
 
 class GenreBacklog(models.Model):
@@ -1692,6 +1704,10 @@ class GenreBacklog(models.Model):
                 name='beatport_genre_id_unique_backlog',
                 violation_error_message="This genre ID from Beatport is already on the backlog.",
             ),
+        ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_genre_id',
         ]
 
 
@@ -1706,6 +1722,10 @@ class Label404(models.Model):
                 violation_error_message="This label ID from Beatport is already marked as 404.",
             ),
         ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_label_id',
+        ]
 
 
 class LabelBacklog(models.Model):
@@ -1718,6 +1738,10 @@ class LabelBacklog(models.Model):
                 name='beatport_label_id_unique_backlog',
                 violation_error_message="This label ID from Beatport is already on the backlog.",
             ),
+        ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_label_id',
         ]
 
 
@@ -1732,6 +1756,10 @@ class Track404(models.Model):
                 violation_error_message="This track ID from Beatport is already marked as 404.",
             ),
         ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_track_id',
+        ]
 
 
 class TrackBacklog(models.Model):
@@ -1745,6 +1773,10 @@ class TrackBacklog(models.Model):
                 name='beatport_track_id_unique_backlog',
                 violation_error_message="This track ID from Beatport is already on the backlog.",
             ),
+        ]
+        ordering = [
+            'datetime_discovered',
+            'beatport_track_id',
         ]
 
 
