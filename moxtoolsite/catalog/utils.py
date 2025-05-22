@@ -570,7 +570,7 @@ def object_model_scraper(object_name, id, text=None):
 def process_artist(data):
     success = False
     try:
-        for key, value in data:
+        for key, value in data.items():
             artist, created = Artist.objects.get_or_create(beatport_artist_id=key)
             artist.set_field('name', value['name'])
             artist.set_field('public', True)
@@ -586,7 +586,7 @@ def process_artist(data):
 def process_genre(data):
     success = False
     try:
-        for key, value in data:
+        for key, value in data.items():
             genre, created = Genre.objects.get_or_create(beatport_genre_id=key)
             genre.set_field('name', value['name'])
             genre.set_field('public', True)
@@ -602,7 +602,7 @@ def process_genre(data):
 def process_label(data):
     success = False
     try:
-        for key, value in data:
+        for key, value in data.items():
             label, created = Label.objects.get_or_create(beatport_label_id=key)
             label.set_field('name', value['name'])
             label.set_field('public', True)
@@ -618,7 +618,7 @@ def process_label(data):
 def process_track(data):
     success = False
     try:
-        for key, value in data:
+        for key, value in data.items():
             track, created = Track.objects.get_or_create(beatport_track_id=key)
             track.set_field('title', value['title'])
             track.set_field('mix', value['mix'])
@@ -627,7 +627,7 @@ def process_track(data):
             track.set_field('bpm', value['bpm'])
             track.set_field('key', value['key'])
             track.set_field('genre', Genre.objects.get(beatport_genre_id=value['genre']['id']))
-            track.set_field('label', Label.objects.get(beatport_label_id=value['genre']['id']))
+            track.set_field('label', Label.objects.get(beatport_label_id=value['label']['id']))
             track.artist.clear()
             for artist in value['artists']:
                 track.artist.add(Artist.objects.get(beatport_artist_id=artist['id']))
@@ -651,18 +651,24 @@ def process_track(data):
     return success
 
 
-def object_model_processor(object_name, combined_data):
-    success = False
-    for key, value in combined_data:
-        if key == 'artist':
-            process_artist(value)
-        elif key == 'genre':
-            process_genre(value)
-        elif key == 'label':
-            process_label(value)
-        elif key == 'track':
-            process_track(value)
-    return success
+def object_model_processor(combined_data):
+    if 'artist' in combined_data:
+        success = process_artist(combined_data['artist'])
+        if success == False:
+            return False
+    if 'genre' in combined_data:
+        success = process_genre(combined_data['genre'])
+        if success == False:
+            return False
+    if 'label' in combined_data:
+        success = process_label(combined_data['label'])
+        if success == False:
+            return False
+    if 'track' in combined_data:
+        success = process_track(combined_data['track'])
+        if success == False:
+            return False
+    return True
 
 
 def random_scraper(object_name, lookup):
@@ -732,7 +738,7 @@ def process_backlog_items(object_name, num=1):
         bad_track_item = bad_tracks.first()
         result = object_model_scraper(object_name, bad_track_item.get_field(lookup['id']))
         if result['count'] > 0:
-            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
+            print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
@@ -740,12 +746,13 @@ def process_backlog_items(object_name, num=1):
     # backlog loop
     while strike_count < 3:
         backlog = lookup['backlog'].objects.all()
+        print('Backlog tracks: ' + str(backlog.count()))
         if backlog.count() == 0 or success_count >= num:
             break
         backlog_item = backlog.first()
         result = object_model_scraper(object_name, backlog_item.get_id())
         if result['count'] > 0:
-            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
+            print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
@@ -756,7 +763,7 @@ def process_backlog_items(object_name, num=1):
             break
         result = random_scraper(object_name, lookup)
         if result['count'] > 0:
-            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
+            print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
