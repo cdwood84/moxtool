@@ -153,6 +153,7 @@ def scrape_artist(id, text=None):
     
     # handle existing, complete artist
     if Artist.objects.filter(beatport_artist_id=id).count() > 0:
+        ArtistBacklog.objects.filter(beatport_artist_id=id).delete()
         artist = Artist.objects.get(beatport_artist_id=id)
         if should_object_be_scraped(artist) == False:
             result['success'] = True
@@ -161,6 +162,8 @@ def scrape_artist(id, text=None):
         
     # handle existing, 404 artist
     if Artist404.objects.filter(beatport_artist_id=id).count() > 0:
+        ArtistBacklog.objects.filter(beatport_artist_id=id).delete()
+        Artist.objects.filter(beatport_artist_id=id).delete()
         result['success'] = True
         result['message'] = 'Process Skipped: artist is marked as 404'
         return result
@@ -230,6 +233,7 @@ def scrape_genre(id, text=None):
     
     # handle existing, complete genre
     if Genre.objects.filter(beatport_genre_id=id).count() > 0:
+        GenreBacklog.objects.filter(beatport_genre_id=id).delete()
         genre = Genre.objects.get(beatport_genre_id=id)
         if should_object_be_scraped(genre) == False:
             result['success'] = True
@@ -238,6 +242,8 @@ def scrape_genre(id, text=None):
         
     # handle existing, 404 genre
     if Genre404.objects.filter(beatport_genre_id=id).count() > 0:
+        GenreBacklog.objects.filter(beatport_genre_id=id).delete()
+        Genre.objects.filter(beatport_genre_id=id).delete()
         result['success'] = True
         result['message'] = 'Process Skipped: genre is marked as 404'
         return result
@@ -307,6 +313,7 @@ def scrape_label(id, text=None):
     
     # handle existing, complete label
     if Label.objects.filter(beatport_label_id=id).count() > 0:
+        LabelBacklog.objects.filter(beatport_label_id=id).delete()
         label = Label.objects.get(beatport_label_id=id)
         if should_object_be_scraped(label) == False:
             result['success'] = True
@@ -315,6 +322,8 @@ def scrape_label(id, text=None):
         
     # handle existing, 404 label
     if Label404.objects.filter(beatport_label_id=id).count() > 0:
+        LabelBacklog.objects.filter(beatport_label_id=id).delete()
+        Label.objects.filter(beatport_label_id=id).delete()
         result['success'] = True
         result['message'] = 'Process Skipped: label is marked as 404'
         return result
@@ -384,6 +393,7 @@ def scrape_track(id, text=None):
     
     # handle existing, complete track
     if Track.objects.filter(beatport_track_id=id).count() > 0:
+        TrackBacklog.objects.filter(beatport_track_id=id).delete()
         track = Track.objects.get(beatport_track_id=id)
         if should_object_be_scraped(track) == False:
             result['success'] = True
@@ -392,6 +402,8 @@ def scrape_track(id, text=None):
         
     # handle existing, 404 track
     if Track404.objects.filter(beatport_track_id=id).count() > 0:
+        TrackBacklog.objects.filter(beatport_track_id=id).delete()
+        Track.objects.filter(beatport_track_id=id).delete()
         result['success'] = True
         result['message'] = 'Process Skipped: track is marked as 404'
         return result
