@@ -116,8 +116,7 @@ def scrape_artist(id, text=None):
                     result['success'] = True
                     result['message'] = 'Artist data scraped: ' + data['name']
                     break
-            except:
-                result['data'] = {'artist':{}}
+            except Exception as e:
                 print('Error parsing html: ' + str(e))
                 traceback.print_exc()
 
@@ -193,8 +192,7 @@ def scrape_genre(id, text=None):
                     result['success'] = True
                     result['message'] = 'Genre data scraped: ' + data['name']
                     break
-            except:
-                result['data'] = {'genre':{}}
+            except Exception as e:
                 print('Error parsing html: ' + str(e))
                 traceback.print_exc()
 
@@ -270,8 +268,7 @@ def scrape_label(id, text=None):
                     result['success'] = True
                     result['message'] = 'Label data scraped: ' + data['name']
                     break
-            except:
-                result['data'] = {'label':{}}
+            except Exception as e:
                 print('Error parsing html: ' + str(e))
                 traceback.print_exc()
 
@@ -341,59 +338,127 @@ def scrape_track(id, text=None):
                 data = {
                     'title': str(title_line).split('>')[1].split('<')[0].strip(),
                     'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0].strip(),
-                    'artist_ids': [],
-                    'remix_artist_ids': [],
+                    'artists': [],
+                    'remix_artists': [],
                 }
                 metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
                 for item in metadata:
                     field = str(item).split('<div>')[1].split('<')[0].replace(':','').lower()
-                    if item.find('a'):
-                        md_id = int(data.find('a', href=True)['href'].split('/')[-1].strip())
-                        md_text = item.find('a', href=True)['href'].split('/')[-2].strip()
-                        md_result = object_model_scraper(field, md_id, md_text)
-                        if md_result['success'] == True and md_result['count'] >= 1:
-                            if field not in result['data']:
-                                result['data'][field] = {}
-                            for m_key, m_value in artist_result['data'][field].items():
-                                result['data'][field][m_key] = m_value
-                            data[field + '_id'] = md_id
-                        elif md_result['success'] == False:
-                            raise('Error scraping track ' + field + ': ' + artist_text + ' (' + str(artist_id) + ')')
-                    else:
-                        data[field] = str(item).split('<span>')[1].split('<')[0].strip()
+                    if field not in data:
+                        print(field)
+                        if item.find('a'):
+                            data[field] = {
+                                'id': int(item.find('a', href=True)['href'].split('/')[-1].strip()),
+                                'text': item.find('a', href=True)['href'].split('/')[-2].strip(),
+                            }
+                        else:
+                            data[field] = str(item).split('<span>')[1].split('<')[0].strip()
                 artist_section = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('Artists-styles__Items')})
                 for section in artist_section:
                     for artist_line in section.findAll('a', href=True):
-                        artist_id = int(artist_line['href'].split('/')[-1].strip())
-                        artist_text = artist_line['href'].split('/')[-2].strip()
-                        artist_result = scrape_artist(artist_id, artist_text)
-                        if artist_result['success'] == True and artist_result['count'] >= 1:
-                            if 'artist' not in result['data']:
-                                result['data']['artist'] = {}
-                            for a_key, a_value in artist_result['data']['artist'].items():
-                                result['data']['artist'][a_key] = a_value
-                            if 'remix' in str(section).lower():
-                                data['remix_artist_ids'].append(artist_id)
-                            else:
-                                data['artist_ids'].append(artist_id)
-                        elif artist_result['success'] == False:
-                            raise('Error scraping track artist: ' + artist_text + ' (' + str(artist_id) + ')')
+                        artist_data = {
+                            'id': int(artist_line['href'].split('/')[-1].strip()),
+                            'text': artist_line['href'].split('/')[-2].strip(),
+                        }
+                        if 'remix' in str(section).lower():
+                            data['remix_artists'].append(artist_data)
+                        else:
+                            data['artists'].append(artist_data)
                 if object_model_data_checker('track', data) == True:
-                    result['data']['track'][str(id)] = data
-                    result['count'] += 1
-                    result['success'] = True
-                    result['message'] = 'Track data scraped: ' + data['name']
+                    result['message'] = 'Track data scraped: ' + data['title']
                     break
-            except:
-                result['data'] = {'track':{}}
+            except Exception as e:
                 print('Error parsing html: ' + str(e))
                 traceback.print_exc()
 
         # iterate the loop
         iteration_count += 1
-        result['message'] = 'Error: genre web scraping unsuccessful'
+        result['message'] = 'Error: track web scraping unsuccessful'
 
-    # return result
+    # scrape linked genre
+    if data['genre'] and result['message'] == 'Track data scraped: ' + data['title']:
+        try:
+            genre_result = object_model_scraper('genre', data['genre']['id'], data['genre']['text'])
+        except Exception as e:
+            result['message'] = 'Error: scraping a genre was unsuccessful'
+            print('Error scraping track genre: ' + str(e))
+            traceback.print_exc()
+
+    # scrape linked label
+    if data['label'] and result['message'] == 'Track data scraped: ' + data['title']:
+        try:
+            label_result = object_model_scraper('label', data['label']['id'], data['label']['text'])
+        except Exception as e:
+            result['message'] = 'Error: scraping a label was unsuccessful'
+            print('Error scraping track label: ' + str(e))
+            traceback.print_exc()
+
+    # scrape linked artists
+    if data['artists'] and result['message'] == 'Track data scraped: ' + data['title']:
+        artist_results = []
+        try:
+            for artist in data['artists']:
+                a_data = object_model_scraper('artist', artist['id'], artist['text'])
+                if object_model_data_checker('artist', ra_data) == True:
+                    artist_results.append(a_data)
+                else:
+                    raise('bad remix artist data')
+        except Exception as e:
+            result['message'] = 'Error: scraping an artist was unsuccessful'
+            print('Error scraping track artists: ' + str(e))
+            traceback.print_exc()
+
+    # scrape linked remix artists
+    if data['remix_artists'] and result['message'] == 'Track data scraped: ' + data['title']:
+        remix_artist_results = []
+        try:
+            for remix_artist in data['remix_artists']:
+                ra_data = object_model_scraper('artist', remix_artist['id'], remix_artist['text'])
+                if object_model_data_checker('artist', ra_data) == True:
+                    remix_artist_results.append(ra_data)
+                else:
+                    raise('bad remix artist data')
+        except Exception as e:
+            result['message'] = 'Error: scraping a remix artist was unsuccessful'
+            print('Error scraping track remix artists: ' + str(e))
+            traceback.print_exc()
+
+    # complete and return data
+    if result['message'] == 'Track data scraped: ' + data['title']:
+        result['data']['track'][str(id)] = {
+            'title': data['title'],
+            'mix': data['mix'],
+            'key': data['key'],
+            'bpm': data['bpm'],
+            'released': data['released'],
+            'length': data['length'],
+            'genre': data['genre'],
+            'label': data['label'],
+            'artists': data['artists'],
+            'remix_artists': data['remix_artists'],
+        }
+        if genre_result['count'] > 0:
+            result['data']['genre'] = {}
+            for genre_id, genre_value in genre_result['data']['genre'].items():
+                result['data']['genre'][genre_id] = genre_value
+        if label_result['count'] > 0:
+            result['data']['label'] = {}
+            for label_id, label_value in label_result['data']['label'].items():
+                result['data']['label'][label_id] = label_value
+        for artist_result in artist_results:
+            if artist_result['count'] > 0:
+                if 'artist' not in result['data']:
+                    result['data']['artist'] = {}
+                for artist_id, artist_value in artist_result['data']['artist'].items():
+                    result['data']['artist'][artist_id] = artist_value
+        for remix_artist_result in remix_artist_results:
+            if remix_artist_result['count'] > 0:
+                if 'artist' not in result['data']:
+                    result['data']['artist'] = {}
+                for remix_artist_id, remix_artist_value in remix_artist_result['data']['artist'].items():
+                    result['data']['artist'][remix_artist_id] = remix_artist_value
+        result['count'] += 1
+        result['success'] = True
     return result
     
 
@@ -411,62 +476,84 @@ def object_model_scraper(object_name, id, text=None):
 
 
 def object_model_data_checker(object_name, data):
-    success = False
-    problems = False
 
     # track as a special case
     if object_name == 'track':
         if 'title' in data:
             if len(data['title']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
+            return False
         if 'mix' in data:
             if len(data['mix']) < 1:
-                problems = True
-            if 'remix' in data['mix'].lower() and len('remix_artist_ids') == 0:
-                problems = True
+                return False
+            if 'remix' in data['mix'].lower():
+                if len(data['remix_artists']) > 0:
+                    for artist in data['remix_artists']:
+                        if 'id' in artist:
+                            if isinstance(artist['id'], int):
+                                if artist['id'] < 1:
+                                    return False
+                            else:
+                                return False
+                        else:
+                            return False
+                else:
+                    return False
         else:
-            problems = True
+            return False
         if 'length' in data:
             if len(data['length']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
+            return False
         if 'key' in data:
             if len(data['key']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
+            return False
         if 'bpm' in data:
             if len(data['bpm']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
+            return False
         if 'released' in data:
             if len(data['released']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
-        if 'genre_id' not in data:
-            problems = True
-        if 'label_id' not in data:
-            problems = True
-        if len('artist_ids') == 0:
-            problems = True
+            return False
+        if 'genre' in data:
+            if 'id' not in data['genre']:
+                return False
+        else:
+            return False
+        if 'label' in data:
+            if 'id' not in data['genre']:
+                return False
+        else:
+            return False
+        if len(data['artists']) > 0:
+            for artist in data['artists']:
+                if 'id' in artist:
+                    if isinstance(artist['id'], int):
+                        if artist['id'] < 1:
+                            return False
+                    else:
+                        return False
+                else:
+                    return False
+        else:
+            return False
 
     # artist, genre, and label as the simple case
     else:
         if 'name' in data:
             if len(data['name']) < 1:
-                problems = True
+                return False
         else:
-            problems = True
-
-    # process findings
-    if problems == False:
-        success = True
-    return success
+            return False
+        
+    return True
 
 
 def random_scraper(object_name, lookup):
@@ -478,7 +565,9 @@ def random_scraper(object_name, lookup):
         max_id = 20000000
     else:
         max_id = max(good_ids)
-    id = random.choice([i for i in range(1, max_id) if i not in good_ids + bad_ids + medium_ids])
+    id = max_id
+    while id in good_ids + bad_ids + medium_ids:
+        id = random.choice(range(1, max_id))
     print('Trying random ' + object_name + ': ' + str(id))
     if lookup['model'].objects.filter(beatport_track_id=id).count() == 0:
         result = object_model_scraper(object_name, id)
@@ -500,10 +589,22 @@ def object_lookup(object_name):
         lookup['model'] = Track
         lookup['backlog'] = TrackBacklog
         lookup['404'] = Track404
+    elif object_name == 'artist':
+        lookup['model'] = Artist
+        lookup['backlog'] = ArtistBacklog
+        lookup['404'] = Artist404
+    elif object_name == 'genre':
+        lookup['model'] = Genre
+        lookup['backlog'] = GenreBacklog
+        lookup['404'] = Genre404
+    elif object_name == 'label':
+        lookup['model'] = Label
+        lookup['backlog'] = LabelBacklog
+        lookup['404'] = Label404
     return lookup 
 
 
-def process_backlog_items(object_name='track', num=1):
+def process_backlog_items(object_name, num=1):
     lookup = object_lookup(object_name)
     start = datetime.datetime.now()
     strike_count = 0
@@ -521,10 +622,10 @@ def process_backlog_items(object_name='track', num=1):
     # backlog loop
     while strike_count < 3:
         backlog = lookup['backlog'].objects.all()
-        print(backlog)
         if backlog.count() == 0 or success_count >= num:
             break
         backlog_item = backlog.first()
+        print('Trying: ' + str(backlog_item))
         result = object_model_scraper(object_name, backlog_item.get_id())
         print(result)
         success_count += result['count']
@@ -535,9 +636,9 @@ def process_backlog_items(object_name='track', num=1):
     while strike_count < 3:
         if success_count >= num + 1:
             break
-        result = random_scraper()
+        result = random_scraper(object_name, lookup)
         print(result)
-        uccess_count += result['count']
+        success_count += result['count']
         if result['success'] == False:
             strike_count += 1
 
