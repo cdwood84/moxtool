@@ -1,7 +1,8 @@
 from bs4 import BeautifulSoup
-from scrapingbee import ScrapingBeeClient
+from django.utils import timezone
 from catalog.models import Artist, Artist404, ArtistBacklog, Genre, Genre404, GenreBacklog, Label, Label404, LabelBacklog, Track, Track404, TrackBacklog, TrackInstance
 from datetime import date
+from scrapingbee import ScrapingBeeClient
 import datetime, os, random, requests, string, time, traceback
 
 
@@ -44,7 +45,7 @@ def get_soup(url, iteration_count=0):
 
     # unknown method requires an error
     else:
-        raise('Error: unselected or unsupoorted web scraping method')
+        raise LookupError('Error: unselected or unsupoorted web scraping method')
 
     # return text
     response.raise_for_status()
@@ -98,7 +99,8 @@ def scrape_artist(id, text=None):
             print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
                 if Artist404.objects.filter(beatport_artist_id=id).count() == 0:
-                    Artist404.objects.create(beatport_artist_id=id, datetime_discovered=datetime.datetime.now())
+                    Artist404.objects.create(beatport_artist_id=id, datetime_discovered=timezone.now())
+                    result['message'] = 'Error: new artist 404'
                 break
             else:
                 traceback.print_exc()
@@ -174,7 +176,8 @@ def scrape_genre(id, text=None):
             print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
                 if Genre404.objects.filter(beatport_genre_id=id).count() == 0:
-                    Genre404.objects.create(beatport_genre_id=id, datetime_discovered=datetime.datetime.now())
+                    Genre404.objects.create(beatport_genre_id=id, datetime_discovered=timezone.now())
+                    result['message'] = 'Error: new genre 404'
                 break
             else:
                 traceback.print_exc()
@@ -223,7 +226,7 @@ def scrape_label(id, text=None):
     
     # handle existing, complete label
     if Label.objects.filter(beatport_label_id=id).count() > 0:
-        label = Artist.objects.get(beatport_label_id=id)
+        label = Label.objects.get(beatport_label_id=id)
         if should_object_be_scraped(label) == False:
             result['success'] = True
             result['message'] = 'Process Skipped: label is already populated'
@@ -250,7 +253,8 @@ def scrape_label(id, text=None):
             print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
                 if Label404.objects.filter(beatport_label_id=id).count() == 0:
-                    Label404.objects.create(beatport_label_id=id, datetime_discovered=datetime.datetime.now())
+                    Label404.objects.create(beatport_label_id=id, datetime_discovered=timezone.now())
+                    result['message'] = 'Error: new label 404'
                 break
             else:
                 traceback.print_exc()
@@ -312,6 +316,7 @@ def scrape_track(id, text=None):
         return result
 
     # scraping loop
+    data = {}
     iteration_count = 0
     while iteration_count < 3:
 
@@ -326,7 +331,8 @@ def scrape_track(id, text=None):
             print('Error scraping data: ' + str(e))
             if str(e).startswith('404'):
                 if Track404.objects.filter(beatport_track_id=id).count() == 0:
-                    Track404.objects.create(beatport_track_id=id, datetime_discovered=datetime.datetime.now())
+                    Track404.objects.create(beatport_track_id=id, datetime_discovered=timezone.now())
+                    result['message'] = 'Error: new track 404'
                 break
             else:
                 traceback.print_exc()
@@ -335,17 +341,14 @@ def scrape_track(id, text=None):
         if soup is not None:
             try:
                 title_line = soup.find('body').find('h1', {'class': lambda x: x and x.startswith('Typography-style__HeadingH1')})
-                data = {
-                    'title': str(title_line).split('>')[1].split('<')[0].strip(),
-                    'mix': str(title_line).split('<span')[1].split('>')[1].split('<')[0].strip(),
-                    'artists': [],
-                    'remix_artists': [],
-                }
+                data['title'] = str(title_line).split('>')[1].split('<')[0].strip()
+                data['mix'] = str(title_line).split('<span')[1].split('>')[1].split('<')[0].strip()
+                data['artists'] = []
+                data['remix_artists'] = []
                 metadata = soup.find('body').findAll('div', {'class': lambda x: x and x.startswith('TrackMeta-style__MetaItem')})
                 for item in metadata:
                     field = str(item).split('<div>')[1].split('<')[0].replace(':','').lower()
                     if field not in data:
-                        print(field)
                         if item.find('a'):
                             data[field] = {
                                 'id': int(item.find('a', href=True)['href'].split('/')[-1].strip()),
@@ -376,55 +379,63 @@ def scrape_track(id, text=None):
         result['message'] = 'Error: track web scraping unsuccessful'
 
     # scrape linked genre
-    if data['genre'] and result['message'] == 'Track data scraped: ' + data['title']:
+    if 'genre' in data and result['message'] == 'Track data scraped: ' + data['title']:
         try:
             genre_result = object_model_scraper('genre', data['genre']['id'], data['genre']['text'])
+            if genre_result['count'] > 0:
+                if object_model_data_checker('genre', list(genre_result['data']['genre'].values())[0]) == False:
+                    raise ValueError('bad genre data')
         except Exception as e:
             result['message'] = 'Error: scraping a genre was unsuccessful'
             print('Error scraping track genre: ' + str(e))
             traceback.print_exc()
 
     # scrape linked label
-    if data['label'] and result['message'] == 'Track data scraped: ' + data['title']:
+    if 'label' in data and result['message'] == 'Track data scraped: ' + data['title']:
         try:
             label_result = object_model_scraper('label', data['label']['id'], data['label']['text'])
+            if label_result['count'] > 0:
+                if object_model_data_checker('label', list(label_result['data']['label'].values())[0]) == False:
+                    raise ValueError('bad label data')
         except Exception as e:
             result['message'] = 'Error: scraping a label was unsuccessful'
             print('Error scraping track label: ' + str(e))
             traceback.print_exc()
 
     # scrape linked artists
-    if data['artists'] and result['message'] == 'Track data scraped: ' + data['title']:
+    if 'artists' in data and result['message'] == 'Track data scraped: ' + data['title']:
         artist_results = []
         try:
             for artist in data['artists']:
                 a_data = object_model_scraper('artist', artist['id'], artist['text'])
-                if object_model_data_checker('artist', ra_data) == True:
-                    artist_results.append(a_data)
-                else:
-                    raise('bad remix artist data')
+                if a_data['count'] > 0:
+                    if object_model_data_checker('artist', list(a_data['data']['artist'].values())[0]) == True:
+                        artist_results.append(a_data)
+                    else:
+                        raise ValueError('bad remix artist data')
         except Exception as e:
             result['message'] = 'Error: scraping an artist was unsuccessful'
             print('Error scraping track artists: ' + str(e))
             traceback.print_exc()
 
     # scrape linked remix artists
-    if data['remix_artists'] and result['message'] == 'Track data scraped: ' + data['title']:
+    if 'remix_artists' in data and result['message'] == 'Track data scraped: ' + data['title']:
         remix_artist_results = []
         try:
             for remix_artist in data['remix_artists']:
                 ra_data = object_model_scraper('artist', remix_artist['id'], remix_artist['text'])
-                if object_model_data_checker('artist', ra_data) == True:
-                    remix_artist_results.append(ra_data)
-                else:
-                    raise('bad remix artist data')
+                if ra_data['count'] > 0:
+                    if object_model_data_checker('artist', list(ra_data['data']['artist'].values())[0]) == True:
+                        remix_artist_results.append(ra_data)
+                    else:
+                        raise ValueError('bad remix artist data')
         except Exception as e:
             result['message'] = 'Error: scraping a remix artist was unsuccessful'
             print('Error scraping track remix artists: ' + str(e))
             traceback.print_exc()
 
     # complete and return data
-    if result['message'] == 'Track data scraped: ' + data['title']:
+    if 'title' in data and result['message'] == 'Track data scraped: ' + data['title']:
         result['data']['track'][str(id)] = {
             'title': data['title'],
             'mix': data['mix'],
@@ -606,7 +617,7 @@ def object_lookup(object_name):
 
 def process_backlog_items(object_name, num=1):
     lookup = object_lookup(object_name)
-    start = datetime.datetime.now()
+    start = timezone.now()
     strike_count = 0
     success_count = 0
 
@@ -642,7 +653,7 @@ def process_backlog_items(object_name, num=1):
         if result['success'] == False:
             strike_count += 1
 
-    end = datetime.datetime.now()
+    end = timezone.now()
     difference = end - start
     difference_seconds = difference.total_seconds()
     return 'Backlog processing: completed ' + str(success_count) + ' items successfully, with ' + str(strike_count) + ' errors, in ' + str(difference_seconds) + ' seconds'
