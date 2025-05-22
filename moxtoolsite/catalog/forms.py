@@ -420,7 +420,12 @@ class BulkUploadForm(forms.Form):
                 if Label.objects.filter(beatport_label_id=id).count() == 0 and Label404.objects.filter(beatport_label_id=id).count() == 0 and LabelBacklog.objects.filter(beatport_label_id=id).count() == 0:
                     LabelBacklog.objects.create(beatport_label_id=id, datetime_discovered=datetime.datetime.now())
             elif obj_name == 'track':
-                if Track.objects.filter(beatport_track_id=id).count() == 0 and Track404.objects.filter(beatport_track_id=id).count() == 0:
+                if Track.objects.filter(beatport_track_id=id).count() > 0 and user is not None:
+                    track = Track.objects.get(beatport_track_id=id)
+                    trackinstance, created = TrackInstance.objects.get_or_create(track=track, user=user)
+                    if created:
+                        print(str(trackinstance) + ' added for ' + str(user))
+                elif Track.objects.filter(beatport_track_id=id).count() == 0 and Track404.objects.filter(beatport_track_id=id).count() == 0:
                     track, created = TrackBacklog.objects.get_or_create(beatport_track_id=id, defaults={'datetime_discovered':datetime.datetime.now()})
                     if user and track:
                         track.users.add(user)
