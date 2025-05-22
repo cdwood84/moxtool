@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition
+from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, TrackRequest, Transition
 
 
 @admin.register(Artist)
@@ -82,7 +82,13 @@ class TrackAdmin(admin.ModelAdmin):
 
 @admin.register(Track404)
 class TrackAdmin(admin.ModelAdmin):
-    list_display = ['beatport_track_id']
+    list_display = ['beatport_track_id', 'datetime_discovered']
+
+
+@admin.register(TrackBacklog)
+class TrackAdmin(admin.ModelAdmin):
+    list_display = ['beatport_track_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered', 'users']
 
 
 @admin.register(TrackRequest)

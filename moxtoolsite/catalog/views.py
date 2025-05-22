@@ -150,7 +150,7 @@ def bulk_upload(request, obj_name):
             print(success)
             if success is True:
                 # find additional data
-                print(random_scraper(1))
+                # print(random_scraper(1))
                 return HttpResponseRedirect(reverse('index'))
             else:
                 print('Invalid form')
