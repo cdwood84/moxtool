@@ -9,6 +9,87 @@ import datetime, os, random, requests, string, time, traceback
 # scraping utils
 
 
+def object_model_data_checker(object_name, data):
+
+    # track as a special case
+    if object_name == 'track':
+        if 'title' in data:
+            if len(data['title']) < 1:
+                return False
+        else:
+            return False
+        if 'mix' in data:
+            if len(data['mix']) < 1:
+                return False
+            if 'remix' in data['mix'].lower():
+                if len(data['remix_artists']) > 0:
+                    for artist in data['remix_artists']:
+                        if 'id' in artist:
+                            if isinstance(artist['id'], int):
+                                if artist['id'] < 1:
+                                    return False
+                            else:
+                                return False
+                        else:
+                            return False
+                else:
+                    return False
+        else:
+            return False
+        if 'length' in data:
+            if len(data['length']) < 1:
+                return False
+        else:
+            return False
+        if 'key' in data:
+            if len(data['key']) < 1:
+                return False
+        else:
+            return False
+        if 'bpm' in data:
+            if len(data['bpm']) < 1:
+                return False
+        else:
+            return False
+        if 'released' in data:
+            if len(data['released']) < 1:
+                return False
+        else:
+            return False
+        if 'genre' in data:
+            if 'id' not in data['genre']:
+                return False
+        else:
+            return False
+        if 'label' in data:
+            if 'id' not in data['genre']:
+                return False
+        else:
+            return False
+        if len(data['artists']) > 0:
+            for artist in data['artists']:
+                if 'id' in artist:
+                    if isinstance(artist['id'], int):
+                        if artist['id'] < 1:
+                            return False
+                    else:
+                        return False
+                else:
+                    return False
+        else:
+            return False
+
+    # artist, genre, and label as the simple case
+    else:
+        if 'name' in data:
+            if len(data['name']) < 1:
+                return False
+        else:
+            return False
+        
+    return True
+
+
 def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(2+extra_time, 4+extra_time))
@@ -486,85 +567,102 @@ def object_model_scraper(object_name, id, text=None):
     return result
 
 
-def object_model_data_checker(object_name, data):
+def process_artist(data):
+    success = False
+    try:
+        for key, value in data:
+            artist, created = Artist.objects.get_or_create(beatport_artist_id=key)
+            artist.set_field('name', value['name'])
+            artist.set_field('public', True)
+        if created == True:
+            print('New artist created: ' + str(artist))
+        success = True
+    except Exception as e:
+        print('Error processing artist: ' + str(e))
+        traceback.print_exc()
+    return success
 
-    # track as a special case
-    if object_name == 'track':
-        if 'title' in data:
-            if len(data['title']) < 1:
-                return False
-        else:
-            return False
-        if 'mix' in data:
-            if len(data['mix']) < 1:
-                return False
-            if 'remix' in data['mix'].lower():
-                if len(data['remix_artists']) > 0:
-                    for artist in data['remix_artists']:
-                        if 'id' in artist:
-                            if isinstance(artist['id'], int):
-                                if artist['id'] < 1:
-                                    return False
-                            else:
-                                return False
-                        else:
-                            return False
-                else:
-                    return False
-        else:
-            return False
-        if 'length' in data:
-            if len(data['length']) < 1:
-                return False
-        else:
-            return False
-        if 'key' in data:
-            if len(data['key']) < 1:
-                return False
-        else:
-            return False
-        if 'bpm' in data:
-            if len(data['bpm']) < 1:
-                return False
-        else:
-            return False
-        if 'released' in data:
-            if len(data['released']) < 1:
-                return False
-        else:
-            return False
-        if 'genre' in data:
-            if 'id' not in data['genre']:
-                return False
-        else:
-            return False
-        if 'label' in data:
-            if 'id' not in data['genre']:
-                return False
-        else:
-            return False
-        if len(data['artists']) > 0:
-            for artist in data['artists']:
-                if 'id' in artist:
-                    if isinstance(artist['id'], int):
-                        if artist['id'] < 1:
-                            return False
-                    else:
-                        return False
-                else:
-                    return False
-        else:
-            return False
 
-    # artist, genre, and label as the simple case
-    else:
-        if 'name' in data:
-            if len(data['name']) < 1:
-                return False
-        else:
-            return False
-        
-    return True
+def process_genre(data):
+    success = False
+    try:
+        for key, value in data:
+            genre, created = Genre.objects.get_or_create(beatport_genre_id=key)
+            genre.set_field('name', value['name'])
+            genre.set_field('public', True)
+        if created == True:
+            print('New genre created: ' + str(genre))
+        success = True
+    except Exception as e:
+        print('Error processing genre: ' + str(e))
+        traceback.print_exc()
+    return success
+
+
+def process_label(data):
+    success = False
+    try:
+        for key, value in data:
+            label, created = Label.objects.get_or_create(beatport_label_id=key)
+            label.set_field('name', value['name'])
+            label.set_field('public', True)
+        if created == True:
+            print('New label created: ' + str(label))
+        success = True
+    except Exception as e:
+        print('Error processing label: ' + str(e))
+        traceback.print_exc()
+    return success
+
+
+def process_track(data):
+    success = False
+    try:
+        for key, value in data:
+            track, created = Track.objects.get_or_create(beatport_track_id=key)
+            track.set_field('title', value['title'])
+            track.set_field('mix', value['mix'])
+            track.set_field('length', value['length'])
+            track.set_field('released', value['released'])
+            track.set_field('bpm', value['bpm'])
+            track.set_field('key', value['key'])
+            track.set_field('genre', Genre.objects.get(beatport_genre_id=value['genre']['id']))
+            track.set_field('label', Label.objects.get(beatport_label_id=value['genre']['id']))
+            track.artist.clear()
+            for artist in value['artists']:
+                track.artist.add(Artist.objects.get(beatport_artist_id=artist['id']))
+            track.remix_artist.clear()
+            for remix_artist in value['remix_artists']:
+                track.remix_artist.add(Artist.objects.get(beatport_artist_id=artist['id']))
+            track.set_field('public', True)
+        if created == True:
+            print('New track created: ' + str(track))
+        if TrackBacklog.objects.filter(beatport_track_id=track.beatport_track_id).count() > 0:
+            backlog = TrackBacklog.objects.get(beatport_track_id=track.beatport_track_id)
+            for user in backlog.users.all():
+                trackinstance, ic = TrackInstance.objects.get_or_create(track=track, user=user)
+                if ic == True:
+                    print('New trackinstance added: ' + str(trackinstance) + ' for ' + str(user))
+            backlog.delete()
+        success = True
+    except Exception as e:
+        print('Error processing label: ' + str(e))
+        traceback.print_exc()
+    return success
+
+
+def object_model_processor(object_name, combined_data):
+    success = False
+    for key, value in combined_data:
+        if key == 'artist':
+            process_artist(value)
+        elif key == 'genre':
+            process_genre(value)
+        elif key == 'label':
+            process_label(value)
+        elif key == 'track':
+            process_track(value)
+    return success
 
 
 def random_scraper(object_name, lookup):
@@ -600,18 +698,22 @@ def object_lookup(object_name):
         lookup['model'] = Track
         lookup['backlog'] = TrackBacklog
         lookup['404'] = Track404
+        lookup['id'] = 'beatport_track_id'
     elif object_name == 'artist':
         lookup['model'] = Artist
         lookup['backlog'] = ArtistBacklog
         lookup['404'] = Artist404
+        lookup['id'] = 'beatport_artist_id'
     elif object_name == 'genre':
         lookup['model'] = Genre
         lookup['backlog'] = GenreBacklog
         lookup['404'] = Genre404
+        lookup['id'] = 'beatport_genre_id'
     elif object_name == 'label':
         lookup['model'] = Label
         lookup['backlog'] = LabelBacklog
         lookup['404'] = Label404
+        lookup['id'] = 'beatport_label_id'
     return lookup 
 
 
@@ -622,13 +724,18 @@ def process_backlog_items(object_name, num=1):
     success_count = 0
 
     # non-public loop
-    # while strike_count < 3:
-    #     # if nothing to process or num achieved break
-    #     # TBD
-    #     # if bad status 
-    #     strike_count += 1
-    #     # else 
-    #     success_count += 1
+    while strike_count < 3:
+        bad_tracks = lookup['model'].objects.filter(public=False)
+        print('Non-public tracks: ' + str(bad_tracks.count()))
+        if bad_tracks.count() == 0 or success_count >= num:
+            break
+        bad_track_item = bad_tracks.first()
+        result = object_model_scraper(object_name, bad_track_item.get_field(lookup['id']))
+        if result['count'] > 0:
+            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
+        success_count += result['count']
+        if result['success'] == False:
+            strike_count += 1
 
     # backlog loop
     while strike_count < 3:
@@ -636,9 +743,9 @@ def process_backlog_items(object_name, num=1):
         if backlog.count() == 0 or success_count >= num:
             break
         backlog_item = backlog.first()
-        print('Trying: ' + str(backlog_item))
         result = object_model_scraper(object_name, backlog_item.get_id())
-        print(result)
+        if result['count'] > 0:
+            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
@@ -648,11 +755,13 @@ def process_backlog_items(object_name, num=1):
         if success_count >= num + 1:
             break
         result = random_scraper(object_name, lookup)
-        print(result)
+        if result['count'] > 0:
+            print('Processing ' + object_name + ': ' + str(object_model_processor(object_name, result['data'])))
         success_count += result['count']
         if result['success'] == False:
             strike_count += 1
 
+    cleanup404()
     end = timezone.now()
     difference = end - start
     difference_seconds = difference.total_seconds()
@@ -666,3 +775,26 @@ def should_object_be_scraped(object):
     if status['remove'] == True:
         object.set_field('public', False)
     return status['scrape']
+
+
+def cleanup404():
+
+    # track (first due to FKeys)
+    bad_tracks = list(Track404.objects.all().values_list('beatport_track_id', flat=True))
+    Track.objects.filter(beatport_track_id__in=bad_tracks).delete()
+    TrackBacklog.objects.filter(beatport_track_id__in=bad_tracks).delete()
+
+    # artist
+    bad_artists = list(Artist404.objects.all().values_list('beatport_artist_id', flat=True))
+    Artist.objects.filter(beatport_artist_id__in=bad_artists).delete()
+    ArtistBacklog.objects.filter(beatport_artist_id__in=bad_artists).delete()
+
+    # genre
+    bad_genres = list(Genre404.objects.all().values_list('beatport_genre_id', flat=True))
+    Genre.objects.filter(beatport_genre_id__in=bad_genres).delete()
+    GenreBacklog.objects.filter(beatport_genre_id__in=bad_genres).delete()
+
+    # label
+    bad_labels = list(Label404.objects.all().values_list('beatport_label_id', flat=True))
+    Label.objects.filter(beatport_label_id__in=bad_labels).delete()
+    LabelBacklog.objects.filter(beatport_label_id__in=bad_labels).delete()
