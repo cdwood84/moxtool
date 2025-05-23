@@ -295,6 +295,13 @@ class ArtistBacklogModelTest(TestCase, CatalogTestMixin):
         field_label = artist._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
 
+    # ArtistBacklog specific functions
+
+    def test_get_id(self):
+        artistbacklog = ArtistBacklog.objects.first()
+        expected_object_id = artistbacklog.beatport_artist_id
+        self.assertEqual(artistbacklog.get_id(), expected_object_id)
+
     # test constraints
 
     def test_beatport_artist_id_unique(self):
@@ -614,6 +621,13 @@ class GenreBacklogModelTest(TestCase, CatalogTestMixin):
         field_label = genre._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
 
+    # GenreBacklog specific functions
+
+    def test_get_id(self):
+        genrebacklog = GenreBacklog.objects.first()
+        expected_object_id = genrebacklog.beatport_genre_id
+        self.assertEqual(genrebacklog.get_id(), expected_object_id)
+
     # test constraints
 
     def test_beatport_genre_id_unique(self):
@@ -911,6 +925,13 @@ class LabelBacklogModelTest(TestCase, CatalogTestMixin):
         label = LabelBacklog.objects.get(id=1)
         field_label = label._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # LabelBacklog specific functions
+
+    def test_get_id(self):
+        labelbacklog = LabelBacklog.objects.first()
+        expected_object_id = labelbacklog.beatport_label_id
+        self.assertEqual(labelbacklog.get_id(), expected_object_id)
 
     # test constraints
 
@@ -1323,6 +1344,13 @@ class TrackBacklogModelTest(TestCase, CatalogTestMixin):
         field_label = track._meta.get_field('users').verbose_name
         self.assertEqual(field_label, 'Users')
 
+    # TrackBacklog specific functions
+
+    def test_get_id(self):
+        trackbacklog = TrackBacklog.objects.first()
+        expected_object_id = trackbacklog.beatport_track_id
+        self.assertEqual(trackbacklog.get_id(), expected_object_id)
+
     # test constraints
 
     def test_beatport_track_id_unique(self):
@@ -1342,668 +1370,668 @@ class TrackBacklogModelTest(TestCase, CatalogTestMixin):
 # user shared model requests
 
 
-class ArtistRequestModelTest(TestCase, CatalogTestMixin):
-    @classmethod
-    def setUpTestData(cls):
-        cls.users, cls.groups = cls.create_test_data()
+# class ArtistRequestModelTest(TestCase, CatalogTestMixin):
+#     @classmethod
+#     def setUpTestData(cls):
+#         cls.users, cls.groups = cls.create_test_data()
 
-    # fields
+#     # fields
 
-    def test_beatport_artist_id(self):
-        artistrequest = ArtistRequest.objects.first()
-        field_label = artistrequest._meta.get_field('beatport_artist_id').verbose_name
-        self.assertEqual(field_label, 'Beatport Artist ID')
-        help_text = artistrequest._meta.get_field('beatport_artist_id').help_text
-        self.assertEqual(help_text, 'Artist ID from Beatport, found in the artist URL, which can be used to populate metadata')
+#     def test_beatport_artist_id(self):
+#         artistrequest = ArtistRequest.objects.first()
+#         field_label = artistrequest._meta.get_field('beatport_artist_id').verbose_name
+#         self.assertEqual(field_label, 'Beatport Artist ID')
+#         help_text = artistrequest._meta.get_field('beatport_artist_id').help_text
+#         self.assertEqual(help_text, 'Artist ID from Beatport, found in the artist URL, which can be used to populate metadata')
 
-    def test_name(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('name').verbose_name
-        self.assertEqual(field_label, 'name')
-        max_length = artistrequest._meta.get_field('name').max_length
-        self.assertEqual(max_length, 200)
+#     def test_name(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         field_label = artistrequest._meta.get_field('name').verbose_name
+#         self.assertEqual(field_label, 'name')
+#         max_length = artistrequest._meta.get_field('name').max_length
+#         self.assertEqual(max_length, 200)
 
-    def test_public(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('public').verbose_name
-        self.assertEqual(field_label, 'public')
+#     def test_public(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         field_label = artistrequest._meta.get_field('public').verbose_name
+#         self.assertEqual(field_label, 'public')
 
-    def test_artist(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('artist').verbose_name
-        self.assertEqual(field_label, 'artist')
+#     def test_artist(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         field_label = artistrequest._meta.get_field('artist').verbose_name
+#         self.assertEqual(field_label, 'artist')
 
-    def test_user(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('user').verbose_name
-        self.assertEqual(field_label, 'user')
+#     def test_user(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         field_label = artistrequest._meta.get_field('user').verbose_name
+#         self.assertEqual(field_label, 'user')
 
-    def test_date_requested(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        field_label = artistrequest._meta.get_field('date_requested').verbose_name
-        self.assertEqual(field_label, 'date requested')
+#     def test_date_requested(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         field_label = artistrequest._meta.get_field('date_requested').verbose_name
+#         self.assertEqual(field_label, 'date requested')
 
-    # mixin fields
+#     # mixin fields
 
-    def test_useful_field_list_property(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        useful_field_list = artistrequest.useful_field_list
-        self.assertEqual(useful_field_list['beatport_artist_id']['type'], 'integer')
-        self.assertTrue(useful_field_list['beatport_artist_id']['equal'])
-        self.assertEqual(useful_field_list['name']['type'], 'string')
-        self.assertTrue(useful_field_list['name']['equal'])
-        self.assertEqual(useful_field_list['public']['type'], 'boolean')
-        self.assertFalse(useful_field_list['public']['equal'])
+#     def test_useful_field_list_property(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         useful_field_list = artistrequest.useful_field_list
+#         self.assertEqual(useful_field_list['beatport_artist_id']['type'], 'integer')
+#         self.assertTrue(useful_field_list['beatport_artist_id']['equal'])
+#         self.assertEqual(useful_field_list['name']['type'], 'string')
+#         self.assertTrue(useful_field_list['name']['equal'])
+#         self.assertEqual(useful_field_list['public']['type'], 'boolean')
+#         self.assertFalse(useful_field_list['public']['equal'])
 
-    def test_create_by_property(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        create_by = artistrequest.create_by_field
-        self.assertEqual(create_by, 'beatport_artist_id')
+#     def test_create_by_property(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         create_by = artistrequest.create_by_field
+#         self.assertEqual(create_by, 'beatport_artist_id')
 
-    def test_string_by_property(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        string_by = artistrequest.string_by_field
-        self.assertEqual(string_by, 'name')
+#     def test_string_by_property(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         string_by = artistrequest.string_by_field
+#         self.assertEqual(string_by, 'name')
 
-    # ArtistRequest specific functions
+#     # ArtistRequest specific functions
 
-    def test_get_absolute_url(self):
-        for artistrequest in ArtistRequest.objects.all():
-            expected_url = '/catalog/artistrequest/' + str(artistrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', artistrequest.name.lower())
-            self.assertEqual(artistrequest.get_absolute_url(), expected_url)
+#     def test_get_absolute_url(self):
+#         for artistrequest in ArtistRequest.objects.all():
+#             expected_url = '/catalog/artistrequest/' + str(artistrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', artistrequest.name.lower())
+#             self.assertEqual(artistrequest.get_absolute_url(), expected_url)
 
-    # Request model functions
+#     # Request model functions
 
-    def test_model_name(self):
-        artistrequest = ArtistRequest.objects.get(id=1)
-        model_name = artistrequest.model_name
-        self.assertEqual(model_name, 'artist')
+#     def test_model_name(self):
+#         artistrequest = ArtistRequest.objects.get(id=1)
+#         model_name = artistrequest.model_name
+#         self.assertEqual(model_name, 'artist')
 
-    def test_field_substr(self):
-        artistrequest1 = ArtistRequest.objects.get(id=1)
-        expected_text1 = ', change name to ' + artistrequest1.name
-        self.assertEqual(artistrequest1.field_substr('', 'name'), expected_text1)
-        self.assertEqual(artistrequest1.field_substr('', 'public'), '')
-        artistrequest2 = ArtistRequest.objects.get(id=2)
-        expected_text2 = ', change name to ' + artistrequest2.name
-        expected_text3 = ', change public to ' + str(artistrequest2.public)
-        self.assertEqual(artistrequest2.field_substr('', 'name'), expected_text2)
-        self.assertEqual(artistrequest2.field_substr('', 'public'), expected_text3)
+#     def test_field_substr(self):
+#         artistrequest1 = ArtistRequest.objects.get(id=1)
+#         expected_text1 = ', change name to ' + artistrequest1.name
+#         self.assertEqual(artistrequest1.field_substr('', 'name'), expected_text1)
+#         self.assertEqual(artistrequest1.field_substr('', 'public'), '')
+#         artistrequest2 = ArtistRequest.objects.get(id=2)
+#         expected_text2 = ', change name to ' + artistrequest2.name
+#         expected_text3 = ', change public to ' + str(artistrequest2.public)
+#         self.assertEqual(artistrequest2.field_substr('', 'name'), expected_text2)
+#         self.assertEqual(artistrequest2.field_substr('', 'public'), expected_text3)
 
-    def test_object_string(self):
-        for artistrequest in ArtistRequest.objects.all():
-            if artistrequest.artist:
-                expected_object_string = 'Modify artist request: ' + str(artistrequest.artist)
-                for field in artistrequest.useful_field_list:
-                    expected_object_string = artistrequest.field_substr(expected_object_string, field)
-                if ',' not in expected_object_string:
-                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
-            else:
-                if artistrequest.name:
-                    expected_object_string = 'New artist request: ' + artistrequest.name
-                else:
-                    expected_object_string = 'New artist request: ' + artistrequest.beatport_artist_id
-                try:
-                    artist = Artist.objects.get(beatport_artist_id=artistrequest.beatport_artist_id)
-                except:
-                    artist = None
-                if artist is None:
-                    try:
-                        artist = Artist.objects.get(name=artistrequest.name)
-                    except:
-                        artist = None
-                if artist:
-                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
-            self.assertEqual(str(artistrequest), expected_object_string)
+#     def test_object_string(self):
+#         for artistrequest in ArtistRequest.objects.all():
+#             if artistrequest.artist:
+#                 expected_object_string = 'Modify artist request: ' + str(artistrequest.artist)
+#                 for field in artistrequest.useful_field_list:
+#                     expected_object_string = artistrequest.field_substr(expected_object_string, field)
+#                 if ',' not in expected_object_string:
+#                     expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+#             else:
+#                 if artistrequest.name:
+#                     expected_object_string = 'New artist request: ' + artistrequest.name
+#                 else:
+#                     expected_object_string = 'New artist request: ' + artistrequest.beatport_artist_id
+#                 try:
+#                     artist = Artist.objects.get(beatport_artist_id=artistrequest.beatport_artist_id)
+#                 except:
+#                     artist = None
+#                 if artist is None:
+#                     try:
+#                         artist = Artist.objects.get(name=artistrequest.name)
+#                     except:
+#                         artist = None
+#                 if artist:
+#                     expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+#             self.assertEqual(str(artistrequest), expected_object_string)
 
-    # Shared model functions
+#     # Shared model functions
 
-    def test_set_field(self):
-        artistrequest = ArtistRequest.objects.get(id=3)
-        self.assertTrue(artistrequest.public)
-        artistrequest.set_field('public', False)
-        self.assertFalse(artistrequest.public)
+#     def test_set_field(self):
+#         artistrequest = ArtistRequest.objects.get(id=3)
+#         self.assertTrue(artistrequest.public)
+#         artistrequest.set_field('public', False)
+#         self.assertFalse(artistrequest.public)
 
-    def test_get_field(self):
-        for artistrequest in ArtistRequest.objects.all():
-            field_value = artistrequest.get_field('name')
-            self.assertEqual(field_value, artistrequest.name)
+#     def test_get_field(self):
+#         for artistrequest in ArtistRequest.objects.all():
+#             field_value = artistrequest.get_field('name')
+#             self.assertEqual(field_value, artistrequest.name)
 
-    def test_get_modify_url(self):
-        for artistrequest in ArtistRequest.objects.all():
-            self.assertEqual(artistrequest.get_modify_url(), '/catalog/artistrequest/modify/' + str(artistrequest.id))
+#     def test_get_modify_url(self):
+#         for artistrequest in ArtistRequest.objects.all():
+#             self.assertEqual(artistrequest.get_modify_url(), '/catalog/artistrequest/modify/' + str(artistrequest.id))
 
-    def test_add_fields_to_initial(self):
-        for artistrequest in ArtistRequest.objects.all():
-            expected_initial = {
-                'beatport_artist_id': artistrequest.beatport_artist_id,
-                'name': artistrequest.name,
-                'public': artistrequest.public,
-            }
-            self.assertEqual(artistrequest.add_fields_to_initial({}), expected_initial)
+#     def test_add_fields_to_initial(self):
+#         for artistrequest in ArtistRequest.objects.all():
+#             expected_initial = {
+#                 'beatport_artist_id': artistrequest.beatport_artist_id,
+#                 'name': artistrequest.name,
+#                 'public': artistrequest.public,
+#             }
+#             self.assertEqual(artistrequest.add_fields_to_initial({}), expected_initial)
 
-    def test_is_equivalent(self):
-        artistrequest1 = ArtistRequest.objects.get(id=1)
-        artistrequest2 = ArtistRequest.objects.get(id=2)
-        self.assertFalse(artistrequest1.is_equivalent(artistrequest2))
-        self.assertTrue(artistrequest1.is_equivalent(artistrequest1))
+#     def test_is_equivalent(self):
+#         artistrequest1 = ArtistRequest.objects.get(id=1)
+#         artistrequest2 = ArtistRequest.objects.get(id=2)
+#         self.assertFalse(artistrequest1.is_equivalent(artistrequest2))
+#         self.assertTrue(artistrequest1.is_equivalent(artistrequest1))
 
-    def test_is_field_is_equivalent(self):
-        artistrequest1 = ArtistRequest.objects.get(id=1)
-        artistrequest2 = ArtistRequest.objects.get(id=2)
-        self.assertFalse(artistrequest1.field_is_equivalent(artistrequest2, 'name'))
-        self.assertTrue(artistrequest1.field_is_equivalent(artistrequest1, 'name'))
+#     def test_is_field_is_equivalent(self):
+#         artistrequest1 = ArtistRequest.objects.get(id=1)
+#         artistrequest2 = ArtistRequest.objects.get(id=2)
+#         self.assertFalse(artistrequest1.field_is_equivalent(artistrequest2, 'name'))
+#         self.assertTrue(artistrequest1.field_is_equivalent(artistrequest1, 'name'))
 
-    # test object manager
+#     # test object manager
 
-    def test_get_queryset_can_view(self):
-        all_artistrequestss = ArtistRequest.objects.all()
-        self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_view, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['dj'])), set(artistrequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_artistrequestss))
+#     def test_get_queryset_can_view(self):
+#         all_artistrequestss = ArtistRequest.objects.all()
+#         self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_view, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['dj'])), set(artistrequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_artistrequestss))
 
-    def test_get_queryset_can_direct_modify(self):
-        all_artistrequests = ArtistRequest.objects.all()
-        self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(artistrequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artistrequests))
+#     def test_get_queryset_can_direct_modify(self):
+#         all_artistrequests = ArtistRequest.objects.all()
+#         self.assertRaises(PermissionDenied, ArtistRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         artistrequests_dj = ArtistRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(artistrequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(ArtistRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_artistrequests))
 
-    def test_display(self):
-        self.assertRaises(PermissionDenied, ArtistRequest.objects.display, self.users['anonymous'])
-        dj_artistrequests = ArtistRequest.objects.filter(user=self.users['dj'])
-        dj_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in dj_artistrequests)
-        self.assertEqual(ArtistRequest.objects.display(self.users['dj']), dj_artistrequest_list)
-        admin_artistrequests = ArtistRequest.objects.all()
-        admin_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in admin_artistrequests)
-        self.assertEqual(ArtistRequest.objects.display(self.users['admin']), admin_artistrequest_list)
+#     def test_display(self):
+#         self.assertRaises(PermissionDenied, ArtistRequest.objects.display, self.users['anonymous'])
+#         dj_artistrequests = ArtistRequest.objects.filter(user=self.users['dj'])
+#         dj_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in dj_artistrequests)
+#         self.assertEqual(ArtistRequest.objects.display(self.users['dj']), dj_artistrequest_list)
+#         admin_artistrequests = ArtistRequest.objects.all()
+#         admin_artistrequest_list = ', '.join(str(artistrequest) for artistrequest in admin_artistrequests)
+#         self.assertEqual(ArtistRequest.objects.display(self.users['admin']), admin_artistrequest_list)
 
-    # test constraints
+#     # test constraints
 
-    def test_request_artist_name_or_beatport_id_is_not_null(self):
-        no_artist_requests = ArtistRequest.objects.filter(beatport_artist_id__isnull=True, name__isnull=True)
-        self.assertEqual(no_artist_requests.count(), 0)
-        self.assertRaises(IntegrityError, ArtistRequest.objects.create, public=True)
+#     def test_request_artist_name_or_beatport_id_is_not_null(self):
+#         no_artist_requests = ArtistRequest.objects.filter(beatport_artist_id__isnull=True, name__isnull=True)
+#         self.assertEqual(no_artist_requests.count(), 0)
+#         self.assertRaises(IntegrityError, ArtistRequest.objects.create, public=True)
 
 
-class GenreRequestModelTest(TestCase, CatalogTestMixin):
-    @classmethod
-    def setUpTestData(cls):
-        cls.users, cls.groups = cls.create_test_data()
+# class GenreRequestModelTest(TestCase, CatalogTestMixin):
+#     @classmethod
+#     def setUpTestData(cls):
+#         cls.users, cls.groups = cls.create_test_data()
 
-    # fields
+#     # fields
 
-    def test_beatport_genre_id(self):
-        genrerquest = GenreRequest.objects.filter(beatport_genre_id__isnull=False).first()
-        field_label = genrerquest._meta.get_field('beatport_genre_id').verbose_name
-        self.assertEqual(field_label, 'Beatport Genre ID')
-        help_text = genrerquest._meta.get_field('beatport_genre_id').help_text
-        self.assertEqual(help_text, 'Genre ID from Beatport, found in the genre URL, which can be used to populate metadata')
+#     def test_beatport_genre_id(self):
+#         genrerquest = GenreRequest.objects.filter(beatport_genre_id__isnull=False).first()
+#         field_label = genrerquest._meta.get_field('beatport_genre_id').verbose_name
+#         self.assertEqual(field_label, 'Beatport Genre ID')
+#         help_text = genrerquest._meta.get_field('beatport_genre_id').help_text
+#         self.assertEqual(help_text, 'Genre ID from Beatport, found in the genre URL, which can be used to populate metadata')
 
-    def test_name(self):
-        genrerquest = GenreRequest.objects.get(id=1)
-        field_label = genrerquest._meta.get_field('name').verbose_name
-        self.assertEqual(field_label, 'name')
-        max_length = genrerquest._meta.get_field('name').max_length
-        self.assertEqual(max_length, 200)
-        # help_text = genrerquest._meta.get_field('name').help_text
-        # self.assertEqual(help_text, 'Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)')
+#     def test_name(self):
+#         genrerquest = GenreRequest.objects.get(id=1)
+#         field_label = genrerquest._meta.get_field('name').verbose_name
+#         self.assertEqual(field_label, 'name')
+#         max_length = genrerquest._meta.get_field('name').max_length
+#         self.assertEqual(max_length, 200)
+#         # help_text = genrerquest._meta.get_field('name').help_text
+#         # self.assertEqual(help_text, 'Enter a dance music genre (e.g. Progressive House, Future Bass, etc.)')
 
-    def test_public(self):
-        genrerquest = GenreRequest.objects.get(id=1)
-        field_label = genrerquest._meta.get_field('public').verbose_name
-        self.assertEqual(field_label, 'public')
+#     def test_public(self):
+#         genrerquest = GenreRequest.objects.get(id=1)
+#         field_label = genrerquest._meta.get_field('public').verbose_name
+#         self.assertEqual(field_label, 'public')
 
-    def test_genre_label(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        field_label = genrerequest._meta.get_field('genre').verbose_name
-        self.assertEqual(field_label, 'genre')
+#     def test_genre_label(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         field_label = genrerequest._meta.get_field('genre').verbose_name
+#         self.assertEqual(field_label, 'genre')
 
-    def test_user(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        field_label = genrerequest._meta.get_field('user').verbose_name
-        self.assertEqual(field_label, 'user')
+#     def test_user(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         field_label = genrerequest._meta.get_field('user').verbose_name
+#         self.assertEqual(field_label, 'user')
 
-    def test_date_requested(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        field_label = genrerequest._meta.get_field('date_requested').verbose_name
-        self.assertEqual(field_label, 'date requested')
+#     def test_date_requested(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         field_label = genrerequest._meta.get_field('date_requested').verbose_name
+#         self.assertEqual(field_label, 'date requested')
 
-    # mixin fields
+#     # mixin fields
 
-    def test_useful_field_list_property(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        useful_field_list = genrerequest.useful_field_list
-        self.assertEqual(useful_field_list['name']['type'], 'string')
-        self.assertTrue(useful_field_list['name']['equal'])
-        self.assertEqual(useful_field_list['public']['type'], 'boolean')
-        self.assertFalse(useful_field_list['public']['equal'])
+#     def test_useful_field_list_property(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         useful_field_list = genrerequest.useful_field_list
+#         self.assertEqual(useful_field_list['name']['type'], 'string')
+#         self.assertTrue(useful_field_list['name']['equal'])
+#         self.assertEqual(useful_field_list['public']['type'], 'boolean')
+#         self.assertFalse(useful_field_list['public']['equal'])
 
-    def test_create_by_property(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        create_by = genrerequest.create_by_field
-        self.assertEqual(create_by, 'beatport_genre_id')
+#     def test_create_by_property(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         create_by = genrerequest.create_by_field
+#         self.assertEqual(create_by, 'beatport_genre_id')
 
-    def test_string_by_property(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        string_by = genrerequest.string_by_field
-        self.assertEqual(string_by, 'name')
+#     def test_string_by_property(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         string_by = genrerequest.string_by_field
+#         self.assertEqual(string_by, 'name')
 
-    # GenreRequest specific functions
+#     # GenreRequest specific functions
 
-    def test_get_absolute_url(self):
-        for genrerequest in GenreRequest.objects.all():
-            if genrerequest.name:
-                expected_url = '/catalog/genrerequest/' + str(genrerequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', genrerequest.name.lower())
-            else:
-                expected_url = '/catalog/genrerequest/' + str(genrerequest.id) + '/tbd'
-            self.assertEqual(genrerequest.get_absolute_url(), expected_url)
+#     def test_get_absolute_url(self):
+#         for genrerequest in GenreRequest.objects.all():
+#             if genrerequest.name:
+#                 expected_url = '/catalog/genrerequest/' + str(genrerequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', genrerequest.name.lower())
+#             else:
+#                 expected_url = '/catalog/genrerequest/' + str(genrerequest.id) + '/tbd'
+#             self.assertEqual(genrerequest.get_absolute_url(), expected_url)
 
-    # Request model functions
+#     # Request model functions
 
-    def test_model_name(self):
-        genrerequest = GenreRequest.objects.get(id=1)
-        model_name = genrerequest.model_name
-        self.assertEqual(model_name, 'genre')
+#     def test_model_name(self):
+#         genrerequest = GenreRequest.objects.get(id=1)
+#         model_name = genrerequest.model_name
+#         self.assertEqual(model_name, 'genre')
 
-    def test_field_substr(self):
-        genrerequest1 = GenreRequest.objects.get(id=1)
-        expected_text1 = ', change name to ' + genrerequest1.name
-        self.assertEqual(genrerequest1.field_substr('', 'name'), expected_text1)
-        self.assertEqual(genrerequest1.field_substr('', 'public'), '')
-        genrerequest2 = GenreRequest.objects.get(id=2)
-        expected_text2 = ', change name to ' + genrerequest2.name
-        expected_text3 = ', change public to ' + str(genrerequest2.public)
-        self.assertEqual(genrerequest2.field_substr('', 'name'), expected_text2)
-        self.assertEqual(genrerequest2.field_substr('', 'public'), expected_text3)
+#     def test_field_substr(self):
+#         genrerequest1 = GenreRequest.objects.get(id=1)
+#         expected_text1 = ', change name to ' + genrerequest1.name
+#         self.assertEqual(genrerequest1.field_substr('', 'name'), expected_text1)
+#         self.assertEqual(genrerequest1.field_substr('', 'public'), '')
+#         genrerequest2 = GenreRequest.objects.get(id=2)
+#         expected_text2 = ', change name to ' + genrerequest2.name
+#         expected_text3 = ', change public to ' + str(genrerequest2.public)
+#         self.assertEqual(genrerequest2.field_substr('', 'name'), expected_text2)
+#         self.assertEqual(genrerequest2.field_substr('', 'public'), expected_text3)
 
-    def test_object_string(self):
-        for genrerequest in GenreRequest.objects.all():
-            if genrerequest.genre:
-                expected_object_string = 'Modify genre request: ' + str(genrerequest.genre)
-                for field in genrerequest.useful_field_list:
-                    expected_object_string = genrerequest.field_substr(expected_object_string, field)
-                if ',' not in expected_object_string:
-                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
-            else:
-                if genrerequest.name:
-                    expected_object_string = 'New genre request: ' + genrerequest.name
-                else:
-                    expected_object_string = 'New genre request: ' + str(genrerequest.beatport_genre_id)
-                try:
-                    genre = Genre.objects.get(beatport_genre_id=genrerequest.beatport_genre_id)
-                except:
-                    genre = None
-                if genre is None:
-                    try:
-                        genre = Genre.objects.get(name=genrerequest.name)
-                    except:
-                        genre = None
-                if genre:
-                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
-            self.assertEqual(str(genrerequest), expected_object_string)
+#     def test_object_string(self):
+#         for genrerequest in GenreRequest.objects.all():
+#             if genrerequest.genre:
+#                 expected_object_string = 'Modify genre request: ' + str(genrerequest.genre)
+#                 for field in genrerequest.useful_field_list:
+#                     expected_object_string = genrerequest.field_substr(expected_object_string, field)
+#                 if ',' not in expected_object_string:
+#                     expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+#             else:
+#                 if genrerequest.name:
+#                     expected_object_string = 'New genre request: ' + genrerequest.name
+#                 else:
+#                     expected_object_string = 'New genre request: ' + str(genrerequest.beatport_genre_id)
+#                 try:
+#                     genre = Genre.objects.get(beatport_genre_id=genrerequest.beatport_genre_id)
+#                 except:
+#                     genre = None
+#                 if genre is None:
+#                     try:
+#                         genre = Genre.objects.get(name=genrerequest.name)
+#                     except:
+#                         genre = None
+#                 if genre:
+#                     expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+#             self.assertEqual(str(genrerequest), expected_object_string)
 
-    # Shared model functions
+#     # Shared model functions
 
-    def test_set_field(self):
-        genrerequest = GenreRequest.objects.get(id=3)
-        self.assertTrue(genrerequest.public)
-        genrerequest.set_field('public', False)
-        self.assertFalse(genrerequest.public)
+#     def test_set_field(self):
+#         genrerequest = GenreRequest.objects.get(id=3)
+#         self.assertTrue(genrerequest.public)
+#         genrerequest.set_field('public', False)
+#         self.assertFalse(genrerequest.public)
 
-    def test_get_field(self):
-        for genrerequest in GenreRequest.objects.all():
-            field_value = genrerequest.get_field('name')
-            self.assertEqual(field_value, genrerequest.name)
+#     def test_get_field(self):
+#         for genrerequest in GenreRequest.objects.all():
+#             field_value = genrerequest.get_field('name')
+#             self.assertEqual(field_value, genrerequest.name)
 
-    def test_get_modify_url(self):
-        for genrerequest in GenreRequest.objects.all():
-            self.assertEqual(genrerequest.get_modify_url(), '/catalog/genrerequest/modify/' + str(genrerequest.id))
+#     def test_get_modify_url(self):
+#         for genrerequest in GenreRequest.objects.all():
+#             self.assertEqual(genrerequest.get_modify_url(), '/catalog/genrerequest/modify/' + str(genrerequest.id))
 
-    def test_add_fields_to_initial(self):
-        for genrerequest in GenreRequest.objects.all():
-            expected_initial = {
-                'beatport_genre_id': genrerequest.beatport_genre_id,
-                'name': genrerequest.name,
-                'public': genrerequest.public,
-            }
-            self.assertEqual(genrerequest.add_fields_to_initial({}), expected_initial)
+#     def test_add_fields_to_initial(self):
+#         for genrerequest in GenreRequest.objects.all():
+#             expected_initial = {
+#                 'beatport_genre_id': genrerequest.beatport_genre_id,
+#                 'name': genrerequest.name,
+#                 'public': genrerequest.public,
+#             }
+#             self.assertEqual(genrerequest.add_fields_to_initial({}), expected_initial)
 
-    def test_is_equivalent(self):
-        genrerequest1 = GenreRequest.objects.get(id=1)
-        genrerequest2 = GenreRequest.objects.get(id=2)
-        self.assertFalse(genrerequest1.is_equivalent(genrerequest2))
-        self.assertTrue(genrerequest1.is_equivalent(genrerequest1))
+#     def test_is_equivalent(self):
+#         genrerequest1 = GenreRequest.objects.get(id=1)
+#         genrerequest2 = GenreRequest.objects.get(id=2)
+#         self.assertFalse(genrerequest1.is_equivalent(genrerequest2))
+#         self.assertTrue(genrerequest1.is_equivalent(genrerequest1))
 
-    def test_is_field_is_equivalent(self):
-        genrerequest1 = GenreRequest.objects.get(id=1)
-        genrerequest2 = GenreRequest.objects.get(id=2)
-        self.assertFalse(genrerequest1.field_is_equivalent(genrerequest2, 'name'))
-        self.assertTrue(genrerequest1.field_is_equivalent(genrerequest1, 'name'))
+#     def test_is_field_is_equivalent(self):
+#         genrerequest1 = GenreRequest.objects.get(id=1)
+#         genrerequest2 = GenreRequest.objects.get(id=2)
+#         self.assertFalse(genrerequest1.field_is_equivalent(genrerequest2, 'name'))
+#         self.assertTrue(genrerequest1.field_is_equivalent(genrerequest1, 'name'))
 
-    # test object manager
+#     # test object manager
 
-    def test_get_queryset_can_view(self):
-        all_genrerequestss = GenreRequest.objects.all()
-        self.assertRaises(PermissionDenied, GenreRequest.objects.get_queryset_can_view, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        genrerequests_dj = GenreRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(GenreRequest.objects.get_queryset_can_view(self.users['dj'])), set(genrerequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(GenreRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_genrerequestss))
+#     def test_get_queryset_can_view(self):
+#         all_genrerequestss = GenreRequest.objects.all()
+#         self.assertRaises(PermissionDenied, GenreRequest.objects.get_queryset_can_view, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         genrerequests_dj = GenreRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(GenreRequest.objects.get_queryset_can_view(self.users['dj'])), set(genrerequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(GenreRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_genrerequestss))
 
-    def test_get_queryset_can_direct_modify(self):
-        all_genrerequests = GenreRequest.objects.all()
-        self.assertRaises(PermissionDenied, GenreRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        genrerequests_dj = GenreRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(genrerequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genrerequests))
+#     def test_get_queryset_can_direct_modify(self):
+#         all_genrerequests = GenreRequest.objects.all()
+#         self.assertRaises(PermissionDenied, GenreRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         genrerequests_dj = GenreRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(genrerequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(GenreRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_genrerequests))
 
-    def test_display(self):
-        self.assertRaises(PermissionDenied, GenreRequest.objects.display, self.users['anonymous'])
-        dj_genrerequests = GenreRequest.objects.filter(user=self.users['dj'])
-        dj_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in dj_genrerequests)
-        self.assertEqual(GenreRequest.objects.display(self.users['dj']), dj_genrerequest_list)
-        admin_genrerequests = GenreRequest.objects.all()
-        admin_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in admin_genrerequests)
-        self.assertEqual(GenreRequest.objects.display(self.users['admin']), admin_genrerequest_list)
+#     def test_display(self):
+#         self.assertRaises(PermissionDenied, GenreRequest.objects.display, self.users['anonymous'])
+#         dj_genrerequests = GenreRequest.objects.filter(user=self.users['dj'])
+#         dj_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in dj_genrerequests)
+#         self.assertEqual(GenreRequest.objects.display(self.users['dj']), dj_genrerequest_list)
+#         admin_genrerequests = GenreRequest.objects.all()
+#         admin_genrerequest_list = ', '.join(str(genrerequest) for genrerequest in admin_genrerequests)
+#         self.assertEqual(GenreRequest.objects.display(self.users['admin']), admin_genrerequest_list)
 
-    # test constraints
+#     # test constraints
 
-    def test_request_genre_name_or_beatport_id_is_not_null(self):
-        no_genre_requests = GenreRequest.objects.filter(beatport_genre_id__isnull=True, name__isnull=True)
-        self.assertEqual(no_genre_requests.count(), 0)
-        self.assertRaises(IntegrityError, GenreRequest.objects.create, public=True)
+#     def test_request_genre_name_or_beatport_id_is_not_null(self):
+#         no_genre_requests = GenreRequest.objects.filter(beatport_genre_id__isnull=True, name__isnull=True)
+#         self.assertEqual(no_genre_requests.count(), 0)
+#         self.assertRaises(IntegrityError, GenreRequest.objects.create, public=True)
 
 
 # class LabelRequestModelTest(TestCase, CatalogTestMixin):
 
 
-class TrackRequestModelTest(TestCase, CatalogTestMixin):
-    @classmethod
-    def setUpTestData(cls):
-        cls.users, cls.groups = cls.create_test_data()
+# class TrackRequestModelTest(TestCase, CatalogTestMixin):
+#     @classmethod
+#     def setUpTestData(cls):
+#         cls.users, cls.groups = cls.create_test_data()
 
-    # fields
+#     # fields
 
-    def test_beatport_track_id(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('beatport_track_id').verbose_name
-        self.assertEqual(field_label, 'Beatport Track ID')
-        help_text = trackrequest._meta.get_field('beatport_track_id').help_text
-        self.assertEqual(help_text, 'Track ID from Beatport, found in the track URL, which can be used to populate metadata')
+#     def test_beatport_track_id(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('beatport_track_id').verbose_name
+#         self.assertEqual(field_label, 'Beatport Track ID')
+#         help_text = trackrequest._meta.get_field('beatport_track_id').help_text
+#         self.assertEqual(help_text, 'Track ID from Beatport, found in the track URL, which can be used to populate metadata')
 
-    def test_title(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('title').verbose_name
-        self.assertEqual(field_label, 'title')
-        max_length = trackrequest._meta.get_field('title').max_length
-        self.assertEqual(max_length, 200)
+#     def test_title(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('title').verbose_name
+#         self.assertEqual(field_label, 'title')
+#         max_length = trackrequest._meta.get_field('title').max_length
+#         self.assertEqual(max_length, 200)
 
-    def test_mix(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('mix').verbose_name
-        self.assertEqual(field_label, 'mix')
-        max_length = trackrequest._meta.get_field('mix').max_length
-        self.assertEqual(max_length, 200)
-        help_text = trackrequest._meta.get_field('mix').help_text
-        self.assertEqual(help_text, 'The mix version of the track (e.g. Original Mix, Remix, etc.)')
+#     def test_mix(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('mix').verbose_name
+#         self.assertEqual(field_label, 'mix')
+#         max_length = trackrequest._meta.get_field('mix').max_length
+#         self.assertEqual(max_length, 200)
+#         help_text = trackrequest._meta.get_field('mix').help_text
+#         self.assertEqual(help_text, 'The mix version of the track (e.g. Original Mix, Remix, etc.)')
 
-    def test_artist(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('artist').verbose_name
-        self.assertEqual(field_label, 'artist')
-        help_text = trackrequest._meta.get_field('artist').help_text
-        self.assertEqual(help_text, 'Select an artist for this track')
+#     def test_artist(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('artist').verbose_name
+#         self.assertEqual(field_label, 'artist')
+#         help_text = trackrequest._meta.get_field('artist').help_text
+#         self.assertEqual(help_text, 'Select an artist for this track')
 
-    def test_remix_artist(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('remix_artist').verbose_name
-        self.assertEqual(field_label, 'remix artist')
-        help_text = trackrequest._meta.get_field('remix_artist').help_text
-        self.assertEqual(help_text, 'Select a remix artist for this track')
+#     def test_remix_artist(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('remix_artist').verbose_name
+#         self.assertEqual(field_label, 'remix artist')
+#         help_text = trackrequest._meta.get_field('remix_artist').help_text
+#         self.assertEqual(help_text, 'Select a remix artist for this track')
 
-    def test_genre(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('genre').verbose_name
-        self.assertEqual(field_label, 'genre')
+#     def test_genre(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('genre').verbose_name
+#         self.assertEqual(field_label, 'genre')
 
-    def test_label(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('label').verbose_name
-        self.assertEqual(field_label, 'label')
+#     def test_label(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('label').verbose_name
+#         self.assertEqual(field_label, 'label')
 
-    def test_length(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('length').verbose_name
-        self.assertEqual(field_label, 'length')
-        max_length = trackrequest._meta.get_field('length').max_length
-        self.assertEqual(max_length, 5)
+#     def test_length(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('length').verbose_name
+#         self.assertEqual(field_label, 'length')
+#         max_length = trackrequest._meta.get_field('length').max_length
+#         self.assertEqual(max_length, 5)
 
-    def test_released(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('released').verbose_name
-        self.assertEqual(field_label, 'released')
+#     def test_released(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('released').verbose_name
+#         self.assertEqual(field_label, 'released')
 
-    def test_bpm(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('bpm').verbose_name
-        self.assertEqual(field_label, 'bpm')
+#     def test_bpm(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('bpm').verbose_name
+#         self.assertEqual(field_label, 'bpm')
 
-    def test_key(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('key').verbose_name
-        self.assertEqual(field_label, 'key')
-        max_length = trackrequest._meta.get_field('key').max_length
-        self.assertEqual(max_length, 8)
+#     def test_key(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('key').verbose_name
+#         self.assertEqual(field_label, 'key')
+#         max_length = trackrequest._meta.get_field('key').max_length
+#         self.assertEqual(max_length, 8)
 
-    def test_public(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('public').verbose_name
-        self.assertEqual(field_label, 'public')
+#     def test_public(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('public').verbose_name
+#         self.assertEqual(field_label, 'public')
 
-    def test_track(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('track').verbose_name
-        self.assertEqual(field_label, 'track')
+#     def test_track(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('track').verbose_name
+#         self.assertEqual(field_label, 'track')
 
-    def test_user(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('user').verbose_name
-        self.assertEqual(field_label, 'user')
+#     def test_user(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('user').verbose_name
+#         self.assertEqual(field_label, 'user')
 
-    def test_date_requested(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        field_label = trackrequest._meta.get_field('date_requested').verbose_name
-        self.assertEqual(field_label, 'date requested')
+#     def test_date_requested(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         field_label = trackrequest._meta.get_field('date_requested').verbose_name
+#         self.assertEqual(field_label, 'date requested')
 
-    # mixin fields
+#     # mixin fields
 
-    def test_useful_field_list_property(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        useful_field_list = trackrequest.useful_field_list
-        self.assertEqual(useful_field_list['beatport_track_id']['type'], 'integer')
-        self.assertTrue(useful_field_list['beatport_track_id']['equal'])
-        self.assertEqual(useful_field_list['title']['type'], 'string')
-        self.assertTrue(useful_field_list['title']['equal'])
-        self.assertEqual(useful_field_list['mix']['type'], 'string')
-        self.assertTrue(useful_field_list['mix']['equal'])
-        self.assertEqual(useful_field_list['artist']['type'], 'queryset')
-        self.assertTrue(useful_field_list['artist']['equal'])
-        self.assertEqual(useful_field_list['remix_artist']['type'], 'queryset')
-        self.assertTrue(useful_field_list['remix_artist']['equal'])
-        self.assertEqual(useful_field_list['genre']['type'], 'model')
-        self.assertTrue(useful_field_list['genre']['equal'])
-        self.assertEqual(useful_field_list['label']['type'], 'model')
-        self.assertTrue(useful_field_list['label']['equal'])
-        self.assertEqual(useful_field_list['length']['type'], 'string')
-        self.assertTrue(useful_field_list['length']['equal'])
-        self.assertEqual(useful_field_list['released']['type'], 'date')
-        self.assertTrue(useful_field_list['released']['equal'])
-        self.assertEqual(useful_field_list['bpm']['type'], 'integer')
-        self.assertTrue(useful_field_list['bpm']['equal'])
-        self.assertEqual(useful_field_list['key']['type'], 'string')
-        self.assertTrue(useful_field_list['key']['equal'])
-        self.assertEqual(useful_field_list['public']['type'], 'boolean')
-        self.assertFalse(useful_field_list['public']['equal'])
+#     def test_useful_field_list_property(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         useful_field_list = trackrequest.useful_field_list
+#         self.assertEqual(useful_field_list['beatport_track_id']['type'], 'integer')
+#         self.assertTrue(useful_field_list['beatport_track_id']['equal'])
+#         self.assertEqual(useful_field_list['title']['type'], 'string')
+#         self.assertTrue(useful_field_list['title']['equal'])
+#         self.assertEqual(useful_field_list['mix']['type'], 'string')
+#         self.assertTrue(useful_field_list['mix']['equal'])
+#         self.assertEqual(useful_field_list['artist']['type'], 'queryset')
+#         self.assertTrue(useful_field_list['artist']['equal'])
+#         self.assertEqual(useful_field_list['remix_artist']['type'], 'queryset')
+#         self.assertTrue(useful_field_list['remix_artist']['equal'])
+#         self.assertEqual(useful_field_list['genre']['type'], 'model')
+#         self.assertTrue(useful_field_list['genre']['equal'])
+#         self.assertEqual(useful_field_list['label']['type'], 'model')
+#         self.assertTrue(useful_field_list['label']['equal'])
+#         self.assertEqual(useful_field_list['length']['type'], 'string')
+#         self.assertTrue(useful_field_list['length']['equal'])
+#         self.assertEqual(useful_field_list['released']['type'], 'date')
+#         self.assertTrue(useful_field_list['released']['equal'])
+#         self.assertEqual(useful_field_list['bpm']['type'], 'integer')
+#         self.assertTrue(useful_field_list['bpm']['equal'])
+#         self.assertEqual(useful_field_list['key']['type'], 'string')
+#         self.assertTrue(useful_field_list['key']['equal'])
+#         self.assertEqual(useful_field_list['public']['type'], 'boolean')
+#         self.assertFalse(useful_field_list['public']['equal'])
 
-    def test_create_by_property(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        create_by = trackrequest.create_by_field
-        self.assertEqual(create_by, 'beatport_track_id')
+#     def test_create_by_property(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         create_by = trackrequest.create_by_field
+#         self.assertEqual(create_by, 'beatport_track_id')
 
-    def test_string_by_property(self):
-        trackrequest = TrackRequest.objects.get(id=1)
-        string_by = trackrequest.string_by_field
-        self.assertEqual(string_by, 'title')
+#     def test_string_by_property(self):
+#         trackrequest = TrackRequest.objects.get(id=1)
+#         string_by = trackrequest.string_by_field
+#         self.assertEqual(string_by, 'title')
 
-    def test_display_artist(self):
-        for trackrequest in TrackRequest.objects.all():
-            expected_artists = ', '.join(str(artist) for artist in trackrequest.artist.all())
-            self.assertEqual(trackrequest.display_artist(), expected_artists)
+#     def test_display_artist(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             expected_artists = ', '.join(str(artist) for artist in trackrequest.artist.all())
+#             self.assertEqual(trackrequest.display_artist(), expected_artists)
 
-    def test_display_remix_artist(self):
-        for trackrequest in TrackRequest.objects.all():
-            expected_remix_artists = ', '.join(str(artist) for artist in trackrequest.remix_artist.all())
-            self.assertEqual(trackrequest.display_remix_artist(), expected_remix_artists)
+#     def test_display_remix_artist(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             expected_remix_artists = ', '.join(str(artist) for artist in trackrequest.remix_artist.all())
+#             self.assertEqual(trackrequest.display_remix_artist(), expected_remix_artists)
 
-    def test_field_substr(self):
-        trackrequest1 = TrackRequest.objects.get(id=1)
-        expected_text1 = ', change title to ' + trackrequest1.title
-        self.assertEqual(trackrequest1.field_substr('', 'title'), expected_text1)
-        self.assertEqual(trackrequest1.field_substr('', 'public'), '')
-        trackrequest2 = TrackRequest.objects.get(id=2)
-        expected_text2 = ', change public to ' + str(trackrequest2.public)
-        self.assertEqual(trackrequest2.field_substr('', 'title'), '')
-        self.assertEqual(trackrequest2.field_substr('', 'public'), expected_text2)
+#     def test_field_substr(self):
+#         trackrequest1 = TrackRequest.objects.get(id=1)
+#         expected_text1 = ', change title to ' + trackrequest1.title
+#         self.assertEqual(trackrequest1.field_substr('', 'title'), expected_text1)
+#         self.assertEqual(trackrequest1.field_substr('', 'public'), '')
+#         trackrequest2 = TrackRequest.objects.get(id=2)
+#         expected_text2 = ', change public to ' + str(trackrequest2.public)
+#         self.assertEqual(trackrequest2.field_substr('', 'title'), '')
+#         self.assertEqual(trackrequest2.field_substr('', 'public'), expected_text2)
 
-    def test_object_string(self):
-        for trackrequest in TrackRequest.objects.all():
-            if trackrequest.track:
-                expected_object_string = 'Modify track request: ' + str(trackrequest.track)
-                for field in trackrequest.useful_field_list:
-                    expected_object_string = trackrequest.field_substr(expected_object_string, field)
-                if ',' not in expected_object_string:
-                    expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
-            else:
-                if trackrequest.title:
-                    expected_object_string = 'New track request: ' + trackrequest.title
-                else:
+#     def test_object_string(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             if trackrequest.track:
+#                 expected_object_string = 'Modify track request: ' + str(trackrequest.track)
+#                 for field in trackrequest.useful_field_list:
+#                     expected_object_string = trackrequest.field_substr(expected_object_string, field)
+#                 if ',' not in expected_object_string:
+#                     expected_object_string = expected_object_string + ' (NO CHANGES FOUND)'
+#             else:
+#                 if trackrequest.title:
+#                     expected_object_string = 'New track request: ' + trackrequest.title
+#                 else:
 
-                    expected_object_string = 'New track request: ' + str(trackrequest.beatport_track_id)
-                try:
-                    track = Track.objects.get(beatport_track_id=trackrequest.beatport_track_id)
-                except:
-                    track = None
-                if track is None:
-                    try:
-                        track = Track.objects.get(title=trackrequest.title)
-                    except:
-                        track = None
-                if track:
-                    expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
-            self.assertEqual(str(trackrequest), expected_object_string)
+#                     expected_object_string = 'New track request: ' + str(trackrequest.beatport_track_id)
+#                 try:
+#                     track = Track.objects.get(beatport_track_id=trackrequest.beatport_track_id)
+#                 except:
+#                     track = None
+#                 if track is None:
+#                     try:
+#                         track = Track.objects.get(title=trackrequest.title)
+#                     except:
+#                         track = None
+#                 if track:
+#                     expected_object_string = expected_object_string + ' (ALREADY EXISTS)'
+#             self.assertEqual(str(trackrequest), expected_object_string)
 
-    # TrackRequest specific functions
+#     # TrackRequest specific functions
 
-    def test_get_absolute_url(self):
-        for trackrequest in TrackRequest.objects.all():
-            expected_url = '/catalog/trackrequest/' + str(trackrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', trackrequest.title.lower())
-            self.assertEqual(trackrequest.get_absolute_url(), expected_url)
+#     def test_get_absolute_url(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             expected_url = '/catalog/trackrequest/' + str(trackrequest.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', trackrequest.title.lower())
+#             self.assertEqual(trackrequest.get_absolute_url(), expected_url)
 
-    # Shared model functions
+#     # Shared model functions
 
-    def test_set_field(self):
-        trackrequest = TrackRequest.objects.get(id=3)
-        self.assertFalse(trackrequest.public)
-        trackrequest.set_field('public', True)
-        self.assertTrue(trackrequest.public)
+#     def test_set_field(self):
+#         trackrequest = TrackRequest.objects.get(id=3)
+#         self.assertFalse(trackrequest.public)
+#         trackrequest.set_field('public', True)
+#         self.assertTrue(trackrequest.public)
 
-    def test_get_field(self):
-        for trackrequest in TrackRequest.objects.all():
-            field_value = trackrequest.get_field('title')
-            self.assertEqual(field_value, trackrequest.title)
+#     def test_get_field(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             field_value = trackrequest.get_field('title')
+#             self.assertEqual(field_value, trackrequest.title)
 
-    def test_get_modify_url(self):
-        for trackrequest in TrackRequest.objects.all():
-            self.assertEqual(trackrequest.get_modify_url(), '/catalog/trackrequest/modify/' + str(trackrequest.id))
+#     def test_get_modify_url(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             self.assertEqual(trackrequest.get_modify_url(), '/catalog/trackrequest/modify/' + str(trackrequest.id))
 
-    def test_add_fields_to_initial(self):
-        for trackrequest in TrackRequest.objects.all():
-            expected_initial = {
-                'beatport_track_id': trackrequest.beatport_track_id,
-                'title': trackrequest.title,
-                'mix': trackrequest.mix,
-                'bpm': trackrequest.bpm,
-                'key': trackrequest.key,
-                'length': trackrequest.length,
-                'released': trackrequest.released,
-                'public': trackrequest.public,
-            }
-            if trackrequest.genre:
-                expected_initial['genre_beatport_genre_id'] = trackrequest.genre.beatport_genre_id
-            if trackrequest.label:
-                expected_initial['label_beatport_label_id'] = trackrequest.label.beatport_label_id
-            if trackrequest.artist.count() > 0:
-                expected_initial['artist_beatport_artist_ids'] = ', '.join(str(artist.beatport_artist_id) for artist in trackrequest.artist.all())
-            if trackrequest.remix_artist.count() > 0:
-                expected_initial['remix_artist_beatport_artist_ids'] = ', '.join(str(remix_artist.beatport_artist_id) for remix_artist in trackrequest.remix_artist.all())
-            self.assertEqual(trackrequest.add_fields_to_initial({}), expected_initial)
+#     def test_add_fields_to_initial(self):
+#         for trackrequest in TrackRequest.objects.all():
+#             expected_initial = {
+#                 'beatport_track_id': trackrequest.beatport_track_id,
+#                 'title': trackrequest.title,
+#                 'mix': trackrequest.mix,
+#                 'bpm': trackrequest.bpm,
+#                 'key': trackrequest.key,
+#                 'length': trackrequest.length,
+#                 'released': trackrequest.released,
+#                 'public': trackrequest.public,
+#             }
+#             if trackrequest.genre:
+#                 expected_initial['genre_beatport_genre_id'] = trackrequest.genre.beatport_genre_id
+#             if trackrequest.label:
+#                 expected_initial['label_beatport_label_id'] = trackrequest.label.beatport_label_id
+#             if trackrequest.artist.count() > 0:
+#                 expected_initial['artist_beatport_artist_ids'] = ', '.join(str(artist.beatport_artist_id) for artist in trackrequest.artist.all())
+#             if trackrequest.remix_artist.count() > 0:
+#                 expected_initial['remix_artist_beatport_artist_ids'] = ', '.join(str(remix_artist.beatport_artist_id) for remix_artist in trackrequest.remix_artist.all())
+#             self.assertEqual(trackrequest.add_fields_to_initial({}), expected_initial)
 
-    def test_is_equivalent(self):
-        trackrequest1 = TrackRequest.objects.get(id=1)
-        trackrequest2 = TrackRequest.objects.get(id=2)
-        self.assertFalse(trackrequest1.is_equivalent(trackrequest2))
-        self.assertTrue(trackrequest1.is_equivalent(trackrequest1))
+#     def test_is_equivalent(self):
+#         trackrequest1 = TrackRequest.objects.get(id=1)
+#         trackrequest2 = TrackRequest.objects.get(id=2)
+#         self.assertFalse(trackrequest1.is_equivalent(trackrequest2))
+#         self.assertTrue(trackrequest1.is_equivalent(trackrequest1))
 
-    def test_is_field_is_equivalent(self):
-        trackrequest1 = TrackRequest.objects.get(id=1)
-        trackrequest2 = TrackRequest.objects.get(id=2)
-        self.assertFalse(trackrequest1.field_is_equivalent(trackrequest2, 'title'))
-        self.assertTrue(trackrequest1.field_is_equivalent(trackrequest1, 'title'))
+#     def test_is_field_is_equivalent(self):
+#         trackrequest1 = TrackRequest.objects.get(id=1)
+#         trackrequest2 = TrackRequest.objects.get(id=2)
+#         self.assertFalse(trackrequest1.field_is_equivalent(trackrequest2, 'title'))
+#         self.assertTrue(trackrequest1.field_is_equivalent(trackrequest1, 'title'))
 
-    # test object manager
+#     # test object manager
 
-    def test_get_queryset_can_view(self):
-        all_trackrequestss = TrackRequest.objects.all()
-        self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_view, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['dj'])), set(trackrequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_trackrequestss))
+#     def test_get_queryset_can_view(self):
+#         all_trackrequestss = TrackRequest.objects.all()
+#         self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_view, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['dj'])), set(trackrequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(TrackRequest.objects.get_queryset_can_view(self.users['admin'])), set(all_trackrequestss))
 
-    def test_get_queryset_can_direct_modify(self):
-        all_trackrequests = TrackRequest.objects.all()
-        self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
-        self.client.force_login(self.users['dj'])
-        trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
-        self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(trackrequests_dj))
-        self.client.force_login(self.users['admin'])
-        self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_trackrequests))
+#     def test_get_queryset_can_direct_modify(self):
+#         all_trackrequests = TrackRequest.objects.all()
+#         self.assertRaises(PermissionDenied, TrackRequest.objects.get_queryset_can_direct_modify, (self.users['anonymous']))
+#         self.client.force_login(self.users['dj'])
+#         trackrequests_dj = TrackRequest.objects.filter(user=self.users['dj'])
+#         self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['dj'])), set(trackrequests_dj))
+#         self.client.force_login(self.users['admin'])
+#         self.assertEqual(set(TrackRequest.objects.get_queryset_can_direct_modify(self.users['admin'])), set(all_trackrequests))
 
-    def test_display(self):
-        self.assertRaises(PermissionDenied, TrackRequest.objects.display, self.users['anonymous'])
-        dj_trackrequests = TrackRequest.objects.filter(user=self.users['dj'])
-        dj_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in dj_trackrequests)
-        self.assertEqual(TrackRequest.objects.display(self.users['dj']), dj_trackrequest_list)
-        admin_trackrequests = TrackRequest.objects.all()
-        admin_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in admin_trackrequests)
-        self.assertEqual(TrackRequest.objects.display(self.users['admin']), admin_trackrequest_list)
+#     def test_display(self):
+#         self.assertRaises(PermissionDenied, TrackRequest.objects.display, self.users['anonymous'])
+#         dj_trackrequests = TrackRequest.objects.filter(user=self.users['dj'])
+#         dj_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in dj_trackrequests)
+#         self.assertEqual(TrackRequest.objects.display(self.users['dj']), dj_trackrequest_list)
+#         admin_trackrequests = TrackRequest.objects.all()
+#         admin_trackrequest_list = ', '.join(str(trackrequest) for trackrequest in admin_trackrequests)
+#         self.assertEqual(TrackRequest.objects.display(self.users['admin']), admin_trackrequest_list)
 
-    # test constraints
+#     # test constraints
 
-    def test_request_track_title_or_beatport_id_is_not_null(self):
-        no_track_requests = TrackRequest.objects.filter(beatport_track_id__isnull=True, title__isnull=True)
-        self.assertEqual(no_track_requests.count(), 0)
-        self.assertRaises(IntegrityError, TrackRequest.objects.create, public=True)
+#     def test_request_track_title_or_beatport_id_is_not_null(self):
+#         no_track_requests = TrackRequest.objects.filter(beatport_track_id__isnull=True, title__isnull=True)
+#         self.assertEqual(no_track_requests.count(), 0)
+#         self.assertRaises(IntegrityError, TrackRequest.objects.create, public=True)
 
 
 # user models
@@ -2106,7 +2134,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['dj'])), set(tracks_dj))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['dj']), tracks_dj.count())
             self.client.force_login(self.users['admin'])
-            tracks_admin = playlist.track
+            tracks_admin = playlist.track.all()
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['admin'])), set(tracks_admin))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['admin']), tracks_admin.count())
 

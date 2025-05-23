@@ -749,6 +749,7 @@ def process_backlog_items(object_name, num=1):
             break
         bad_track_item = bad_tracks.first()
         result = object_model_scraper(object_name, bad_track_item.get_field(lookup['id']))
+        print(result['message'])
         if result['count'] > 0:
             print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']
@@ -763,6 +764,7 @@ def process_backlog_items(object_name, num=1):
             break
         backlog_item = backlog.first()
         result = object_model_scraper(object_name, backlog_item.get_id())
+        print(result['message'])
         if result['count'] > 0:
             print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']
@@ -774,6 +776,7 @@ def process_backlog_items(object_name, num=1):
         if success_count >= num + 1:
             break
         result = random_scraper(object_name, lookup)
+        print(result['message'])
         if result['count'] > 0:
             print('Processing ' + object_name + ': ' + str(object_model_processor(result['data'])))
         success_count += result['count']

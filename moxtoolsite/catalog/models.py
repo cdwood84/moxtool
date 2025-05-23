@@ -1704,7 +1704,6 @@ class GenreBacklog(models.Model):
 
     def get_id(self):
         return self.beatport_genre_id
-
     
     class Meta:
         constraints = [
@@ -1743,7 +1742,6 @@ class LabelBacklog(models.Model):
 
     def get_id(self):
         return self.beatport_label_id
-
     
     class Meta:
         constraints = [
@@ -1783,7 +1781,6 @@ class TrackBacklog(models.Model):
 
     def get_id(self):
         return self.beatport_track_id
-
     
     class Meta:
         constraints = [
