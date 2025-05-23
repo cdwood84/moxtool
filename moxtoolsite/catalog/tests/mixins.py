@@ -16,7 +16,7 @@ class CatalogTestMixin:
         list_data = {
             'group': ['dj', 'admin'],
             'perm': ['view', 'create', 'modify'],
-            'model': ['artist', 'artistrequest', 'genre', 'genrerequest', 'label', 'playlist', 'setlist', 'setlistitem', 'tag', 'track', 'trackinstance', 'trackrequest', 'transition'],
+            'model': ['artist', 'genre', 'label', 'playlist', 'setlist', 'setlistitem', 'tag', 'track', 'trackinstance', 'transition'],
             'domain': ['any', 'public', 'own'],
         }
         user_models = ['playlist', 'setlist', 'setlistitem', 'tag', 'trackinstance', 'transition']
