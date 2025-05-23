@@ -1865,7 +1865,7 @@ class PlaylistModelTest(TestCase, CatalogTestMixin):
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['dj'])), set(tracks_dj))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['dj']), tracks_dj.count())
             self.client.force_login(self.users['admin'])
-            tracks_admin = playlist.track
+            tracks_admin = playlist.track.all()
             self.assertEqual(set(playlist.get_viewable_tracks_in_playlist(self.users['admin'])), set(tracks_admin))
             self.assertEqual(playlist.count_viewable_tracks_in_playlist(self.users['admin']), tracks_admin.count())
 
@@ -2101,6 +2101,67 @@ class SetListModelTest(TestCase, CatalogTestMixin):
         for setlist in SetList.objects.all():
             expected_url = '/catalog/setlist/' + str(setlist.id) + '/' + re.sub(r'[^a-zA-Z0-9]', '_', setlist.name.lower())
             self.assertEqual(setlist.get_absolute_url(), expected_url)
+
+    def test_get_viewable_tracks_in_setlist_with_count(self):
+        for setlist in SetList.objects.all():
+            self.assertRaises(PermissionDenied, setlist.get_viewable_tracks_in_setlist, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            tracks_admin = Track.objects.none()
+            tracks_dj = Track.objects.none()
+            user_track_ids = []
+            for trackinstance in TrackInstance.objects.filter(user=self.users['dj']):
+                user_track_ids.append(trackinstance.track.id)
+            for setlistitem in SetListItem.objects.filter(setlist=setlist):
+                tracks_admin = tracks_admin | Track.objects.filter(id=setlistitem.track.id)
+                if setlistitem.track.public is True or setlistitem.track.id in user_track_ids:
+                    tracks_dj = tracks_dj | Track.objects.filter(id=setlistitem.track.id)
+            self.assertEqual(set(setlist.get_viewable_tracks_in_setlist(self.users['dj'])), set(tracks_dj))
+            self.assertEqual(setlist.count_viewable_tracks_in_setlist(self.users['dj']), tracks_dj.count())
+            self.client.force_login(self.users['admin'])
+            self.assertEqual(set(setlist.get_viewable_tracks_in_setlist(self.users['admin'])), set(tracks_admin))
+            self.assertEqual(setlist.count_viewable_tracks_in_setlist(self.users['admin']), tracks_admin.count())
+
+    def test_get_top_viewable_setlist_artists(self):
+        for setlist in SetList.objects.all():
+            dj_data = {}
+            dj_max = 1
+            admin_data = {}
+            admin_max = 1
+            for track in setlist.get_viewable_tracks_in_setlist(self.users['admin']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in admin_data:
+                        admin_data[artist.id]['count'] += 1
+                        if admin_max < admin_data[artist.id]['count']:
+                            admin_max = admin_data[artist.id]['count']
+                    else:
+                        admin_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_admin = Artist.objects.none()
+            for id, data in admin_data.items():
+                if data['count'] == admin_max:
+                    artists_admin = artists_admin | Artist.objects.filter(id=id)
+            for track in setlist.get_viewable_tracks_in_setlist(self.users['dj']):
+                track_artists = track.artist.all() | track.remix_artist.all()
+                for artist in track_artists.distinct():
+                    if artist.id in dj_data:
+                        dj_data[artist.id]['count'] += 1
+                        if dj_max < dj_data[artist.id]['count']:
+                            dj_max = dj_data[artist.id]['count']
+                    else:
+                        dj_data[artist.id] = {
+                            'count': 1,
+                        }
+            artists_dj = Artist.objects.none()
+            for id, data in dj_data.items():
+                if data['count'] == dj_max:
+                    artists_dj = artists_dj | Artist.objects.filter(id=id)
+            self.assertRaises(PermissionDenied, setlist.get_top_viewable_setlist_artists, (self.users['anonymous']))
+            self.client.force_login(self.users['dj'])
+            self.assertEqual(set(setlist.get_top_viewable_setlist_artists(self.users['dj'])), set(artists_dj))
+            self.client.force_login(self.users['admin'])
+            self.assertEqual(set(setlist.get_top_viewable_setlist_artists(self.users['admin'])), set(artists_admin))
 
     # Shared model functions
 
@@ -2483,6 +2544,16 @@ class TagModelTest(TestCase, CatalogTestMixin):
         self.client.force_login(self.users['admin'])
         playlists_admin = Playlist.objects.filter(tag__in=[tag])
         self.assertEqual(set(tag.get_viewable_playlists_tagged(self.users['admin'])), set(playlists_admin))
+
+    def test_get_viewable_setlists_tagged(self):
+        tag = Tag.objects.get(id=1)
+        self.assertRaises(PermissionDenied, tag.get_viewable_setlists_tagged, self.users['anonymous'])
+        self.client.force_login(self.users['dj'])
+        playlists_dj = SetList.objects.get_queryset_can_view(self.users['dj']).filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_setlists_tagged(self.users['dj'])), set(playlists_dj))
+        self.client.force_login(self.users['admin'])
+        playlists_admin = SetList.objects.filter(tag__in=[tag])
+        self.assertEqual(set(tag.get_viewable_setlists_tagged(self.users['admin'])), set(playlists_admin))
 
     # Shared model functions
 

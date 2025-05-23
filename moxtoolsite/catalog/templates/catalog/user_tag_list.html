@@ -1,14 +1,55 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-    {% if tag_list %}
-        <h1>Your Tags</h1>
-        <ul>{% for tag in tag_list %}
-            <li>
-                {{ tag.get_type_display }} - <a href="{{ tag.get_absolute_url }}">{{ tag.value }}</a> by <strong>{{ tag.user }}</strong>
-            </li>
-        {% endfor %}</ul>
+    {% if page_data %}
+        <h1>{{ user }}'s tags</h1>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:25%;">Tag</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:30%;">Detail</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:15%;">Track Count</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:15%;">Playlist Count</th>
+                    <th scope="col" style="padding-left:5px;padding-right:15px;width:15%;">Setlist Count</th>
+                </tr>
+            </thead>
+            <tbody>{% for tag_data in page_data %}
+                <tr>
+                    <td data-label="Tag"><a href="{{ tag_data.tag.get_absolute_url }}">{{ tag_data.tag }}</a></td>
+                    <td data-label="Detail">{{ tag_data.tag.detail }}</td>
+                    <td data-label="Track Count" style="padding-left:40px;">{{ tag_data.trackinstances.count }}</td>
+                    <td data-label="Playlist Count" style="padding-left:40px;">{{ tag_data.playlists.count }}</td>
+                    <td data-label="Setlist Count" style="padding-left:40px;">{{ tag_data.setlists.count }}</td>
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+        <hr>
+        {% if page_data.paginator.num_pages > 1 %}
+          <div class="pagination" style="margin-left:20px;margin-top:20px">
+            <span class="step-links">
+              {% if page_data.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ page_data.previous_page_number }}">previous</a>
+              {% endif %}
+          
+              <span class="current">
+                Page {{ page_data.number }} of {{ page_data.paginator.num_pages }}
+              </span>
+          
+              {% if page_data.has_next %}
+                <a href="?page={{ page_data.next_page_number }}">next</a>
+                <a href="?page={{ page_data.paginator.num_pages }}">last &raquo;</a>
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
     {% else %}
-        <p>You don't own any tags.</p>
+        <p>You don't have any tags in your library.</p>
+    {% endif %}
+    {% if perms.catalog.moxtool_can_create_own_tag %}
+        <div style="margin-left:20px;margin-top:20px">
+            <p><a href="{% url 'create-object' 'tag' %}">Create a new tag</a></p>
+        </div>
     {% endif %}
 {% endblock %}

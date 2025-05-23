@@ -2,7 +2,7 @@
 
 {% block content %}
     {% if page_data %}
-        <h1>Tracks</h1>
+        <h1>{{ user }}'s tracks</h1>
         <hr>
         <table>
             <thead>
@@ -14,13 +14,13 @@
                     <th scope="col" style="padding-left:5px;padding-right:15px;">Remix Artists</th>
                 </tr>
             </thead>
-            <tbody>{% for track_data in page_data %}
+            <tbody>{% for trackinstance_data in page_data %}
                 <tr>
-                    <td data-label="Track"><a href="{{ track_data.track.get_absolute_url }}">{{ track_data.track.title }} ({{ track_data.track.mix }})</a></td>
-                    <td data-label="Time">{{ track_data.track.length }}</td>
-                    <td data-label="Genre">{% if track_data.track.genre is not None %}<a href="{{ track_data.track.genre.get_absolute_url }}">{{ track_data.track.genre.name }}</a>{% endif %}</td>
-                    <td data-label="Artists">{% for artist in track_data.track.artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
-                    <td data-label="Remix Artists">{% for remix_artist in track_data.track.remix_artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ remix_artist.get_absolute_url }}">{{ remix_artist.name }}</a>{% endfor %}</td>
+                    <td data-label="Track"><a href="{{ trackinstance_data.trackinstance.track.get_absolute_url }}">{{ trackinstance_data.trackinstance.track.title }} ({{ trackinstance_data.trackinstance.track.mix }})</a></td>
+                    <td data-label="Time">{{ trackinstance_data.trackinstance.track.length }}</td>
+                    <td data-label="Genre">{% if trackinstance_data.trackinstance.track.genre is not None %}<a href="{{ trackinstance_data.trackinstance.track.genre.get_absolute_url }}">{{ trackinstance_data.trackinstance.track.genre.name }}</a>{% endif %}</td>
+                    <td data-label="Artists">{% for artist in trackinstance_data.trackinstance.track.artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% endfor %}</td>
+                    <td data-label="Remix Artists">{% for remix_artist in trackinstance_data.trackinstance.track.remix_artist.all %}{% if not forloop.first %}, {% endif %}<a href="{{ remix_artist.get_absolute_url }}">{{ remix_artist.name }}</a>{% endfor %}</td>
                 </tr>
             {% endfor %}</tbody>
         </table>
@@ -45,15 +45,11 @@
             </div>
         {% endif %}
     {% else %}
-        <p>There aren't any tracks publicly shared on this site.</p>
+        <p>You don't have any tracks in your library.</p>
     {% endif %}
-    {% if perms.catalog.moxtool_can_create_any_track %}
+    {% if perms.catalog.moxtool_can_create_own_track %}
         <div style="margin-left:20px;margin-top:20px">
             <p><a href="{% url 'bulk-create' 'track' %}">Add new tracks</a></p>
-        </div>
-    {% elif perms.catalog.moxtool_can_create_public_track %}
-        <div style="margin-left:20px;margin-top:20px">
-            <p><a href="{% url 'bulk-create' 'track' %}">Request new tracks</a></p>
         </div>
     {% endif %}
 {% endblock %}

@@ -311,14 +311,28 @@ class LabelDetailView(LoginRequiredMixin, generic.DetailView):
 # setlist
 
 
-class SetListListView(LoginRequiredMixin, generic.ListView):
-    model = SetList
-    context_object_name = 'setlist_list'
-    template_name = 'catalog/setlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return SetList.objects.get_queryset_can_view(self.request.user)
+@login_required
+def SetListListView(request):
+    setlist_data = []
+    for setlist in SetList.objects.get_queryset_can_view(request.user):
+        setlist_data.append({
+            'setlist': setlist,
+            'track_count':setlist.count_viewable_tracks_in_setlist(request.user),
+            'top_artists': setlist.get_top_viewable_setlist_artists(request.user),
+        })
+    sorted_data = sorted(setlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/setlist_list.html', context=context)
 
 
 class SetListDetailView(LoginRequiredMixin, generic.DetailView):
@@ -331,17 +345,28 @@ class SetListDetailView(LoginRequiredMixin, generic.DetailView):
         return SetList.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-class UserSetListListView(LoginRequiredMixin, generic.ListView):
-    model = SetList
-    template_name = 'catalog/user_setlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            SetList.objects
-            .filter(user=self.request.user)
-            .order_by('-date_played')
-        )
+@login_required
+def UserSetListListView(request):
+    setlist_data = []
+    for setlist in SetList.objects.filter(user=request.user):
+        setlist_data.append({
+            'setlist': setlist,
+            'track_count':setlist.count_viewable_tracks_in_setlist(request.user),
+            'top_artists': setlist.get_top_viewable_setlist_artists(request.user),
+        })
+    sorted_data = sorted(setlist_data, key=lambda dictionary: dictionary["track_count"], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_setlist_list.html', context=context)
    
 
 # track
@@ -376,26 +401,27 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
     
     def get_object(self):
         pk = self.kwargs.get(self.pk_url_kwarg)
-        return Track.objects.get_queryset_can_view(self.request.user).get(id=pk)
+        return Track.objects.get_queryset_can_view(self.request.user).filter(id=pk).first()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
-        for label in Label.objects.get_queryset_can_view(self.request.user):
-            if label == context['track'].label:
-                context['viewable_label'] = label
-        context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
-        context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
-        context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
-        context['user_trackinstance'] = TrackInstance.objects.filter(user=self.request.user, track=context['track']).first()
-        context['user_playlist_list'] = Playlist.objects.filter(user=self.request.user, track=context['track'])
-        context['user_transition_to_list'] = Transition.objects.filter(user=self.request.user, to_track=context['track'])
-        context['user_transition_from_list'] = Transition.objects.filter(user=self.request.user, from_track=context['track'])
-        setlists = SetList.objects.filter(user=self.request.user)
-        ids = []
-        for setlist in setlists:
-            ids.append(setlist.id)
-        context['user_setlistitem_list'] = SetListItem.objects.filter(track=context['track'], setlist__id__in=ids)
+        if 'track' in context:
+            context['viewable_genre'] = context['track'].get_viewable_genre_on_track(self.request.user)
+            for label in Label.objects.get_queryset_can_view(self.request.user):
+                if label == context['track'].label:
+                    context['viewable_label'] = label
+            context['viewable_artists'] = context['track'].get_viewable_artists_on_track(self.request.user)
+            context['viewable_remix_artists'] = context['track'].get_viewable_remix_artists_on_track(self.request.user)
+            context['viewable_trackinstances'] = context['track'].get_viewable_instances_of_track(self.request.user).exclude(user=self.request.user)
+            context['user_trackinstance'] = TrackInstance.objects.filter(user=self.request.user, track=context['track']).first() 
+            context['user_playlist_list'] = Playlist.objects.filter(user=self.request.user, track=context['track'])
+            context['user_transition_to_list'] = Transition.objects.filter(user=self.request.user, to_track=context['track'])
+            context['user_transition_from_list'] = Transition.objects.filter(user=self.request.user, from_track=context['track'])
+            setlists = SetList.objects.filter(user=self.request.user)
+            ids = []
+            for setlist in setlists:
+                ids.append(setlist.id)
+            context['user_setlistitem_list'] = SetListItem.objects.filter(track=context['track'], setlist__id__in=ids)
         return context
 
 
@@ -409,21 +435,26 @@ class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
         return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
-class UserTrackInstanceListView(LoginRequiredMixin, generic.ListView):
-    model = TrackInstance
-    template_name = 'catalog/user_trackinstance_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        if self.request.user.has_perm('catalog.moxtool_can_view_own_playlist'):
-            list_result = (
-                TrackInstance.objects
-                .filter(user=self.request.user)
-                .order_by('date_added', '-play_count')
-            )
-        else:
-            raise PermissionDenied
-        return list_result
+@login_required
+def UserTrackInstanceListView(request):
+    trackinstance_data = []
+    for trackinstance in TrackInstance.objects.filter(user=request.user):
+        trackinstance_data.append({
+            'trackinstance': trackinstance,
+        })
+    sorted_data = sorted(trackinstance_data, key=lambda item: item['trackinstance'].rating, reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_track_list.html', context=context)
 
 
 # playlist
@@ -493,30 +524,56 @@ def modify_playlist(request, playlist_id):
     return render(request, 'catalog/create_playlist.html', context)
 
 
-class UserPlaylistListView(LoginRequiredMixin, generic.ListView):
-    model = Playlist
-    template_name = 'catalog/user_playlist_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Playlist.objects
-            .filter(user=self.request.user)
-            .order_by('name')
-        )
+@login_required
+def UserPlaylistListView(request):
+    playlist_data = []
+    for playlist in Playlist.objects.filter(user=request.user):
+        playlist_data.append({
+            'playlist': playlist,
+            'track_count':playlist.count_viewable_tracks_in_playlist(request.user),
+            'top_artists': playlist.get_top_viewable_playlist_artists(request.user),
+        })
+    sorted_data = sorted(playlist_data, key=lambda item: item['track_count'], reverse=True)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_playlist_list.html', context=context)
 
 
 # tag
 
 
-class TagListView(LoginRequiredMixin, generic.ListView):
-    model = Tag
-    context_object_name = 'tag_list'
-    template_name = 'catalog/tag_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Tag.objects.get_queryset_can_view(self.request.user, 'tag')
+@login_required
+def TagListView(request):
+    tag_data = []
+    for tag in Tag.objects.get_queryset_can_view(request.user):
+        tag_data.append({
+            'tag': tag,
+            'trackinstances':tag.get_viewable_trackinstances_tagged(request.user),
+            'playlists': tag.get_viewable_playlists_tagged(request.user),
+            'setlists': tag.get_viewable_setlists_tagged(request.user),
+        })
+    sorted_data = sorted(tag_data, key=lambda dictionary: str(dictionary["tag"]), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/tag_list.html', context=context)
 
 
 class TagDetailView(LoginRequiredMixin, generic.DetailView):
@@ -535,30 +592,54 @@ class TagDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-class UserTagView(LoginRequiredMixin, generic.ListView):
-    model = Tag
-    template_name = 'catalog/user_tag_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Tag.objects
-            .filter(user=self.request.user)
-            .order_by('type', 'value')
-        )
+@login_required
+def UserTagListView(request):
+    tag_data = []
+    for tag in Tag.objects.filter(user=request.user):
+        tag_data.append({
+            'tag': tag,
+            'trackinstances':tag.get_viewable_trackinstances_tagged(request.user).filter(user=request.user),
+            'playlists': tag.get_viewable_playlists_tagged(request.user).filter(user=request.user),
+            'setlists': tag.get_viewable_setlists_tagged(request.user).filter(user=request.user),
+        })
+    sorted_data = sorted(tag_data, key=lambda item: str(item['tag']), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_tag_list.html', context=context)
 
 
 # transitions
 
 
-class TransitionListView(LoginRequiredMixin, generic.ListView):
-    model = Transition
-    context_object_name = 'transition_list'
-    template_name = 'catalog/transition_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return Transition.objects.get_queryset_can_view(self.request.user)
+@login_required
+def TransitionListView(request):
+    transition_data = []
+    for transition in Transition.objects.get_queryset_can_view(request.user):
+        transition_data.append({
+            'transition': transition,
+        })
+    sorted_data = sorted(transition_data, key=lambda dictionary: str(dictionary["transition"].user), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/transition_list.html', context=context)
 
 
 class TransitionDetailView(LoginRequiredMixin, generic.DetailView):
@@ -571,18 +652,27 @@ class TransitionDetailView(LoginRequiredMixin, generic.DetailView):
         return Transition.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-class UserTransitionListView(LoginRequiredMixin, generic.ListView):
-    model = Transition
-    template_name = 'catalog/user_transition_list.html'
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Transition.objects
-            .filter(user=self.request.user)
-            .order_by('-rating')
-        )
-    
+@login_required
+def UserTransitionListView(request):
+    transition_data = []
+    for transition in Transition.objects.filter(user=request.user):
+        transition_data.append({
+            'transition': transition,
+        })
+    sorted_data = sorted(transition_data, key=lambda dictionary: str(dictionary["transition"].user), reverse=False)
+    paginator = Paginator(sorted_data, 20)
+    page = request.GET.get('page')
+    try:
+        page_data = paginator.page(page)
+    except PageNotAnInteger:
+        page_data = paginator.page(1)
+    except EmptyPage:
+        page_data = paginator.page(paginator.num_pages)
+    context = {
+        'page_data': page_data,
+    }
+    return render(request, 'catalog/user_transition_list.html', context=context)
+  
 
 # lower navigation pages and assocciated form pages
 
