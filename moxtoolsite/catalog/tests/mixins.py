@@ -1,10 +1,13 @@
-from catalog.models import Artist, Artist404, ArtistBacklog, Genre, Genre404, GenreBacklog, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, Transition
+from catalog.models import Artist, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, Transition
+from catalog.models import Artist404, Genre404, Label404, Track404
+from catalog.models import ArtistBacklog, GenreBacklog, LabelBacklog, TrackBacklog
 # from catalog.models import ArtistRequest, GenreRequest, TrackRequest
 from datetime import date, time
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 import datetime
 
 
@@ -318,3 +321,62 @@ class CatalogTestMixin:
             t+=6
             last_item = item
         return users, groups
+    
+
+class UtilsTestMixin:
+    def create_test_data():
+        users = {
+            'admin': User.objects.create_user(username='admin', password="admintestpassword"),
+            'dj': User.objects.create_user(username='dj', password="djtestpassword"),
+            'anonymous': AnonymousUser(),
+        }
+        Artist.objects.create(
+            beatport_artist_id = 1072157,
+            public = False,
+        )
+        Artist.objects.create(
+            beatport_artist_id = 325252,
+            public = True,
+        )
+        Artist.objects.create(
+            beatport_artist_id = 460053,
+            name = 'Prospa',
+            public = True,
+        )
+        Artist404.objects.create(beatport_artist_id=4300000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 5, 17, 33, 2), timezone=timezone.get_fixed_timezone(0)))
+        ArtistBacklog.objects.create(beatport_artist_id=124254, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 2, 3, 12, 55, 59), timezone=timezone.get_fixed_timezone(0)))
+        Genre.objects.create(
+            beatport_genre_id = 5,
+            public = False,
+        )
+        Genre.objects.create(
+            beatport_genre_id = 12,
+            public = True,
+        )
+        Genre404.objects.create(beatport_genre_id=4500000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 8, 4, 6, 59, 59), timezone=timezone.get_fixed_timezone(0)))
+        GenreBacklog.objects.create(beatport_genre_id=90, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 31, 23, 59, 59), timezone=timezone.get_fixed_timezone(0)))
+        Label.objects.create(
+            beatport_label_id = 2752,
+            public = False,
+        )
+        Label.objects.create(
+            beatport_label_id = 23732,
+            public = True,
+        )
+        Label404.objects.create(beatport_label_id=2500000, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 1, 31, 20, 30, 21), timezone=timezone.get_fixed_timezone(0)))
+        LabelBacklog.objects.create(beatport_label_id=73662, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 3, 14, 10, 1, 9), timezone=timezone.get_fixed_timezone(0)))
+        Track.objects.create(
+            beatport_track_id = 20085129,
+            mix = 'Original Mix',
+            genre =  Genre.objects.get(beatport_genre_id=5),
+            label =  Label.objects.get(beatport_label_id=2752),
+            public = False,
+        )
+        Track.objects.create(
+            beatport_track_id = 19432763,
+            mix = 'Original Mix',
+            public = True,
+        )
+        Track404.objects.create(beatport_track_id=1900504, datetime_discovered=timezone.make_aware(timezone.datetime(2020, 2, 1, 22, 14, 17), timezone=timezone.get_fixed_timezone(0)))
+        TrackBacklog.objects.create(beatport_track_id=19407238, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 5, 1, 7, 44, 18), timezone=timezone.get_fixed_timezone(0)))
+        return users

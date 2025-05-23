@@ -1,6 +1,7 @@
 from catalog.models import Artist, Genre, Label, Track
 from catalog.models import Artist404, Genre404, Label404, Track404
 from catalog.models import ArtistBacklog, GenreBacklog, LabelBacklog, TrackBacklog
+from catalog.tests.mixins import UtilsTestMixin
 from catalog.utils import cleanup404, convert_url, get_soup, object_lookup, object_model_data_checker, should_object_be_scraped
 from catalog.utils import object_model_processor, process_artist, process_genre, process_label, process_track, process_backlog_items
 from catalog.utils import object_model_scraper, scrape_artist, scrape_genre, scrape_label, scrape_track, random_scraper
@@ -10,55 +11,10 @@ from django.utils import timezone
 from requests.exceptions import HTTPError
 
 
-class ScrapingUtilsTest(TestCase):
+class UtilityFunctionsTest(TestCase, UtilsTestMixin):
     @classmethod
     def setUpTestData(cls):
-        Artist.objects.create(
-            beatport_artist_id = 1072157,
-            public = False,
-        )
-        Artist.objects.create(
-            beatport_artist_id = 325252,
-            public = True,
-        )
-        Artist404.objects.create(beatport_artist_id=4300000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 5, 17, 33, 2), timezone=timezone.get_fixed_timezone(0)))
-        ArtistBacklog.objects.create(beatport_artist_id=124254, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 2, 3, 12, 55, 59), timezone=timezone.get_fixed_timezone(0)))
-        Genre.objects.create(
-            beatport_genre_id = 5,
-            public = False,
-        )
-        Genre.objects.create(
-            beatport_genre_id = 12,
-            public = True,
-        )
-        Genre404.objects.create(beatport_genre_id=4500000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 8, 4, 6, 59, 59), timezone=timezone.get_fixed_timezone(0)))
-        GenreBacklog.objects.create(beatport_genre_id=90, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 31, 23, 59, 59), timezone=timezone.get_fixed_timezone(0)))
-        Label.objects.create(
-            beatport_label_id = 2752,
-            public = False,
-        )
-        Label.objects.create(
-            beatport_label_id = 23732,
-            public = True,
-        )
-        Label404.objects.create(beatport_label_id=2500000, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 1, 31, 20, 30, 21), timezone=timezone.get_fixed_timezone(0)))
-        LabelBacklog.objects.create(beatport_label_id=73662, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 3, 14, 10, 1, 9), timezone=timezone.get_fixed_timezone(0)))
-        Track.objects.create(
-            beatport_track_id = 20085129,
-            mix = 'Original Mix',
-            genre =  Genre.objects.get(beatport_genre_id=5),
-            label =  Label.objects.get(beatport_label_id=2752),
-            public = False,
-        )
-        Track.objects.create(
-            beatport_track_id = 19432763,
-            mix = 'Original Mix',
-            public = True,
-        )
-        Track404.objects.create(beatport_track_id=1900504, datetime_discovered=timezone.make_aware(timezone.datetime(2020, 2, 1, 22, 14, 17), timezone=timezone.get_fixed_timezone(0)))
-        TrackBacklog.objects.create(beatport_track_id=19407238, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 5, 1, 7, 44, 18), timezone=timezone.get_fixed_timezone(0)))
-
-    # utility functions
+        cls.users = cls.create_test_data()
 
     def test_get_soup(self):
 
@@ -79,57 +35,75 @@ class ScrapingUtilsTest(TestCase):
             except HTTPError as e:
                 raise HTTPError(str(e)[:3])
 
-    # scraping functions
+
+class ScrapingUtilsTest(TestCase, UtilsTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.users = cls.create_test_data()
 
     def test_scrape_artist(self):
 
         # id only case
         id1 = 610028
-        artist1, success1 = scrape_artist(id1)
-        self.assertTrue(success1)
-        self.assertEqual(artist1.name, 'John Summit')
-        self.assertTrue(artist1.public)
+        ar1 = scrape_artist(id1)
+        self.assertTrue(ar1['success'])
+        self.assertEqual(list(ar1['data']['artist'].values())[0]['name'], 'John Summit')
+        self.assertEqual(ar1['count'], 1)
+        self.assertEqual(ar1['message'], 'Artist data scraped: John Summit')
 
         #id and text case
         id2 = 522539
         text2 = 'james_hype'
-        artist2, success2 = scrape_artist(id2, text2)
-        self.assertTrue(success2)
-        self.assertEqual(artist2.name, 'James Hype')
-        self.assertTrue(artist2.public)
+        ar2 = scrape_artist(id2, text2)
+        self.assertTrue(ar2['success'])
+        self.assertEqual(list(ar2['data']['artist'].values())[0]['name'], 'James Hype')
+        self.assertEqual(ar2['count'], 1)
+        self.assertEqual(ar2['message'], 'Artist data scraped: James Hype')
 
         # bad id case
         id3 = -10
-        artist3, success3 = scrape_artist(id3)
-        self.assertFalse(success3)
-        self.assertIsNone(artist3)
+        ar3 = scrape_artist(id3)
+        self.assertFalse(ar3['success'])
+        self.assertEqual(len(ar3['data']['artist']), 0)
+        self.assertEqual(ar3['count'], 0)
+        self.assertEqual(ar3['message'], 'Error: invalid artist ID provided')
 
         # no id case
-        artist4, success4 = scrape_artist(None)
-        self.assertFalse(success4)
-        self.assertIsNone(artist4)
+        ar4 = scrape_artist(None)
+        self.assertFalse(ar4['success'])
+        self.assertEqual(len(ar4['data']['artist']), 0)
+        self.assertEqual(ar4['count'], 0)
+        self.assertEqual(ar4['message'], 'Error: invalid artist ID provided')
 
-        # existing object case
+        # existing object with missing data case
         id5 = 1072157
-        artist = Artist.objects.get(beatport_artist_id=id5)
-        self.assertIsNone(artist.name)
-        self.assertFalse(artist.public)
-        artist5, success5 = scrape_artist(id5)
-        self.assertTrue(success5)
-        self.assertEqual(artist, artist5)
-        self.assertEqual(artist5.name, 'Mau P')
-        self.assertTrue(artist5.public)
+        artist5 = Artist.objects.get(beatport_artist_id=id5)
+        self.assertIsNone(artist5.name)
+        self.assertFalse(artist5.public)
+        ar5 = scrape_artist(id5)
+        self.assertTrue(ar5['success'])
+        self.assertEqual(list(ar5['data']['artist'].values())[0]['name'], 'Mau P')
+        self.assertEqual(ar5['count'], 1)
+        self.assertEqual(ar5['message'], 'Artist data scraped: Mau P')
 
-        # public with missing data
-        id6 = 325252
-        artist = Artist.objects.get(beatport_artist_id=id6)
-        self.assertIsNone(artist.name)
-        self.assertTrue(artist.public)
-        artist6, success6 = scrape_artist(id6)
-        self.assertTrue(success6)
-        self.assertEqual(artist, artist6)
-        self.assertEqual(artist6.name, 'Dennis Cruz')
+        # existing object with complete data case
+        id6 = 460053
+        artist6 = Artist.objects.get(beatport_artist_id=id6)
+        self.assertIsNotNone(artist6.name)
         self.assertTrue(artist6.public)
+        ar6 = scrape_artist(id6)
+        self.assertTrue(ar6['success'])
+        self.assertEqual(len(ar6['data']['artist']), 0)
+        self.assertEqual(ar6['count'], 0)
+        self.assertEqual(ar6['message'], 'Process Skipped: artist is already populated')
+
+        # existing object with 404
+        artist7 = Artist404.objects.first()
+        ar7 = scrape_artist(artist7.beatport_artist_id)
+        self.assertTrue(ar7['success'])
+        self.assertEqual(len(ar7['data']['artist']), 0)
+        self.assertEqual(ar7['count'], 0)
+        self.assertEqual(ar7['message'], 'Process Skipped: artist is marked as 404')
 
     def test_scrape_genre(self):
 
