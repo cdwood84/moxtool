@@ -1,4 +1,8 @@
-from catalog.models import Artist, Artist404, ArtistBacklog, ArtistRequest, Genre, Genre404, GenreBacklog, GenreRequest, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, TrackRequest, Transition, metadata_action_status
+from catalog.models import Artist, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, Transition
+from catalog.models import Artist404, Genre404, Label404, Track404
+from catalog.models import ArtistBacklog, GenreBacklog, LabelBacklog, TrackBacklog
+# from catalog.models import ArtistRequest, GenreRequest, TrackRequest
+from catalog.models import metadata_action_status
 from catalog.tests.mixins import CatalogTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q

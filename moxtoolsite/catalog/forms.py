@@ -1,8 +1,10 @@
+from catalog.models import Artist, Genre, Label, Playlist, Track, TrackInstance
+from catalog.models import Artist404, Genre404, Label404, Track404
+from catalog.models import ArtistBacklog, GenreBacklog, LabelBacklog, TrackBacklog
 from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Artist, Artist404, ArtistBacklog, Genre, Genre404, GenreBacklog, Label, Label404, LabelBacklog, Playlist, Track, Track404, TrackBacklog, TrackInstance
 import datetime
 
 

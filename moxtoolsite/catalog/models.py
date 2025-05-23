@@ -1077,127 +1077,127 @@ class UserRequestPermissionManager(models.Manager):
         return ', '.join(str(obj) for obj in self.get_queryset_can_view(user))
     
 
-class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
-    beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata', null=True)
-    name = models.CharField(max_length=200, null=True)
-    public = models.BooleanField(default=False)
-    date_requested = models.DateField(null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
-    objects = UserRequestPermissionManager()
+# class ArtistRequest(RequestMixin, models.Model, SharedModelMixin, ArtistMixin):
+#     beatport_artist_id = models.BigIntegerField('Beatport Artist ID', help_text='Artist ID from Beatport, found in the artist URL, which can be used to populate metadata', null=True)
+#     name = models.CharField(max_length=200, null=True)
+#     public = models.BooleanField(default=False)
+#     date_requested = models.DateField(null=True, blank=True)
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+#     artist = models.ForeignKey('Artist', on_delete=models.RESTRICT, null=True)
+#     objects = UserRequestPermissionManager()
 
-    def get_absolute_url(self):
-        if self.name:
-            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        else:
-            url_friendly_name = 'tbd'
-        return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
+#     def get_absolute_url(self):
+#         if self.name:
+#             url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+#         else:
+#             url_friendly_name = 'tbd'
+#         return reverse('artist-request-detail', args=[str(self.id), url_friendly_name])
     
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=Q(beatport_artist_id__isnull=False) | Q(name__isnull=False),
-                name='request_artist_name_or_beatport_id_is_not_null'
-            ),
-        ]
-        ordering = [
-            'date_requested',
-            'name',
-        ]
-        permissions = (
-            ('moxtool_can_create_own_artistrequest', 'ArtistRequest - Create Own - DJ'),
-            ('moxtool_can_create_any_artistrequest', 'ArtistRequest - Create Any - MOX'),
-            ('moxtool_can_view_own_artistrequest', 'ArtistRequest - View Own - DJ'),
-            ('moxtool_can_view_any_artistrequest', 'ArtistRequest - View Any - MOX'),
-            ('moxtool_can_modify_own_artistrequest', 'ArtistRequest - Modify Own - DJ'),
-            ('moxtool_can_modify_any_artistrequest', 'ArtistRequest - Modify Any - MOX'),
-        )
+#     class Meta:
+#         constraints = [
+#             models.CheckConstraint(
+#                 check=Q(beatport_artist_id__isnull=False) | Q(name__isnull=False),
+#                 name='request_artist_name_or_beatport_id_is_not_null'
+#             ),
+#         ]
+#         ordering = [
+#             'date_requested',
+#             'name',
+#         ]
+#         permissions = (
+#             ('moxtool_can_create_own_artistrequest', 'ArtistRequest - Create Own - DJ'),
+#             ('moxtool_can_create_any_artistrequest', 'ArtistRequest - Create Any - MOX'),
+#             ('moxtool_can_view_own_artistrequest', 'ArtistRequest - View Own - DJ'),
+#             ('moxtool_can_view_any_artistrequest', 'ArtistRequest - View Any - MOX'),
+#             ('moxtool_can_modify_own_artistrequest', 'ArtistRequest - Modify Own - DJ'),
+#             ('moxtool_can_modify_any_artistrequest', 'ArtistRequest - Modify Any - MOX'),
+#         )
 
 
-class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
-    beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
-    name = models.CharField(max_length=200, null=True)
-    public = models.BooleanField(default=False)
-    date_requested = models.DateField(null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    objects = UserRequestPermissionManager()
+# class GenreRequest(RequestMixin, models.Model, SharedModelMixin, GenreMixin):
+#     beatport_genre_id = models.BigIntegerField('Beatport Genre ID', help_text='Genre ID from Beatport, found in the genre URL, which can be used to populate metadata', null=True)
+#     name = models.CharField(max_length=200, null=True)
+#     public = models.BooleanField(default=False)
+#     date_requested = models.DateField(null=True, blank=True)
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+#     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+#     objects = UserRequestPermissionManager()
 
-    def get_absolute_url(self):
-        if self.name:
-            url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
-        else:
-            url_friendly_name = 'tbd'
-        return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
+#     def get_absolute_url(self):
+#         if self.name:
+#             url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
+#         else:
+#             url_friendly_name = 'tbd'
+#         return reverse('genre-request-detail', args=[str(self.id), url_friendly_name])
     
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
-                name='request_genre_name_or_beatport_id_is_not_null'
-            ),
-        ]
-        ordering = [
-            'date_requested',
-            'name',
-        ]
-        permissions = (
-            ('moxtool_can_create_own_genrerequest', 'GenreRequest - Create Own - DJ'),
-            ('moxtool_can_create_any_genrerequest', 'GenreRequest - Create Any - MOX'),
-            ('moxtool_can_view_own_genrerequest', 'GenreRequest - View Own - DJ'),
-            ('moxtool_can_view_any_genrerequest', 'GenreRequest - View Any - MOX'),
-            ('moxtool_can_modify_own_genrerequest', 'GenreRequest - Modify Own - DJ'),
-            ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
-        )
+#     class Meta:
+#         constraints = [
+#             models.CheckConstraint(
+#                 check=Q(beatport_genre_id__isnull=False) | Q(name__isnull=False),
+#                 name='request_genre_name_or_beatport_id_is_not_null'
+#             ),
+#         ]
+#         ordering = [
+#             'date_requested',
+#             'name',
+#         ]
+#         permissions = (
+#             ('moxtool_can_create_own_genrerequest', 'GenreRequest - Create Own - DJ'),
+#             ('moxtool_can_create_any_genrerequest', 'GenreRequest - Create Any - MOX'),
+#             ('moxtool_can_view_own_genrerequest', 'GenreRequest - View Own - DJ'),
+#             ('moxtool_can_view_any_genrerequest', 'GenreRequest - View Any - MOX'),
+#             ('moxtool_can_modify_own_genrerequest', 'GenreRequest - Modify Own - DJ'),
+#             ('moxtool_can_modify_any_genrerequest', 'GenreRequest - Modify Any - MOX'),
+#         )
 
 #wip
 # class LabelRequest(RequestMixin, models.Model, SharedModelMixin, LabelMixin):
 
 
-class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
-    beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
-    title = models.CharField(max_length=200, null=True)
-    mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
-    artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
-    remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist")
-    genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
-    label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
-    length = models.CharField(max_length=5, null=True)
-    released = models.DateField(null=True)
-    bpm = models.IntegerField(null=True)
-    key = models.CharField(max_length=8, null=True)
-    public = models.BooleanField(default=False)
-    date_requested = models.DateField(null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
-    objects = UserRequestPermissionManager()
+# class TrackRequest(RequestMixin, models.Model, SharedModelMixin, TrackMixin):
+#     beatport_track_id = models.BigIntegerField('Beatport Track ID', help_text='Track ID from Beatport, found in the track URL, which can be used to populate metadata', null=True)
+#     title = models.CharField(max_length=200, null=True)
+#     mix = models.CharField(max_length=200, help_text='The mix version of the track (e.g. Original Mix, Remix, etc.)', null=True)
+#     artist = models.ManyToManyField(Artist, help_text="Select an artist for this track", related_name="request_artist")
+#     remix_artist = models.ManyToManyField(Artist, help_text="Select a remix artist for this track", related_name="request_remix_artist")
+#     genre = models.ForeignKey('Genre', on_delete=models.RESTRICT, null=True)
+#     label = models.ForeignKey('Label', on_delete=models.RESTRICT, null=True)
+#     length = models.CharField(max_length=5, null=True)
+#     released = models.DateField(null=True)
+#     bpm = models.IntegerField(null=True)
+#     key = models.CharField(max_length=8, null=True)
+#     public = models.BooleanField(default=False)
+#     date_requested = models.DateField(null=True, blank=True)
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+#     track = models.ForeignKey('Track', on_delete=models.RESTRICT, null=True)
+#     objects = UserRequestPermissionManager()
 
-    def get_absolute_url(self):
-        if self.title:
-            url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
-        else:
-            url_friendly_title = 'tbd'
-        return reverse('track-request-detail', args=[str(self.id), url_friendly_title])
+#     def get_absolute_url(self):
+#         if self.title:
+#             url_friendly_title = re.sub(r'[^a-zA-Z0-9]', '_', self.title.lower())
+#         else:
+#             url_friendly_title = 'tbd'
+#         return reverse('track-request-detail', args=[str(self.id), url_friendly_title])
     
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
-                name='request_track_title_or_beatport_id_is_not_null'
-            ),
-        ]
-        ordering = [
-            'date_requested',
-            'title',
-        ]
-        permissions = (
-            ('moxtool_can_create_own_trackrequest', 'TrackRequest - Create Own - DJ'),
-            ('moxtool_can_create_any_trackrequest', 'TrackRequest - Create Any - MOX'),
-            ('moxtool_can_view_own_trackrequest', 'TrackRequest - View Own - DJ'),
-            ('moxtool_can_view_any_trackrequest', 'TrackRequest - View Any - MOX'),
-            ('moxtool_can_modify_own_trackrequest', 'TrackRequest - Modify Own - DJ'),
-            ('moxtool_can_modify_any_trackrequest', 'TrackRequest - Modify Any - MOX'),
-        )
+#     class Meta:
+#         constraints = [
+#             models.CheckConstraint(
+#                 check=Q(beatport_track_id__isnull=False) | Q(title__isnull=False),
+#                 name='request_track_title_or_beatport_id_is_not_null'
+#             ),
+#         ]
+#         ordering = [
+#             'date_requested',
+#             'title',
+#         ]
+#         permissions = (
+#             ('moxtool_can_create_own_trackrequest', 'TrackRequest - Create Own - DJ'),
+#             ('moxtool_can_create_any_trackrequest', 'TrackRequest - Create Any - MOX'),
+#             ('moxtool_can_view_own_trackrequest', 'TrackRequest - View Own - DJ'),
+#             ('moxtool_can_view_any_trackrequest', 'TrackRequest - View Any - MOX'),
+#             ('moxtool_can_modify_own_trackrequest', 'TrackRequest - Modify Own - DJ'),
+#             ('moxtool_can_modify_any_trackrequest', 'TrackRequest - Modify Any - MOX'),
+#         )
 
 
 # user models
