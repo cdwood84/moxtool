@@ -20,6 +20,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_artist_id = 325252,
             public = True,
         )
+        Artist404.objects.create(beatport_artist_id=4300000)
+        ArtistBacklog.objects.create(beatport_artist_id=124254)
         Genre.objects.create(
             beatport_genre_id = 5,
             public = False,
@@ -28,6 +30,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_genre_id = 12,
             public = True,
         )
+        Genre404.objects.create(beatport_genre_id=4500000)
+        GenreBacklog.objects.create(beatport_genre_id=90)
         Label.objects.create(
             beatport_label_id = 2752,
             public = False,
@@ -36,6 +40,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_label_id = 23732,
             public = True,
         )
+        Label404.objects.create(beatport_label_id=2500000)
+        LabelBacklog.objects.create(beatport_label_id=73662)
         Track.objects.create(
             beatport_track_id = 20085129,
             mix = 'Original Mix',
@@ -49,6 +55,7 @@ class ScrapingUtilsTest(TestCase):
             public = True,
         )
         Track404.objects.create(beatport_track_id=1900504)
+        TrackBacklog.objects.create(beatport_track_id=19407238)
 
     # functions
 
