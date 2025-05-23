@@ -6,6 +6,7 @@ from catalog.utils import object_model_processor, process_artist, process_genre,
 from catalog.utils import object_model_scraper, scrape_artist, scrape_genre, scrape_label, scrape_track, random_scraper
 from datetime import date
 from django.test import TestCase
+from django.utils import timezone
 from requests.exceptions import HTTPError
 
 
@@ -20,8 +21,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_artist_id = 325252,
             public = True,
         )
-        Artist404.objects.create(beatport_artist_id=4300000)
-        ArtistBacklog.objects.create(beatport_artist_id=124254)
+        Artist404.objects.create(beatport_artist_id=4300000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 5, 17, 33, 2), timezone=timezone.get_fixed_timezone(0)))
+        ArtistBacklog.objects.create(beatport_artist_id=124254, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 2, 3, 12, 55, 59), timezone=timezone.get_fixed_timezone(0)))
         Genre.objects.create(
             beatport_genre_id = 5,
             public = False,
@@ -30,8 +31,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_genre_id = 12,
             public = True,
         )
-        Genre404.objects.create(beatport_genre_id=4500000)
-        GenreBacklog.objects.create(beatport_genre_id=90)
+        Genre404.objects.create(beatport_genre_id=4500000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 8, 4, 6, 59, 59), timezone=timezone.get_fixed_timezone(0)))
+        GenreBacklog.objects.create(beatport_genre_id=90, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 31, 23, 59, 59), timezone=timezone.get_fixed_timezone(0)))
         Label.objects.create(
             beatport_label_id = 2752,
             public = False,
@@ -40,8 +41,8 @@ class ScrapingUtilsTest(TestCase):
             beatport_label_id = 23732,
             public = True,
         )
-        Label404.objects.create(beatport_label_id=2500000)
-        LabelBacklog.objects.create(beatport_label_id=73662)
+        Label404.objects.create(beatport_label_id=2500000, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 1, 31, 20, 30, 21), timezone=timezone.get_fixed_timezone(0)))
+        LabelBacklog.objects.create(beatport_label_id=73662, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 3, 14, 10, 1, 9), timezone=timezone.get_fixed_timezone(0)))
         Track.objects.create(
             beatport_track_id = 20085129,
             mix = 'Original Mix',
@@ -54,10 +55,10 @@ class ScrapingUtilsTest(TestCase):
             mix = 'Original Mix',
             public = True,
         )
-        Track404.objects.create(beatport_track_id=1900504)
-        TrackBacklog.objects.create(beatport_track_id=19407238)
+        Track404.objects.create(beatport_track_id=1900504, datetime_discovered=timezone.make_aware(timezone.datetime(2020, 2, 1, 22, 14, 17), timezone=timezone.get_fixed_timezone(0)))
+        TrackBacklog.objects.create(beatport_track_id=19407238, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 5, 1, 7, 44, 18), timezone=timezone.get_fixed_timezone(0)))
 
-    # functions
+    # utility functions
 
     def test_get_soup(self):
 
@@ -77,6 +78,8 @@ class ScrapingUtilsTest(TestCase):
                 soup = get_soup('http://www.beatport.com/label/records/1')
             except HTTPError as e:
                 raise HTTPError(str(e)[:3])
+
+    # scraping functions
 
     def test_scrape_artist(self):
 
@@ -343,3 +346,26 @@ class ScrapingUtilsTest(TestCase):
         self.assertNotEqual(message2, 'No new tracks found')
         track_count2 = Track.objects.all().count()
         self.assertNotEqual(track_count1, track_count2)
+
+    def test_object_model_scraper(self):
+
+        # base case with good data for each model type
+        data_to_test = [
+            {'object_name': 'artist','id': 786170},
+            {'object_name': 'genre','id': 8, 'text': None},
+            {'object_name': 'label','id': 17532},
+            {'object_name': 'track','id': 5009324, 'text': 'Vibes Up'},
+        ]
+        for data in data_to_test:
+            if 'text' in data:
+                result = object_model_scraper(data['object_name'], data['id'], data['text'])
+            else:
+                result = object_model_scraper(data['object_name'], data['id'])
+            self.assertTrue(result['success'])
+            self.assertTrue(data['object_name'] in result['data'])
+            self.assertEqual(result['count'], 1)
+            self.assertTrue(result['message'].lower().startswith(data['object_name']))
+
+        # case of invalid object name
+        bad_result = object_model_scraper('dj', 1)
+        self.assertIsNone(bad_result)
