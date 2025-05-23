@@ -31,6 +31,30 @@ class UtilityFunctionsTest(TestCase, UtilsTestMixin):
         bad_lookup = object_lookup('dj')
         self.assertEqual(len(bad_lookup), 0)
 
+    def test_convert_url(self):
+        http_url = 'http://mox.rox'
+        https_url = 'https://enter.this'
+
+        # case of http to https
+        url1 = convert_url(http_url, True)
+        self.assertEqual(url1, 'https://mox.rox')
+
+        # case of https to http
+        url2 = convert_url(https_url, False)
+        self.assertEqual(url2, 'http://enter.this')
+
+        # case of http to https, default s value
+        url3 = convert_url(http_url)
+        self.assertEqual(url3, 'https://mox.rox')
+
+        # case of http to http (no change)
+        url4 = convert_url(http_url, False)
+        self.assertEqual(url4, http_url)
+
+        # case of https to https (no change)
+        url5 = convert_url(https_url, True)
+        self.assertEqual(url5, https_url)
+
     def test_cleanup404(self):
         test_objects = ['artist', 'genre', 'label', 'track']
         for object_name in test_objects:
