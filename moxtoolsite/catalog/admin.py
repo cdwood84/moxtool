@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition
+from catalog.models import Artist, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, Transition
+from catalog.models import Artist404, Genre404, Label404, Track404
+from catalog.models import ArtistBacklog, GenreBacklog, LabelBacklog, TrackBacklog
+# from catalog.models ArtistRequest, GenreRequest, TrackRequest
 
 
 @admin.register(Artist)
@@ -8,10 +11,22 @@ class ArtistAdmin(admin.ModelAdmin):
     list_filter = ['public']
 
 
-@admin.register(ArtistRequest)
-class ArtistRequestAdmin(admin.ModelAdmin):
-    list_display = ['artist', 'beatport_artist_id', 'name']
-    list_filter = ['user', 'date_requested']
+@admin.register(Artist404)
+class Artist404Admin(admin.ModelAdmin):
+    list_display = ['beatport_artist_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
+
+
+@admin.register(ArtistBacklog)
+class ArtistBacklogAdmin(admin.ModelAdmin):
+    list_display = ['beatport_artist_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
+
+
+# @admin.register(ArtistRequest)
+# class ArtistRequestAdmin(admin.ModelAdmin):
+#     list_display = ['artist', 'beatport_artist_id', 'name']
+#     list_filter = ['user', 'date_requested']
 
 
 @admin.register(Genre)
@@ -20,16 +35,40 @@ class GenreAdmin(admin.ModelAdmin):
     list_filter = ['public']
 
 
-@admin.register(GenreRequest)
-class GenreRequestAdmin(admin.ModelAdmin):
-    list_display = ['genre', 'beatport_genre_id', 'name']
-    list_filter = ['user', 'date_requested']
+@admin.register(Genre404)
+class Genre404Admin(admin.ModelAdmin):
+    list_display = ['beatport_genre_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
+
+
+@admin.register(GenreBacklog)
+class GenreBacklogAdmin(admin.ModelAdmin):
+    list_display = ['beatport_genre_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
+
+
+# @admin.register(GenreRequest)
+# class GenreRequestAdmin(admin.ModelAdmin):
+#     list_display = ['genre', 'beatport_genre_id', 'name']
+#     list_filter = ['user', 'date_requested']
 
 
 @admin.register(Label)
 class LabelAdmin(admin.ModelAdmin):
     list_display = ['name', 'public']
     list_filter = ['public']
+
+
+@admin.register(Label404)
+class Label404Admin(admin.ModelAdmin):
+    list_display = ['beatport_label_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
+
+
+@admin.register(LabelBacklog)
+class LabelBacklogAdmin(admin.ModelAdmin):
+    list_display = ['beatport_label_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
 
 
 # @admin.register(LabelRequest)
@@ -81,14 +120,21 @@ class TrackAdmin(admin.ModelAdmin):
 
 
 @admin.register(Track404)
-class TrackAdmin(admin.ModelAdmin):
-    list_display = ['beatport_track_id']
+class Track404Admin(admin.ModelAdmin):
+    list_display = ['beatport_track_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered']
 
 
-@admin.register(TrackRequest)
-class TrackRequestAdmin(admin.ModelAdmin):
-    list_display = ['track', 'beatport_track_id', 'title', 'mix']
-    list_filter = ['user', 'date_requested']
+@admin.register(TrackBacklog)
+class TrackBacklogAdmin(admin.ModelAdmin):
+    list_display = ['beatport_track_id', 'datetime_discovered']
+    list_filter = ['datetime_discovered', 'users']
+
+
+# @admin.register(TrackRequest)
+# class TrackRequestAdmin(admin.ModelAdmin):
+#     list_display = ['track', 'beatport_track_id', 'title', 'mix']
+#     list_filter = ['user', 'date_requested']
 
 
 @admin.register(TrackInstance)

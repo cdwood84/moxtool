@@ -1,8 +1,11 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackInstance, TrackRequest, Transition
+from catalog.models import Artist, Artist404, ArtistBacklog, Genre, Genre404, GenreBacklog, Label, Label404, LabelBacklog, Playlist, SetList, SetListItem, Tag, Track, Track404, TrackBacklog, TrackInstance, Transition
+# from catalog.models import ArtistRequest, GenreRequest, TrackRequest
 from datetime import date, time
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
+import datetime
 
 
 class CatalogTestMixin:
@@ -39,76 +42,82 @@ class CatalogTestMixin:
         Artist.objects.create(name='EnterTheMox', public=True)
         Artist.objects.create(beatport_artist_id=402072, public=False)
         Artist.objects.create(name='m4ri55a', public=False)
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=1),
-            public=True,
-            name='Caution Tape',
-            user=users['dj'],
-            date_requested=date(2017, 4, 30),
-        )
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=2),
-            public=True,
-            name='Max Styler',
-            user=users['dj'],
-            date_requested=date(2025, 3, 14),
-        )
-        ArtistRequest.objects.create(
-            public=True,
-            name='Alivera7',
-            user=users['admin'],
-            date_requested=date(2025, 3, 26),
-        )
-        ArtistRequest.objects.create(
-            artist=Artist.objects.get(id=1),
-            public=Artist.objects.get(id=1).public,
-            name=Artist.objects.get(id=1).name,
-            user=users['dj'],
-            date_requested=date(2025, 1, 1),
-        )
-        ArtistRequest.objects.create(
-            public=Artist.objects.get(id=1).public,
-            name=Artist.objects.get(id=1).name,
-            user=users['dj'],
-            date_requested=date(2024, 8, 4),
-        )
+        Artist404.objects.create(beatport_artist_id=98137192719823, datetime_discovered=datetime.datetime(2019,8,4,6,59,59))
+        ArtistBacklog.objects.create(beatport_artist_id=84, datetime_discovered=datetime.datetime(2019,8,5,6,59,59))
+        # ArtistRequest.objects.create(
+        #     artist=Artist.objects.get(id=1),
+        #     public=True,
+        #     name='Caution Tape',
+        #     user=users['dj'],
+        #     date_requested=date(2017, 4, 30),
+        # )
+        # ArtistRequest.objects.create(
+        #     artist=Artist.objects.get(id=2),
+        #     public=True,
+        #     name='Max Styler',
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 14),
+        # )
+        # ArtistRequest.objects.create(
+        #     public=True,
+        #     name='Alivera7',
+        #     user=users['admin'],
+        #     date_requested=date(2025, 3, 26),
+        # )
+        # ArtistRequest.objects.create(
+        #     artist=Artist.objects.get(id=1),
+        #     public=Artist.objects.get(id=1).public,
+        #     name=Artist.objects.get(id=1).name,
+        #     user=users['dj'],
+        #     date_requested=date(2025, 1, 1),
+        # )
+        # ArtistRequest.objects.create(
+        #     public=Artist.objects.get(id=1).public,
+        #     name=Artist.objects.get(id=1).name,
+        #     user=users['dj'],
+        #     date_requested=date(2024, 8, 4),
+        # )
         Genre.objects.create(name='House', public=True)
         Genre.objects.create(beatport_genre_id=6, public=False)
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=1),
-            public=True,
-            name='Hau5',
-            user=users['dj'],
-            date_requested=date(2020, 2, 28),
-        )
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=2),
-            public=True,
-            name='Techno',
-            user=users['dj'],
-            date_requested=date(2025, 3, 1),
-        )
-        GenreRequest.objects.create(
-            public=True,
-            beatport_genre_id=7,
-            user=users['admin'],
-            date_requested=date(2025, 3, 26),
-        )
-        GenreRequest.objects.create(
-            genre=Genre.objects.get(id=1),
-            public=Genre.objects.get(id=1).public,
-            name=Genre.objects.get(id=1).name,
-            user=users['dj'],
-            date_requested=date(2025, 2, 3),
-        )
-        GenreRequest.objects.create(
-            public=Genre.objects.get(id=1).public,
-            name=Genre.objects.get(id=1).name,
-            user=users['dj'],
-            date_requested=date(2024, 12, 31),
-        )
+        Genre404.objects.create(beatport_genre_id=999, datetime_discovered=datetime.datetime(2020,3,1,11,59,59))
+        GenreBacklog.objects.create(beatport_genre_id=20, datetime_discovered=datetime.datetime(2020,3,2,11,59,59))
+        # GenreRequest.objects.create(
+        #     genre=Genre.objects.get(id=1),
+        #     public=True,
+        #     name='Hau5',
+        #     user=users['dj'],
+        #     date_requested=date(2020, 2, 28),
+        # )
+        # GenreRequest.objects.create(
+        #     genre=Genre.objects.get(id=2),
+        #     public=True,
+        #     name='Techno',
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 1),
+        # )
+        # GenreRequest.objects.create(
+        #     public=True,
+        #     beatport_genre_id=7,
+        #     user=users['admin'],
+        #     date_requested=date(2025, 3, 26),
+        # )
+        # GenreRequest.objects.create(
+        #     genre=Genre.objects.get(id=1),
+        #     public=Genre.objects.get(id=1).public,
+        #     name=Genre.objects.get(id=1).name,
+        #     user=users['dj'],
+        #     date_requested=date(2025, 2, 3),
+        # )
+        # GenreRequest.objects.create(
+        #     public=Genre.objects.get(id=1).public,
+        #     name=Genre.objects.get(id=1).name,
+        #     user=users['dj'],
+        #     date_requested=date(2024, 12, 31),
+        # )
         Label.objects.create(name='Cautionary Tapes', public=True)
         Label.objects.create(beatport_label_id=586, public=False)
+        Label404.objects.create(beatport_label_id=28347239833, datetime_discovered=datetime.datetime(2025,4,1,0,0,1))
+        LabelBacklog.objects.create(beatport_label_id=100, datetime_discovered=datetime.datetime(2025,4,2,0,0,1))
         Track.objects.create(
             title='Not in my Haus', 
             genre=Genre.objects.get(id=1),
@@ -139,63 +148,65 @@ class CatalogTestMixin:
         )
         Track.objects.get(id=4).artist.set(Artist.objects.filter(id=1))
         Track.objects.get(id=4).remix_artist.set(Artist.objects.filter(id=2))
-        Track404.objects.create(beatport_track_id=1900504)
-        TrackRequest.objects.create(
-            track=Track.objects.get(beatport_track_id=20079434),
-            beatport_track_id=20079434,
-            title='I Know You Want To',
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=users['dj'],
-            date_requested=date(2025, 3, 1),
-        )
-        TrackRequest.objects.get(beatport_track_id=20079434).artist.add(Artist.objects.get(beatport_artist_id=402072))
-        TrackRequest.objects.create(
-            track=Track.objects.get(id=2),
-            beatport_track_id=Track.objects.get(id=2).beatport_track_id,
-            title=Track.objects.get(id=2).title,
-            genre=Track.objects.get(id=2).genre,
-            mix=Track.objects.get(id=2).mix,
-            public=not(Track.objects.get(id=2).public),
-            user=users['dj'],
-            date_requested=date(2025, 3, 2),
-        )
-        TrackRequest.objects.get(id=2).artist.set(Track.objects.get(id=2).artist.all())
-        TrackRequest.objects.get(id=2).remix_artist.set(Track.objects.get(id=2).remix_artist.all())
-        TrackRequest.objects.create(
-            beatport_track_id=2384,
-            title='0ur Hau5',
-            genre=Genre.objects.get(id=1),
-            mix='o',
-            public=False,
-            user=users['admin'],
-            date_requested=date(2025, 3, 3),
-        )
-        TrackRequest.objects.get(id=3).artist.set(Artist.objects.filter(id__lt=2))
-        TrackRequest.objects.create(
-            track=Track.objects.get(id=1),
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title=Track.objects.get(id=1).title,
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=users['dj'],
-            date_requested=date(2025, 3, 4),
-        )
-        TrackRequest.objects.get(id=4).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=4).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
-        TrackRequest.objects.create(
-            beatport_track_id=Track.objects.get(id=1).beatport_track_id,
-            title=Track.objects.get(id=1).title,
-            genre=Track.objects.get(id=1).genre,
-            mix=Track.objects.get(id=1).mix,
-            public=Track.objects.get(id=1).public,
-            user=users['dj'],
-            date_requested=date(2025, 3, 5),
-        )
-        TrackRequest.objects.get(id=5).artist.set(Track.objects.get(id=1).artist.all())
-        TrackRequest.objects.get(id=5).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+        Track404.objects.create(beatport_track_id=1900504, datetime_discovered=datetime.datetime(2025,1,1,9,15,0))
+        TrackBacklog.objects.create(beatport_track_id=19143493, datetime_discovered=datetime.datetime(2025,1,2,9,15,0))
+        TrackBacklog.objects.get(id=1).users.add(users['dj'])
+        # TrackRequest.objects.create(
+        #     track=Track.objects.get(beatport_track_id=20079434),
+        #     beatport_track_id=20079434,
+        #     title='I Know You Want To',
+        #     genre=Track.objects.get(id=1).genre,
+        #     mix=Track.objects.get(id=1).mix,
+        #     public=Track.objects.get(id=1).public,
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 1),
+        # )
+        # TrackRequest.objects.get(beatport_track_id=20079434).artist.add(Artist.objects.get(beatport_artist_id=402072))
+        # TrackRequest.objects.create(
+        #     track=Track.objects.get(id=2),
+        #     beatport_track_id=Track.objects.get(id=2).beatport_track_id,
+        #     title=Track.objects.get(id=2).title,
+        #     genre=Track.objects.get(id=2).genre,
+        #     mix=Track.objects.get(id=2).mix,
+        #     public=not(Track.objects.get(id=2).public),
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 2),
+        # )
+        # TrackRequest.objects.get(id=2).artist.set(Track.objects.get(id=2).artist.all())
+        # TrackRequest.objects.get(id=2).remix_artist.set(Track.objects.get(id=2).remix_artist.all())
+        # TrackRequest.objects.create(
+        #     beatport_track_id=2384,
+        #     title='0ur Hau5',
+        #     genre=Genre.objects.get(id=1),
+        #     mix='o',
+        #     public=False,
+        #     user=users['admin'],
+        #     date_requested=date(2025, 3, 3),
+        # )
+        # TrackRequest.objects.get(id=3).artist.set(Artist.objects.filter(id__lt=2))
+        # TrackRequest.objects.create(
+        #     track=Track.objects.get(id=1),
+        #     beatport_track_id=Track.objects.get(id=1).beatport_track_id,
+        #     title=Track.objects.get(id=1).title,
+        #     genre=Track.objects.get(id=1).genre,
+        #     mix=Track.objects.get(id=1).mix,
+        #     public=Track.objects.get(id=1).public,
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 4),
+        # )
+        # TrackRequest.objects.get(id=4).artist.set(Track.objects.get(id=1).artist.all())
+        # TrackRequest.objects.get(id=4).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
+        # TrackRequest.objects.create(
+        #     beatport_track_id=Track.objects.get(id=1).beatport_track_id,
+        #     title=Track.objects.get(id=1).title,
+        #     genre=Track.objects.get(id=1).genre,
+        #     mix=Track.objects.get(id=1).mix,
+        #     public=Track.objects.get(id=1).public,
+        #     user=users['dj'],
+        #     date_requested=date(2025, 3, 5),
+        # )
+        # TrackRequest.objects.get(id=5).artist.set(Track.objects.get(id=1).artist.all())
+        # TrackRequest.objects.get(id=5).remix_artist.set(Track.objects.get(id=1).remix_artist.all())
         Tag.objects.create(
             type='s',
             value='Saxophone',

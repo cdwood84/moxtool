@@ -1,4 +1,5 @@
-from catalog.models import Artist, ArtistRequest, Genre, GenreRequest, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, TrackRequest, Transition
+from catalog.models import Artist, Genre, Label, Playlist, SetList, SetListItem, Tag, Track, TrackInstance, Transition
+# from catalog.models import ArtistRequest, GenreRequest, TrackRequest
 from catalog.forms import AddTrackToLibraryForm, AddTrackToPlaylistForm, BulkUploadForm, PlaylistForm
 from catalog.utils import random_scraper
 from django.apps import apps
@@ -150,7 +151,7 @@ def bulk_upload(request, obj_name):
             print(success)
             if success is True:
                 # find additional data
-                print(random_scraper(1))
+                # print(random_scraper(1))
                 return HttpResponseRedirect(reverse('index'))
             else:
                 print('Invalid form')
@@ -208,14 +209,14 @@ class ArtistDetailView(LoginRequiredMixin, generic.DetailView):
         return Artist.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
-class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
-    model = ArtistRequest
-    context_object_name = 'artistrequest'
-    template_name = "catalog/artist_request_detail.html"
+# class ArtistRequestDetailView(LoginRequiredMixin, generic.DetailView):
+#     model = ArtistRequest
+#     context_object_name = 'artistrequest'
+#     template_name = "catalog/artist_request_detail.html"
     
-    def get_object(self):
-        pk = self.kwargs.get(self.pk_url_kwarg)
-        return ArtistRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+#     def get_object(self):
+#         pk = self.kwargs.get(self.pk_url_kwarg)
+#         return ArtistRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
 
 
 # genre
@@ -261,14 +262,14 @@ class GenreDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
-    model = GenreRequest
-    context_object_name = 'genrerequest'
-    template_name = "catalog/genre_reequest_detail.html"
+# class GenreRequestDetailView(LoginRequiredMixin, generic.DetailView):
+#     model = GenreRequest
+#     context_object_name = 'genrerequest'
+#     template_name = "catalog/genre_reequest_detail.html"
     
-    def get_object(self):
-        pk = self.kwargs.get(self.pk_url_kwarg)
-        return GenreRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+#     def get_object(self):
+#         pk = self.kwargs.get(self.pk_url_kwarg)
+#         return GenreRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
 # label
@@ -425,14 +426,14 @@ class TrackDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
-    model = TrackRequest
-    context_object_name = 'trackrequest'
-    template_name = "catalog/track_request_detail.html"
+# class TrackRequestDetailView(LoginRequiredMixin, generic.DetailView):
+#     model = TrackRequest
+#     context_object_name = 'trackrequest'
+#     template_name = "catalog/track_request_detail.html"
     
-    def get_object(self):
-        pk = self.kwargs.get(self.pk_url_kwarg)
-        return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
+#     def get_object(self):
+#         pk = self.kwargs.get(self.pk_url_kwarg)
+#         return TrackRequest.objects.get_queryset_can_view(self.request.user).get(id=pk)
     
 
 @login_required

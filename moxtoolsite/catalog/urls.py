@@ -13,14 +13,14 @@ urlpatterns = [
     # artist
     path('artists/', views.ArtistListView, name='artists'),
     path('artist/<int:pk>/<str:name>', views.ArtistDetailView.as_view(), name='artist-detail'),
-    path('artistrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),
+    # path('artistrequest/<int:pk>/<str:name>', views.ArtistRequestDetailView.as_view(), name='artist-request-detail'),
     # path('artist/create', views.modify_artist, name='create-artist'),
     # path('artist/modify/<int:pk>', views.modify_artist, name='modify-artist'),
 
     # genre
     path('genres/', views.GenreListView, name='genres'),
     path('genre/<int:pk>/<str:name>', views.GenreDetailView.as_view(), name='genre-detail'),
-    path('genrerequest/<int:pk>/<str:name>', views.GenreRequestDetailView.as_view(), name='genre-request-detail'),
+    # path('genrerequest/<int:pk>/<str:name>', views.GenreRequestDetailView.as_view(), name='genre-request-detail'),
     # path('genre/create', views.modify_genre, name='create-genre'),
     # path('genre/modify/<int:pk>', views.modify_genre, name='modify-genre'),
 
@@ -50,8 +50,8 @@ urlpatterns = [
     # track
     path('tracks/', views.TrackListView, name='tracks'),
     path('track/<int:pk>/<str:title>', views.TrackDetailView.as_view(), name='track-detail'),
-    path('trackrequest/<int:pk>/<str:name>', views.TrackRequestDetailView.as_view(), name='track-request-detail'),
     path('user/tracks/', views.UserTrackInstanceListView, name='user-trackinstances'),
+    # path('trackrequest/<int:pk>/<str:name>', views.TrackRequestDetailView.as_view(), name='track-request-detail'),
     # path('track/create', views.modify_track, name='create-track'),
     # path('track/modify/<int:pk>', views.modify_track, name='modify-track'),
     # re_path(r'^track/(?P<stub>[-\w]+)/(?P<pk>\d+)$', views.TrackDetailView.as_view(), name='track-detail'),
