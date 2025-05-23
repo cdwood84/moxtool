@@ -15,6 +15,53 @@ class UtilityFunctionsTest(TestCase, UtilsTestMixin):
     @classmethod
     def setUpTestData(cls):
         cls.users = cls.create_test_data()
+            
+    def test_object_lookup(self):
+
+        # base case with good data for each model type
+        test_objects = ['artist', 'genre', 'label', 'track']
+        for object_name in test_objects:
+            lookup = object_lookup(object_name)
+            self.assertEqual(str(lookup['model']).lower(), "<class 'catalog.models." + object_name + "'>")
+            self.assertEqual(str(lookup['404']).lower(), "<class 'catalog.models." + object_name + "404'>")
+            self.assertEqual(str(lookup['backlog']).lower(), "<class 'catalog.models." + object_name + "backlog'>")
+            self.assertEqual(str(lookup['id']), 'beatport_' + object_name + '_id')
+
+        # case of invalid object name
+        bad_lookup = object_lookup('dj')
+        self.assertEqual(len(bad_lookup), 0)
+
+    def test_cleanup404(self):
+        test_objects = ['artist', 'genre', 'label', 'track']
+        for object_name in test_objects:
+            lookup = object_lookup(object_name)
+            starting_object_count = lookup['model'].objects.count()
+            starting_backlog_count = lookup['backlog'].objects.count()
+            obj_404 = lookup['404'].objects.first()
+            bad_object = lookup['model'].objects.create(**{lookup['id']: obj_404.get_id()})
+            bad_backlog = lookup['backlog'].objects.create(**{lookup['id']: obj_404.get_id(), 'datetime_discovered': timezone.now()})
+            bad_object_count = lookup['model'].objects.count()
+            bad_backlog_count = lookup['backlog'].objects.count()
+            self.assertEqual(starting_object_count + 1, bad_object_count)
+            self.assertEqual(starting_backlog_count + 1, bad_backlog_count)
+            self.assertEqual(obj_404.get_id(), bad_object.get_field(lookup['id']))
+            self.assertEqual(obj_404.get_id(), bad_backlog.get_id())
+            cleanup404()
+            ending_object_count = lookup['model'].objects.count()
+            ending_backlog_count = lookup['backlog'].objects.count()
+            bad_object_ids = list(lookup['404'].objects.all().values_list(lookup['id'], flat=True))
+            bad_object_count = 0
+            for object in lookup['model'].objects.all():
+                if object.get_field(lookup['id']) in bad_object_ids:
+                    bad_object_count += 1
+            bad_backlog_count = 0
+            for backlog in lookup['backlog'].objects.all():
+                if backlog.get_id() in bad_object_ids:
+                    bad_backlog_count += 1
+            self.assertEqual(starting_object_count, ending_object_count)
+            self.assertEqual(starting_backlog_count, ending_backlog_count)
+            self.assertEqual(bad_object_count, 0)
+            self.assertEqual(bad_backlog_count, 0)
 
     def test_get_soup(self):
 

@@ -6,7 +6,64 @@ from scrapingbee import ScrapingBeeClient
 import datetime, os, random, requests, string, time, traceback
 
 
-# scraping utils
+# utility functions
+
+
+def object_lookup(object_name):
+    lookup = {}
+    if object_name == 'track':
+        lookup['model'] = Track
+        lookup['backlog'] = TrackBacklog
+        lookup['404'] = Track404
+        lookup['id'] = 'beatport_track_id'
+    elif object_name == 'artist':
+        lookup['model'] = Artist
+        lookup['backlog'] = ArtistBacklog
+        lookup['404'] = Artist404
+        lookup['id'] = 'beatport_artist_id'
+    elif object_name == 'genre':
+        lookup['model'] = Genre
+        lookup['backlog'] = GenreBacklog
+        lookup['404'] = Genre404
+        lookup['id'] = 'beatport_genre_id'
+    elif object_name == 'label':
+        lookup['model'] = Label
+        lookup['backlog'] = LabelBacklog
+        lookup['404'] = Label404
+        lookup['id'] = 'beatport_label_id'
+    return lookup 
+
+
+def convert_url(url, s=True):
+    clean_url = url
+    if url.startswith('http://') and s == True:
+        clean_url = 'https://' + url.replace('http://', '', 1)
+    elif url.startswith('https://') and s == False:
+        clean_url = 'http://' + url.replace('https://', '', 1)
+    return clean_url
+
+
+def cleanup404():
+
+    # track (first due to FKeys)
+    bad_tracks = list(Track404.objects.all().values_list('beatport_track_id', flat=True))
+    Track.objects.filter(beatport_track_id__in=bad_tracks).delete()
+    TrackBacklog.objects.filter(beatport_track_id__in=bad_tracks).delete()
+
+    # artist
+    bad_artists = list(Artist404.objects.all().values_list('beatport_artist_id', flat=True))
+    Artist.objects.filter(beatport_artist_id__in=bad_artists).delete()
+    ArtistBacklog.objects.filter(beatport_artist_id__in=bad_artists).delete()
+
+    # genre
+    bad_genres = list(Genre404.objects.all().values_list('beatport_genre_id', flat=True))
+    Genre.objects.filter(beatport_genre_id__in=bad_genres).delete()
+    GenreBacklog.objects.filter(beatport_genre_id__in=bad_genres).delete()
+
+    # label
+    bad_labels = list(Label404.objects.all().values_list('beatport_label_id', flat=True))
+    Label.objects.filter(beatport_label_id__in=bad_labels).delete()
+    LabelBacklog.objects.filter(beatport_label_id__in=bad_labels).delete()
 
 
 def object_model_data_checker(object_name, data):
@@ -90,6 +147,15 @@ def object_model_data_checker(object_name, data):
     return True
 
 
+def should_object_be_scraped(object):
+    status = object.metadata_status()
+    if status['add'] == True:
+        object.set_field('public', True)
+    if status['remove'] == True:
+        object.set_field('public', False)
+    return status['scrape']
+
+
 def get_soup(url, iteration_count=0):
     extra_time = iteration_count * 5
     time.sleep(random.randint(2+extra_time, 4+extra_time))
@@ -132,6 +198,9 @@ def get_soup(url, iteration_count=0):
     response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
     return soup
+
+
+# scraping functions
 
 
 def scrape_artist(id, text=None):
@@ -597,6 +666,9 @@ def random_scraper(object_name, lookup):
     return result
 
 
+# processing functions
+
+
 def process_artist(data):
     success = False
     try:
@@ -701,40 +773,6 @@ def object_model_processor(combined_data):
     return True
 
 
-def convert_url(url, s=True):
-    clean_url = url
-    if url.startswith('http://') and s == True:
-        clean_url = 'https://' + url.replace('http://', '', 1)
-    elif url.startswith('https://') and s == False:
-        clean_url = 'http://' + url.replace('https://', '', 1)
-    return clean_url
-
-
-def object_lookup(object_name):
-    lookup = {}
-    if object_name == 'track':
-        lookup['model'] = Track
-        lookup['backlog'] = TrackBacklog
-        lookup['404'] = Track404
-        lookup['id'] = 'beatport_track_id'
-    elif object_name == 'artist':
-        lookup['model'] = Artist
-        lookup['backlog'] = ArtistBacklog
-        lookup['404'] = Artist404
-        lookup['id'] = 'beatport_artist_id'
-    elif object_name == 'genre':
-        lookup['model'] = Genre
-        lookup['backlog'] = GenreBacklog
-        lookup['404'] = Genre404
-        lookup['id'] = 'beatport_genre_id'
-    elif object_name == 'label':
-        lookup['model'] = Label
-        lookup['backlog'] = LabelBacklog
-        lookup['404'] = Label404
-        lookup['id'] = 'beatport_label_id'
-    return lookup 
-
-
 def process_backlog_items(object_name, num=1):
     lookup = object_lookup(object_name)
     start = timezone.now()
@@ -788,35 +826,3 @@ def process_backlog_items(object_name, num=1):
     difference = end - start
     difference_seconds = difference.total_seconds()
     return 'Backlog processing: completed ' + str(success_count) + ' items successfully, with ' + str(strike_count) + ' errors, in ' + str(difference_seconds) + ' seconds'
-
-
-def should_object_be_scraped(object):
-    status = object.metadata_status()
-    if status['add'] == True:
-        object.set_field('public', True)
-    if status['remove'] == True:
-        object.set_field('public', False)
-    return status['scrape']
-
-
-def cleanup404():
-
-    # track (first due to FKeys)
-    bad_tracks = list(Track404.objects.all().values_list('beatport_track_id', flat=True))
-    Track.objects.filter(beatport_track_id__in=bad_tracks).delete()
-    TrackBacklog.objects.filter(beatport_track_id__in=bad_tracks).delete()
-
-    # artist
-    bad_artists = list(Artist404.objects.all().values_list('beatport_artist_id', flat=True))
-    Artist.objects.filter(beatport_artist_id__in=bad_artists).delete()
-    ArtistBacklog.objects.filter(beatport_artist_id__in=bad_artists).delete()
-
-    # genre
-    bad_genres = list(Genre404.objects.all().values_list('beatport_genre_id', flat=True))
-    Genre.objects.filter(beatport_genre_id__in=bad_genres).delete()
-    GenreBacklog.objects.filter(beatport_genre_id__in=bad_genres).delete()
-
-    # label
-    bad_labels = list(Label404.objects.all().values_list('beatport_label_id', flat=True))
-    Label.objects.filter(beatport_label_id__in=bad_labels).delete()
-    LabelBacklog.objects.filter(beatport_label_id__in=bad_labels).delete()

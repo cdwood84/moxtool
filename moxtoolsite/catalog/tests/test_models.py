@@ -266,6 +266,13 @@ class Artist404ModelTest(TestCase, CatalogTestMixin):
         field_label = artist._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
 
+    # Artist404 specific functions
+
+    def test_get_id(self):
+        artist404 = Artist404.objects.first()
+        expected_object_id = artist404.beatport_artist_id
+        self.assertEqual(artist404.get_id(), expected_object_id)
+
     # test constraints
 
     def test_beatport_artist_id_unique(self):
@@ -592,6 +599,13 @@ class Genre404ModelTest(TestCase, CatalogTestMixin):
         field_label = genre._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
 
+    # Genre404 specific functions
+
+    def test_get_id(self):
+        genre404 = Genre404.objects.first()
+        expected_object_id = genre404.beatport_genre_id
+        self.assertEqual(genre404.get_id(), expected_object_id)
+
     # test constraints
 
     def test_beatport_genre_id_unique(self):
@@ -896,6 +910,13 @@ class Label404ModelTest(TestCase, CatalogTestMixin):
         label = Label404.objects.get(id=1)
         field_label = label._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # Label404 specific functions
+
+    def test_get_id(self):
+        label404 = Label404.objects.first()
+        expected_object_id = label404.beatport_label_id
+        self.assertEqual(label404.get_id(), expected_object_id)
 
     # test constraints
 
@@ -1309,6 +1330,13 @@ class Track404ModelTest(TestCase, CatalogTestMixin):
         track = Track404.objects.get(id=1)
         field_label = track._meta.get_field('datetime_discovered').verbose_name
         self.assertEqual(field_label, 'Date & Time Discovered')
+
+    # Track404 specific functions
+
+    def test_get_id(self):
+        track404 = Track404.objects.first()
+        expected_object_id = track404.beatport_track_id
+        self.assertEqual(track404.get_id(), expected_object_id)
 
     # test constraints
 
