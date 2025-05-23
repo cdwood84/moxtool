@@ -1313,6 +1313,9 @@ class Tag(models.Model, SharedModelMixin, TagMixin):
     def get_viewable_playlists_tagged(self, user):
         return Playlist.objects.get_queryset_can_view(user).filter(tag__in=[self])
     
+    def get_viewable_setlists_tagged(self, user):
+        return SetList.objects.get_queryset_can_view(user).filter(tag__in=[self])
+    
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -1451,6 +1454,37 @@ class SetList(models.Model, SharedModelMixin, SetListMixin):
     def get_absolute_url(self):
         url_friendly_name = re.sub(r'[^a-zA-Z0-9]', '_', self.name.lower())
         return reverse('setlist-detail', args=[str(self.id), url_friendly_name])
+
+    def get_viewable_tracks_in_setlist(self, user):
+        ids = []
+        for setlistitem in SetListItem.objects.filter(setlist=self):
+            track = Track.objects.get_queryset_can_view(user).filter(id=setlistitem.track.id)
+            if track.count() == 1:
+                ids.append(track.first().id)
+        return Track.objects.filter(id__in=ids)
+    
+    def count_viewable_tracks_in_setlist(self, user):
+        return self.get_viewable_tracks_in_setlist(user).count()
+    
+    def get_top_viewable_setlist_artists(self, user):
+        artist_data = {}
+        max = 1
+        for track in self.get_viewable_tracks_in_setlist(user):
+            track_artists = track.artist.all() | track.remix_artist.all()
+            for artist in track_artists.distinct():
+                if artist.id in artist_data:
+                    artist_data[artist.id]['count'] += 1
+                    if max < artist_data[artist.id]['count']:
+                        max = artist_data[artist.id]['count']
+                else:
+                    artist_data[artist.id] = {
+                        'count': 1,
+                    }
+        top_artists = Artist.objects.none()
+        for id, data in artist_data.items():
+            if data['count'] == max:
+                top_artists = top_artists | Artist.objects.filter(id=id)
+        return top_artists
 
     class Meta:
         constraints = [
