@@ -579,6 +579,24 @@ def object_model_scraper(object_name, id, text=None):
     return result
 
 
+def random_scraper(object_name, lookup):
+    result = None
+    good_ids = list(lookup['model'].objects.values_list('beatport_track_id', flat=True))
+    bad_ids = list(lookup['404'].objects.values_list('beatport_track_id', flat=True))
+    medium_ids = list(lookup['backlog'].objects.values_list('beatport_track_id', flat=True))
+    if len(good_ids) == 0:
+        max_id = 20000000
+    else:
+        max_id = max(good_ids)
+    id = max_id
+    while id in good_ids + bad_ids + medium_ids:
+        id = random.choice(range(1, max_id))
+    print('Trying random ' + object_name + ': ' + str(id))
+    if lookup['model'].objects.filter(beatport_track_id=id).count() == 0:
+        result = object_model_scraper(object_name, id)
+    return result
+
+
 def process_artist(data):
     success = False
     try:
@@ -681,24 +699,6 @@ def object_model_processor(combined_data):
         if success == False:
             return False
     return True
-
-
-def random_scraper(object_name, lookup):
-    result = None
-    good_ids = list(lookup['model'].objects.values_list('beatport_track_id', flat=True))
-    bad_ids = list(lookup['404'].objects.values_list('beatport_track_id', flat=True))
-    medium_ids = list(lookup['backlog'].objects.values_list('beatport_track_id', flat=True))
-    if len(good_ids) == 0:
-        max_id = 20000000
-    else:
-        max_id = max(good_ids)
-    id = max_id
-    while id in good_ids + bad_ids + medium_ids:
-        id = random.choice(range(1, max_id))
-    print('Trying random ' + object_name + ': ' + str(id))
-    if lookup['model'].objects.filter(beatport_track_id=id).count() == 0:
-        result = object_model_scraper(object_name, id)
-    return result
 
 
 def convert_url(url, s=True):
