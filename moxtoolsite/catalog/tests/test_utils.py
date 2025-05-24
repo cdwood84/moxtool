@@ -87,6 +87,57 @@ class UtilityFunctionsTest(TestCase, UtilsTestMixin):
             self.assertEqual(bad_object_count, 0)
             self.assertEqual(bad_backlog_count, 0)
 
+    def test_object_model_data_checker(self):
+        test_objects = ['artist', 'genre', 'label', 'track']
+        for object_name in test_objects:
+            lookup = object_lookup(object_name)
+            good_data = {}
+            if object_name == 'track':
+                good_object = lookup['model'].objects.filter(bpm__isnull=False).first()
+            else:
+                good_object = lookup['model'].objects.filter(name__isnull=False).first()
+            bad_data = {}
+            bad_object = lookup['model'].objects.filter(public=False).first()
+            for field_name, field_info in good_object.useful_field_list.items():
+                if field_name == 'public' or field_name.startswith('beatport'):
+                    pass
+                elif field_info['type'] == 'queryset':
+                    good_data[field_name + 's'] = []
+                    for good_obj in good_object.get_field(field_name).all():
+                        good_data[field_name + 's'].append({
+                            'id': good_obj.get_field('beatport_' + field_name + '_id'),
+                            'text': good_obj.get_field('name').lower().replace(' ', '_').replace("'", ""),
+                        })
+                    bad_data[field_name + 's'] = []
+                    for bad_obj in bad_object.get_field(field_name).all():
+                        bad_data[field_name + 's'].append({
+                            'id': bad_obj.get_field('beatport_' + field_name + '_id'),
+                            'text': bad_obj.get_field('name').lower().replace(' ', '_').replace("'", ""),
+                        })
+                elif field_info['type'] == 'model':
+                    good_data[field_name] = {}
+                    good_data[field_name]['id'] = good_object.get_field(field_name).get_field('beatport_' + field_name + '_id')
+                    good_name = good_object.get_field(field_name).get_field('name')
+                    if good_name is not None:
+                       good_data[field_name]['text'] = good_name.lower().replace(' ', '_').replace("'", "")
+                    bad_data[field_name] = {}
+                    bad_data[field_name]['id'] = bad_object.get_field(field_name).get_field('beatport_' + field_name + '_id')
+                    bad_name = bad_object.get_field(field_name).get_field('name')
+                    if bad_name is not None:
+                       bad_data[field_name]['text'] = bad_name.lower().replace(' ', '_').replace("'", "")
+                elif field_info['type'] == 'date':
+                    if good_object.get_field(field_name) is not None:
+                        good_data[field_name] = good_object.get_field(field_name).strftime("%Y-%m-%d")
+                    if bad_object.get_field(field_name) is not None:
+                        bad_data[field_name] = bad_object.get_field(field_name).strftime("%Y-%m-%d")
+                else:
+                    if good_object.get_field(field_name) is not None:
+                        good_data[field_name] = str(good_object.get_field(field_name))
+                    if bad_object.get_field(field_name) is not None:
+                        bad_data[field_name] = str(bad_object.get_field(field_name))
+            self.assertTrue(object_model_data_checker(object_name, good_data))
+            self.assertFalse(object_model_data_checker(object_name, bad_data))
+
     def test_get_soup(self):
 
         # raises error for completely made up url

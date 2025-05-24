@@ -70,16 +70,16 @@ def object_model_data_checker(object_name, data):
 
     # track as a special case
     if object_name == 'track':
-        if 'title' in data:
+        if 'title' in data and data['title'] is not None:
             if len(data['title']) < 1:
                 return False
         else:
             return False
-        if 'mix' in data:
+        if 'mix' in data and data['mix'] is not None:
             if len(data['mix']) < 1:
                 return False
             if 'remix' in data['mix'].lower():
-                if len(data['remix_artists']) > 0:
+                if 'remix_artists' in data and data['remix_artists'] is not None and len(data['remix_artists']) > 0:
                     for artist in data['remix_artists']:
                         if 'id' in artist:
                             if isinstance(artist['id'], int):
@@ -93,37 +93,37 @@ def object_model_data_checker(object_name, data):
                     return False
         else:
             return False
-        if 'length' in data:
+        if 'length' in data and data['length'] is not None:
             if len(data['length']) < 1:
                 return False
         else:
             return False
-        if 'key' in data:
+        if 'key' in data and data['key'] is not None:
             if len(data['key']) < 1:
                 return False
         else:
             return False
-        if 'bpm' in data:
+        if 'bpm' in data and data['bpm'] is not None:
             if len(data['bpm']) < 1:
                 return False
         else:
             return False
-        if 'released' in data:
+        if 'released' in data and data['released'] is not None:
             if len(data['released']) < 1:
                 return False
         else:
             return False
-        if 'genre' in data:
+        if 'genre' in data and data['genre'] is not None:
             if 'id' not in data['genre']:
                 return False
         else:
             return False
-        if 'label' in data:
-            if 'id' not in data['genre']:
+        if 'label' in data and data['label'] is not None:
+            if 'id' not in data['label']:
                 return False
         else:
             return False
-        if len(data['artists']) > 0:
+        if 'artists' in data and data['artists'] is not None and len(data['artists']) > 0:
             for artist in data['artists']:
                 if 'id' in artist:
                     if isinstance(artist['id'], int):
@@ -138,7 +138,7 @@ def object_model_data_checker(object_name, data):
 
     # artist, genre, and label as the simple case
     else:
-        if 'name' in data:
+        if 'name' in data and data['name'] is not None:
             if len(data['name']) < 1:
                 return False
         else:

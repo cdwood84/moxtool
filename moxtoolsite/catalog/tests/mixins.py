@@ -339,8 +339,8 @@ class UtilsTestMixin:
             public = True,
         )
         Artist.objects.create(
-            beatport_artist_id = 460053,
-            name = 'Prospa',
+            beatport_artist_id = 532277,
+            name = "Alessio Cala'",
             public = True,
         )
         Artist404.objects.create(beatport_artist_id=4300000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 5, 17, 33, 2), timezone=timezone.get_fixed_timezone(0)))
@@ -353,6 +353,11 @@ class UtilsTestMixin:
             beatport_genre_id = 12,
             public = True,
         )
+        Genre.objects.create(
+            beatport_genre_id = 81,
+            name = 'Funky House',
+            public = True,
+        )
         Genre404.objects.create(beatport_genre_id=4500000, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 8, 4, 6, 59, 59), timezone=timezone.get_fixed_timezone(0)))
         GenreBacklog.objects.create(beatport_genre_id=90, datetime_discovered=timezone.make_aware(timezone.datetime(2024, 12, 31, 23, 59, 59), timezone=timezone.get_fixed_timezone(0)))
         Label.objects.create(
@@ -361,6 +366,11 @@ class UtilsTestMixin:
         )
         Label.objects.create(
             beatport_label_id = 23732,
+            public = True,
+        )
+        Label.objects.create(
+            beatport_label_id = 62010,
+            name = 'Soul Brain Records',
             public = True,
         )
         Label404.objects.create(beatport_label_id=2500000, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 1, 31, 20, 30, 21), timezone=timezone.get_fixed_timezone(0)))
@@ -377,6 +387,19 @@ class UtilsTestMixin:
             mix = 'Original Mix',
             public = True,
         )
+        Track.objects.create(
+            beatport_track_id = 11795278,
+            title = 'Happiness',
+            length = '5:31',
+            released = '2019-04-26',
+            bpm = '123',
+            key = 'F Major',
+            genre =  Genre.objects.get(beatport_genre_id=81),
+            label =  Label.objects.get(beatport_label_id=62010),
+            mix = 'Original Mix',
+            public = True,
+        )
+        Track.objects.get(beatport_track_id=11795278).artist.add(Artist.objects.get(beatport_artist_id=532277))
         Track404.objects.create(beatport_track_id=1900504, datetime_discovered=timezone.make_aware(timezone.datetime(2020, 2, 1, 22, 14, 17), timezone=timezone.get_fixed_timezone(0)))
         TrackBacklog.objects.create(beatport_track_id=19407238, datetime_discovered=timezone.make_aware(timezone.datetime(2025, 5, 1, 7, 44, 18), timezone=timezone.get_fixed_timezone(0)))
         return users
