@@ -138,6 +138,26 @@ class UtilityFunctionsTest(TestCase, UtilsTestMixin):
             self.assertTrue(object_model_data_checker(object_name, good_data))
             self.assertFalse(object_model_data_checker(object_name, bad_data))
 
+    def test_should_object_be_scraped(self):
+        test_objects = ['artist', 'genre', 'label', 'track']
+        for object_name in test_objects:
+            lookup = object_lookup(object_name)
+            if object_name == 'track':
+                good_object = lookup['model'].objects.filter(bpm__isnull=False).first()
+            else:
+                good_object = lookup['model'].objects.filter(name__isnull=False).first()
+            self.assertTrue(good_object.get_field('public'))
+            good_object.set_field('public', False)
+            self.assertFalse(good_object.get_field('public'))
+            self.assertFalse(should_object_be_scraped(good_object))
+            self.assertTrue(good_object.get_field('public'))
+            bad_object = lookup['model'].objects.filter(public=False).first()
+            self.assertFalse(bad_object.get_field('public'))
+            bad_object.set_field('public', True)
+            self.assertTrue(bad_object.get_field('public'))
+            self.assertTrue(should_object_be_scraped(bad_object))
+            self.assertFalse(bad_object.get_field('public'))
+
     def test_get_soup(self):
 
         # raises error for completely made up url
