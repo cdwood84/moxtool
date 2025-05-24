@@ -20,12 +20,19 @@ class UtilityFunctionsTest(TestCase, UtilsTestMixin):
 
         # base case with good data for each model type
         test_objects = ['artist', 'genre', 'label', 'track']
+        expected_max = {
+            'artist': 23000,
+            'genre': 80,
+            'label': 100000,
+            'track': 20000000,
+        }
         for object_name in test_objects:
             lookup = object_lookup(object_name)
             self.assertEqual(str(lookup['model']).lower(), "<class 'catalog.models." + object_name + "'>")
             self.assertEqual(str(lookup['404']).lower(), "<class 'catalog.models." + object_name + "404'>")
             self.assertEqual(str(lookup['backlog']).lower(), "<class 'catalog.models." + object_name + "backlog'>")
             self.assertEqual(str(lookup['id']), 'beatport_' + object_name + '_id')
+            self.assertEqual(lookup['max'], expected_max[object_name])
 
         # case of invalid object name
         bad_lookup = object_lookup('dj')

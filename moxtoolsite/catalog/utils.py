@@ -16,21 +16,25 @@ def object_lookup(object_name):
         lookup['backlog'] = TrackBacklog
         lookup['404'] = Track404
         lookup['id'] = 'beatport_track_id'
+        lookup['max'] = 20000000
     elif object_name == 'artist':
         lookup['model'] = Artist
         lookup['backlog'] = ArtistBacklog
         lookup['404'] = Artist404
         lookup['id'] = 'beatport_artist_id'
+        lookup['max'] = 23000
     elif object_name == 'genre':
         lookup['model'] = Genre
         lookup['backlog'] = GenreBacklog
         lookup['404'] = Genre404
         lookup['id'] = 'beatport_genre_id'
+        lookup['max'] = 80
     elif object_name == 'label':
         lookup['model'] = Label
         lookup['backlog'] = LabelBacklog
         lookup['404'] = Label404
         lookup['id'] = 'beatport_label_id'
+        lookup['max'] = 100000
     return lookup 
 
 
@@ -654,13 +658,12 @@ def random_scraper(object_name, lookup):
     bad_ids = list(lookup['404'].objects.values_list('beatport_track_id', flat=True))
     medium_ids = list(lookup['backlog'].objects.values_list('beatport_track_id', flat=True))
     if len(good_ids) == 0:
-        max_id = 20000000
+        max_id = lookup['max']
     else:
         max_id = max(good_ids)
-    id = max_id
-    while id in good_ids + bad_ids + medium_ids:
+    id = None
+    while id is None or id in good_ids + bad_ids + medium_ids:
         id = random.choice(range(1, max_id))
-    print('Trying random ' + object_name + ': ' + str(id))
     if lookup['model'].objects.filter(beatport_track_id=id).count() == 0:
         result = object_model_scraper(object_name, id)
     return result
